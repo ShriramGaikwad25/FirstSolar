@@ -1,0 +1,180 @@
+{"data":[{
+  "Entity" : "Entitlement",
+  "Details" : "ZNew_Comp_PP4",
+  "Trigger Event" : "Newly Discovered Entitlement",
+  "Event Type" : "Review Details",
+  "Assigned To" : "Hudson.White",
+  "Expires On" : "2026-03-25",
+  "Actions" : "Review, Reassign"
+},
+{
+  "Entity" : "Entitlement",
+  "Details" : "AP_Invoice_Approve",
+  "Trigger Event" : "Owner Inactive",
+  "Event Type" : "Reassign",
+  "Assigned To" : "Matt.Phelps",
+  "Expires On" : "2026-03-28",
+  "Actions" : "Review, Reassign"
+},
+{
+  "Entity" : "User",
+  "Details" : "Ryan.Johnson",
+  "Trigger Event" : "Job Title Change",
+  "Event Type" : "Access Review",
+  "Assigned To" : "Jessica.Camacho",
+  "Expires On" : "2026-03-21",
+  "Actions" : "Review, Reassign"
+},
+{
+  "Entity" : "User",
+  "Details" : "Alicia.Reed",
+  "Trigger Event" : "Department Change",
+  "Event Type" : "Access Review",
+  "Assigned To" : "Priya.Menon",
+  "Expires On" : "2026-03-22",
+  "Actions" : "Review, Revoke Excess"
+},
+{
+  "Entity" : "User",
+  "Details" : "Daniel.Kim",
+  "Trigger Event" : "Manager Change",
+  "Event Type" : "Access Review",
+  "Assigned To" : "Sarah.Brooks",
+  "Expires On" : "2026-03-27",
+  "Actions" : "Review, Reassign"
+},
+{
+  "Entity" : "User",
+  "Details" : "john.kelly",
+  "Trigger Event" : "Privilege Access Assigned",
+  "Event Type" : "Elevated Access Review",
+  "Assigned To" : "Elena.Rossi",
+  "Expires On" : "2026-03-20",
+  "Actions" : "Review, Adjust Access"
+},
+{
+  "Entity" : "User",
+  "Details" : "Ethan.Walker",
+  "Trigger Event" : "New Account Discovered",
+  "Event Type" : "Immediate Remediation",
+  "Assigned To" : "Noah.Bennett",
+  "Expires On" : "2026-03-28",
+  "Actions" : "Disable, Revoke"
+},
+{
+  "Entity" : "Service Account",
+  "Details" : "svc_api_hrsync",
+  "Trigger Event" : "Owner Inactive",
+  "Event Type" : "Reassign Owner",
+  "Assigned To" : "Jessica Camacho",
+  "Expires On" : "2026-03-22",
+  "Actions" : "Rotate, Review"
+},
+{
+  "Entity" : "User",
+  "Details" : "Sofia.Garcia",
+  "Trigger Event" : "Leave of Absence",
+  "Event Type" : "Suspend User Access",
+  "Assigned To" : "Hannah.Cooper",
+  "Expires On" : "2026-03-22",
+  "Actions" : "Review, Suspend"
+},
+{
+  "Entity" : "User",
+  "Details" : "Lucas.Adams",
+  "Trigger Event" : "SoD Violation Detected",
+  "Event Type" : "Mitigation Review",
+  "Assigned To" : "Hannah.Cooper",
+  "Expires On" : "2026-03-24",
+  "Actions" : "Review, Restore"
+},
+{
+  "Entity" : "Account",
+  "Details" : "adm_jliang",
+  "Trigger Event" : "Newly Discovered Unlinked accounts",
+  "Event Type" : "Classify Accounts",
+  "Assigned To" : "Victor.Chen",
+  "Expires On" : "2026-03-23",
+  "Actions" : "Review, Revoke"
+},
+{
+  "Entity" : "User",
+  "Details" : "Chloe.Turner",
+  "Trigger Event" : "Account Inactive",
+  "Event Type" : "Suspend User Access",
+  "Assigned To" : "Aisha.Hassan",
+  "Expires On" : "2026-03-30",
+  "Actions" : "Review, Enforce MFA"
+},
+{
+  "Entity" : "Account",
+  "Details" : "jmartin_salesforce",
+  "Trigger Event" : "Dormant Account",
+  "Event Type" : "Access Review",
+  "Assigned To" : "Rachel.Nguyen",
+  "Expires On" : "2026-03-25",
+  "Actions" : "Review, Disable"
+},
+{
+  "Entity" : "Service Account",
+  "Details" : "svc_etl_payroll",
+  "Trigger Event" : "Owner Inactive",
+  "Event Type" : "Reassign Owner",
+  "Assigned To" : "Jessica Camacho",
+  "Expires On" : "2026-03-27",
+  "Actions" : "Review, Reassign"
+},
+{
+  "Entity" : "Account",
+  "Details" : "james.shields",
+  "Trigger Event" : "Dormant Account",
+  "Event Type" : "Access Review",
+  "Assigned To" : "Kavya.Iyer",
+  "Expires On" : "2026-03-27",
+  "Actions" : "Review, Revoke"
+},
+{
+  "Entity" : "SoD Policy",
+  "Details" : "AP-001",
+  "Trigger Event" : "SoD Violation Detected",
+  "Event Type" : "Mitigation Review",
+  "Assigned To" : "Jacob.Wright",
+  "Expires On" : "2026-03-30",
+  "Actions" : "Review, Mitigate"
+},
+{
+  "Entity" : "User",
+  "Details" : "Emma.Lewis",
+  "Trigger Event" : "Manager Inactive",
+  "Event Type" : "Reassign Manager",
+  "Assigned To" : "Priya.Menon",
+  "Expires On" : "2026-03-26",
+  "Actions" : "Review, Rationalize"
+},
+{
+  "Entity" : "User",
+  "Details" : "Olivia.Hughes",
+  "Trigger Event" : "Contractor End Date Reached",
+  "Event Type" : "Immediate Remediation",
+  "Assigned To" : "Sarah.Brooks",
+  "Expires On" : "2026-04-02",
+  "Actions" : "Disable, Review"
+},
+{
+  "Entity" : "API Key",
+  "Details" : "AK-982734",
+  "Trigger Event" : "Rotate Key",
+  "Event Type" : "Key Rotation",
+  "Assigned To" : "Jessica.Camacho",
+  "Expires On" : "2026-04-27",
+  "Actions" : "Review, Rotate"
+},
+{
+  "Entity" : "Secret",
+  "Details" : "SEC-449821",
+  "Trigger Event" : "Unused Secret",
+  "Event Type" : "Deactivate Unused Credential",
+  "Assigned To" : "Jessica.Camacho",
+  "Expires On" : "2026-04-25",
+  "Actions" : "Review, Disable"
+}]}

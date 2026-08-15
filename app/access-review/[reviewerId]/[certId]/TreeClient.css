@@ -1,0 +1,490 @@
+/* TreeClient Layout Styles */
+.tree-client-container {
+  height: 100vh;
+  display: flex;
+  position: relative;
+}
+
+/* Custom Scrollbar for User List */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+  scroll-behavior: smooth;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Hide scrollbar but allow scrolling */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Users Sidebar Styles */
+.users-sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background-color: #f0fdf4;
+  border-right: 1px solid #bbf7d0;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 30;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  will-change: width;
+}
+
+.users-sidebar.collapsed {
+  width: 48px;
+}
+
+.users-sidebar.expanded {
+  width: 256px;
+}
+
+.users-sidebar-header {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.user-item {
+  padding: 0.5rem 0.75rem;
+  margin: 0.125rem 0;
+  border-bottom: 1px solid #f3f4f6;
+  cursor: pointer;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              padding 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  flex: 0 0 auto; /* Changed from flex: 1 to prevent stretching */
+  min-height: 48px; /* Consistent height for both states */
+  display: flex;
+  align-items: center;
+  height: 48px; /* Fixed height for consistency */
+  max-height: 48px; /* Same as height for consistency */
+  border-radius: 0.25rem; /* Added subtle border radius */
+  will-change: background-color, border-color, box-shadow, padding;
+}
+
+.user-item:hover {
+  background-color: transparent;
+}
+
+/* Hover background only when hovering avatar/initials circle */
+.user-item:has(.avatar-hover-trigger:hover) {
+  background-color: #dcfce7;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.user-item.selected {
+  background-color: #bbf7d0;
+  border-color: #86efac;
+  border-left: 3px solid #16a34a;
+}
+
+.user-initials {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #2563eb;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.7rem;
+  transition: all 0.3s ease-in-out;
+  flex-shrink: 0;
+}
+
+.user-initials.selected {
+  background-color: #16a34a;
+  box-shadow: 0 0 0 2px #bbf7d0;
+}
+
+.user-details {
+  transition: all 0.3s ease-in-out;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.user-details.collapsed {
+  opacity: 0;
+  width: 0;
+  transform: translateX(-10px);
+}
+
+.user-details.expanded {
+  opacity: 1;
+  width: auto;
+  transform: translateX(0);
+}
+
+.user-name {
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.7rem;
+  line-height: 1.1;
+}
+
+.user-name.selected {
+  color: #166534;
+  font-weight: 600;
+}
+
+.user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.user-name {
+  font-weight: 500;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-details {
+  font-size: 0.875rem;
+  color: #6b7280;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.progress-bar {
+  width: 100%;
+  background-color: #e5e7eb;
+  border-radius: 9999px;
+  height: 6px;
+}
+
+.progress-fill {
+  background-color: #2563eb;
+  height: 100%;
+  border-radius: 9999px;
+  transition: width 0.3s ease;
+}
+
+.risk-indicators {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.risk-badge {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  color: white;
+  background-color: #27685b;
+}
+
+/* Entitlements Table Styles */
+.entitlements-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 64px; /* Account for collapsed sidebar width */
+  transition: margin-left 0.3s ease-in-out;
+}
+
+.entitlements-container.sidebar-expanded {
+  margin-left: 320px;
+}
+
+.selected-user-header {
+  background-color: #eff6ff;
+  border-bottom: 1px solid #dbeafe;
+  padding: 1rem;
+}
+
+.entitlements-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  background-color: white;
+}
+
+.entitlements-grid {
+  flex: 1;
+  padding: 1rem;
+}
+
+/* Empty State Styles */
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state-content {
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-state-icon {
+  width: 4rem;
+  height: 4rem;
+  margin: 0 auto 1rem;
+  color: #d1d5db;
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16rem;
+}
+
+.loading-text {
+  color: #6b7280;
+}
+
+/* Navigation Arrows */
+.nav-arrow {
+  width: 100%;
+  padding: 0.125rem;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+}
+
+.nav-arrow-container {
+  margin-bottom: 0.5rem;
+}
+
+.nav-arrow-container.bottom {
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+
+.nav-arrow.enabled {
+  background-color: #e5e7eb;
+  color: #374151;
+}
+
+.nav-arrow.enabled:hover {
+  background-color: #d1d5db;
+}
+
+.nav-arrow.disabled {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Risk Indicators */
+.risk-indicators {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.risk-badge {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #27685b;
+  color: white;
+  font-size: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* User list container improvements */
+.users-list-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0.5rem 0.25rem;
+}
+
+/* Ensure user items are properly sized in both states */
+.user-item.minimized {
+  min-height: 48px; /* Same height as expanded state */
+  justify-content: center;
+  padding: 0.5rem 0.25rem; /* Reduced horizontal padding for minimized state */
+}
+
+.user-item.expanded {
+  min-height: 48px; /* Same height as minimized state */
+  justify-content: flex-start;
+  padding: 0.5rem 0.75rem; /* Standard padding for expanded state */
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .users-sidebar.expanded {
+    width: 240px;
+  }
+  
+  .user-item {
+    padding: 0.75rem;
+  }
+  
+  .user-initials {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+  
+  .entitlements-container {
+    margin-left: 48px;
+  }
+  
+  .entitlements-container.sidebar-expanded {
+    margin-left: 240px;
+  }
+}
+
+/* AG Grid Customizations for Entitlements Table */
+.ag-main .ag-header-cell {
+  background-color: #ffffff !important;
+}
+
+.ag-main .ag-header-cell-label {
+  font-weight: 700;
+  color: #374151;
+}
+
+.ag-main .ag-cell {
+  border-right: 1px solid #f3f4f6;
+  display: flex;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.ag-main .ag-row {
+  min-height: unset;
+  background-color: white;
+}
+
+.ag-main .ag-row:hover {
+  background-color: #f9fafb;
+}
+
+.ag-main .ag-row-selected {
+  background-color: #eff6ff;
+}
+
+/* Ensure all rows have consistent background */
+.ag-main .ag-row-custom {
+  background-color: white;
+}
+
+.ag-main .ag-row-custom:hover {
+  background-color: #f9fafb;
+}
+
+.ag-main .ag-row-custom.ag-row-selected {
+  background-color: #eff6ff;
+}
+
+/* Entitlement description styling */
+.ag-main .ag-cell .entitlement-description {
+  line-height: 1.4;
+  word-wrap: break-word;
+  white-space: normal;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* Smooth fade-in animation for user details */
+@keyframes fadeInSlide {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Hide selection checkbox on description rows */
+.ag-main .ag-row-desc .ag-selection-checkbox {
+  display: none !important;
+}
+
+/* Search Input Styling */
+.search-input {
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Remove height constraints from AG Grid when using autoHeight */
+.ag-main.ag-layout-auto-height .ag-body-viewport {
+  overflow: visible !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+.ag-main.ag-layout-auto-height .ag-center-cols-container {
+  overflow: visible !important;
+}

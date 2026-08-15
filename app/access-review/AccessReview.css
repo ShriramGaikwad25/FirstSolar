@@ -1,0 +1,12 @@
+.ag-theme-quartz .ag-cell-wrapper {
+  padding-left: -4px !important; /* default is ~8px */
+}
+
+/* Optional: shrink checkbox size */
+.ag-theme-quartz .ag-checkbox-input-wrapper {
+  transform: scale(0.85);
+}
+
+.ag-cell-no-padding {
+  padding-left: 0px !important;
+}

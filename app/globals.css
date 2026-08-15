@@ -1,0 +1,423 @@
+@import "tailwindcss";
+
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+/** DataTable custom css**/
+html {
+  @apply overflow-auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+html::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+body {
+  @apply overflow-auto min-h-screen;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+.level_1 + .no_level {
+  @apply border-white border-t;
+}
+.level_1 td:first-child {
+  @apply left-6.5 relative;
+}
+
+.no_level td:first-child {
+  @apply left-12.5 relative;
+}
+.no_level td:first-child:before {
+  content: " ";
+  @apply absolute bg-[#F4F5FA] block w-[23px] h-[65px] -mt-4.5 -ml-9;
+}
+
+.no_level.group-last-row {
+  @apply border-white border-b;
+}
+
+.row-pagination {
+  @apply relative h-[74px];
+
+  td {
+    @apply bg-[#F4F5FA] left-6.5 absolute right-0;
+  }
+}
+.no_level.group-last-row td:first-child:before {
+  @apply -mt-3.5;
+}
+.no_level.group-last-row.group-first-row {
+  @apply border-b border-b-blue-300;
+
+  td:first-child:before {
+    @apply -mt-4;
+  }
+}
+.no_level.group-first-row td:first-child,
+.level_1.group-first-row td:first-child {
+  @apply rounded-tl-lg;
+}
+
+.no_level.group-last-row td:first-child,
+.level_1.group-last-row td:first-child {
+  @apply rounded-bl-lg;
+}
+
+.form-input {
+  @apply w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500;
+}
+
+.ag-details-row {
+  @apply !pr-0 !pt-0 !pb-0;
+}
+.ag-selection-checkbox {
+  @apply !mr-0;
+}
+.ag-row:hover {
+  @apply !bg-[#E5EEFC];
+}
+.ag-cell-focus {
+  @apply !border-0;
+}
+
+.ag-checked {
+  @apply !bg-[#0275ff];
+}
+.ag-row-group-expanded {
+  @apply border-b-0;
+}
+.ag-header-cell-comp-wrapper {
+  @apply font-bold text-[#1759e4];
+}
+/* AG Grid: white header area + bold green outer border only (not per-column) */
+.ag-header {
+  @apply !bg-[#fff];
+  border: 1.5px solid #16a34a !important;
+}
+
+div[role="row"]:not(.ag-header-row) {
+  @apply !bg-[#fff] !border-0;
+}
+
+/* Header cells: no green column borders; optional subtle separator */
+.ag-header-cell {
+  background-color: #ffffff !important;
+  border-right: 1.5px solid #e5e7eb !important;
+  border-bottom: none !important;
+}
+
+.ag-theme-quartz .ag-header-cell {
+  background-color: #ffffff !important;
+  border-right: 1.5px solid #e5e7eb !important;
+  border-bottom: none !important;
+}
+
+.ag-theme-alpine .ag-header-cell {
+  background-color: #ffffff !important;
+  border-right: 1.5px solid #e5e7eb !important;
+  border-bottom: none !important;
+}
+
+.ag-root-wrapper .ag-header-row,
+.ag-root-wrapper .ag-header-cell {
+  background-color: #ffffff !important;
+}
+
+/* Column resize / separator line — keep subtle, not bold green */
+.ag-root-wrapper .ag-header-cell::after {
+  background-color: #e5e7eb !important;
+}
+
+/* Keep AG Grid header text consistent across all tables/themes */
+.ag-header-cell-text,
+.ag-header-cell-label {
+  color: #1759e4 !important;
+}
+
+/* Non Human Identity grids: always show the full column name, wrap instead of truncating */
+.nhi-compact-grid .ag-header-cell-text {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: unset !important;
+  line-height: 1.25;
+  text-align: center;
+}
+.nhi-compact-grid .ag-header-cell-label {
+  justify-content: center;
+}
+.nhi-compact-grid .ag-cell {
+  font-size: 12px;
+}
+
+.account-table-detail,
+.entitlement-table-detail {
+  .ag-root-wrapper {
+    @apply !border-2 border-white !border-r-0 rounded-tr-none  rounded-br-none;
+  }
+  .ag-details-row,
+  .ag-root,
+  .ag-header,
+  div[role="row"] {
+    @apply !bg-[#F4F5FA] !border-0;
+  }
+  .ag-paging-panel {
+    @apply !border-t-0;
+  }
+}
+.account-table-detail {
+  .ag-root-wrapper {
+    @apply !bg-[#F4F5FA] border-0;
+  }
+}
+.entitlement-table-detail {
+  .ag-details-row,
+  .ag-root,
+  .ag-header,
+  div[role="row"],
+  .ag-root-wrapper {
+    @apply !bg-[#ECEEF8];
+  }
+}
+.ag-main > .ag-root-wrapper > .ag-paging-panel {
+  /* hide top pagination */
+  @apply !hidden;
+}
+
+/* Disable scrollbar for manage campaign table with autoHeight */
+.manage-campaign-table .ag-body-viewport {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.manage-campaign-table .ag-body-viewport-wrapper {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.manage-campaign-table .ag-center-cols-viewport {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.manage-campaign-table .ag-root-wrapper {
+  height: auto !important;
+  max-height: none !important;
+}
+
+.manage-campaign-table .ag-body {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* Disable scrollbar for campaigns table with autoHeight */
+.campaigns-table .ag-body-viewport {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.campaigns-table .ag-body-viewport-wrapper {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.campaigns-table .ag-center-cols-viewport {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+.campaigns-table .ag-root-wrapper {
+  height: auto !important;
+  max-height: none !important;
+}
+
+.campaigns-table .ag-body {
+  overflow: visible !important;
+  max-height: none !important;
+}
+
+/* Custom scrollbar for dropdown lists */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+/* Firefox scrollbar */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af #f3f4f6;
+}
+
+/* Hide scrollbar */
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Accessibility: Focus Indicators */
+*:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Ensure focus is visible for interactive elements */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: #2563eb;
+  color: white;
+  padding: 8px 16px;
+  text-decoration: none;
+  z-index: 100;
+  border-radius: 0 0 4px 0;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* Improve focus visibility for AG Grid cells */
+.ag-cell:focus,
+.ag-cell-focus {
+  outline: 2px solid #2563eb !important;
+  outline-offset: -2px !important;
+}
+
+/* My Approvals: center vertically, align content left (Req ID + Comments + Status) */
+.ag-theme-quartz .pending-approvals-req-id-cell,
+.ag-theme-quartz .pending-approvals-comments-cell,
+.ag-theme-quartz .pending-approvals-status-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.ag-theme-quartz .pending-approvals-comments-cell .ag-cell-wrapper {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.ag-theme-quartz .pending-approvals-comments-cell .ag-cell-value {
+  width: 100%;
+  text-align: left;
+}
+
+.ag-theme-quartz .pending-approvals-status-cell .ag-cell-wrapper {
+  width: 100%;
+  min-width: 0;
+}
+
+/* My Approvals: date columns — values and headers start at the left */
+.ag-theme-quartz.my-approvals-grid .ag-cell.text-left {
+  justify-content: flex-start;
+  text-align: left;
+}
+.ag-theme-quartz.my-approvals-grid .ag-cell.text-left .ag-cell-wrapper,
+.ag-theme-quartz.my-approvals-grid .ag-cell.text-left .ag-cell-value {
+  justify-content: flex-start;
+  text-align: left;
+}
+.ag-theme-quartz.my-approvals-grid .ag-header-cell.text-left .ag-header-cell-label {
+  justify-content: flex-start;
+  text-align: left;
+  margin-left: 0;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Track requests: date columns — explicit left alignment (headers + cells) */
+.track-request-grid .ag-cell.text-left .ag-cell-value {
+  text-align: left;
+}
+.track-request-grid .ag-header-cell.text-left .ag-header-cell-label {
+  justify-content: flex-start;
+  text-align: left;
+  margin-left: 0;
+  margin-right: auto;
+  width: 100%;
+}
+
+/* Track requests: zebra rows (overrides global white row bg for this grid only) */
+.track-request-grid div[role="row"]:not(.ag-header-row).track-request-row-striped {
+  background-color: #f9fafb !important;
+}
+.track-request-grid .track-request-row-striped .ag-cell {
+  background-color: transparent !important;
+}
+
+/* My Approvals: same alternating gray rows as Track requests */
+.my-approvals-grid div[role="row"]:not(.ag-header-row).my-approvals-row-striped {
+  background-color: #f9fafb !important;
+}
+.my-approvals-grid .my-approvals-row-striped .ag-cell {
+  background-color: transparent !important;
+}
+
+/* Track requests: start (left) horizontally, centered vertically */
+.track-request-grid .ag-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+.track-request-grid .ag-cell-wrapper {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}

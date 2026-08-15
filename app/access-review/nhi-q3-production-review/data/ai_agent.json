@@ -1,0 +1,140 @@
+{
+  "typeLabel": "AI Agent",
+  "identityHeader": {
+    "Name": "CustomerSupportAgent_v2",
+    "Identity ID": "AIA-00182",
+    "Type": "AI Support Agent",
+    "Environment": "Production",
+    "Lifecycle State": "Active",
+    "Last Reviewed": "Never"
+  },
+  "badges": [
+    ["Autonomous Actions Enabled", "danger"],
+    ["Sensitive Data Access", "warning"],
+    ["No Human Approval", "danger"]
+  ],
+  "businessContext": {
+    "Business Purpose": "Support triage and customer response assistance",
+    "Technical Purpose": "Agent with tool access to CRM, ticketing, email, refund API",
+    "Associated Service": "CX Automation",
+    "Source System": "Internal agent runtime",
+    "Target Systems": "Salesforce, Zendesk, Email service, Refund API",
+    "Created Date": "2025-02-18",
+    "Exception Status": "Pending guardrail review"
+  },
+  "ownership": {
+    "Primary Owner": "M. Verma",
+    "Backup Owner": "None",
+    "Technical Custodian": "AI Platform Team",
+    "Business Owner": "Customer Experience",
+    "Owning Team": "CX Automation",
+    "Escalation Contact": "AI Governance Council",
+    "Last Ownership Attestation": "Never",
+    "Ownership Confidence": "74 / 100"
+  },
+  "auth": {
+    "Auth Type": "Delegated backend identities",
+    "Credential Type": "Service accounts + tokens",
+    "Credential Age": "Mixed",
+    "Last Rotated / Renewed": "Varies by underlying credential",
+    "Expiry Date": "Mixed",
+    "Rotation / Renewal Status": "Partial",
+    "Storage Location": "Agent runtime and backing systems",
+    "Vaulted": "Partial",
+    "Federation / Managed Identity Supported": "Yes",
+    "Safer Alternative Available": "Yes",
+    "Trust Scope Summary": "Access delegated through multiple connected tools and backend identities"
+  },
+  "plainSummary": "Can read CRM profiles, update support tickets, send emails, and trigger refund workflows.",
+  "accessSummary": {
+    "Access Level": "High",
+    "Sensitive Targets": "Customer profile, refund workflow",
+    "Data Classes Reachable": "PII, support history",
+    "Administrative Capabilities": "Can trigger operational workflows",
+    "Cross-Environment Access": "Production only",
+    "Blast Radius Estimate": "High"
+  },
+  "usage": {
+    "lastUsed": "7m ago",
+    "frequency": "Very high",
+    "details": {
+      "Last Authenticated": "2026-03-04 11:07 UTC",
+      "Peak Usage Pattern": "Business hours with spikes",
+      "Failed Auth Attempts": "2 in 30d",
+      "Dormancy": "Active"
+    }
+  },
+  "typeCards": [
+    {
+      "title": "Connected Tools",
+      "fields": {
+        "Connected Tools": "Salesforce, Zendesk, Email service, Refund API",
+        "Sensitive Systems Reachable": "CRM, refund workflow"
+      }
+    },
+    {
+      "title": "Underlying Identities",
+      "fields": {
+        "Underlying Service Accounts / Tokens": "svc_support_automation_prod, token_zendesk_bot_prod",
+        "Shared Backend Credential": "Yes"
+      }
+    },
+    {
+      "title": "Action Boundaries",
+      "fields": {
+        "Allowed Actions": "Read CRM, update tickets, send email, trigger refund API",
+        "Autonomous Actions Enabled": "Yes",
+        "Production Write Access": "Yes"
+      }
+    },
+    {
+      "title": "Human Approval & Guardrails",
+      "fields": {
+        "Human Approval Required": "No",
+        "Guardrail Violations": "2",
+        "Sensitive Data Classes": "Customer PII, support interactions"
+      }
+    }
+  ],
+  "prompts": [
+    "Does this agent need refund capability?",
+    "Should human approval be required?",
+    "Are hidden backend credentials too broad?",
+    "Should production write access be limited?"
+  ],
+  "guidance": [
+    "The agent can take consequential actions without human approval.",
+    "Shared backend credentials reduce accountability and raise blast radius."
+  ],
+  "risk": {
+    "score": "94",
+    "severity": "Critical",
+    "factors": ["Autonomous write actions", "Sensitive data access", "No human approval"],
+    "confidence": "Clear need for stronger controls; exact restriction path depends on business process."
+  },
+  "recommendations": [
+    {
+      "title": "Require human approval for refunds",
+      "rationale": "High-risk actions should not be fully autonomous.",
+      "meta": ["Best next step", "Guardrail"]
+    },
+    {
+      "title": "Replace shared backend credential",
+      "rationale": "Improves accountability and limits blast radius.",
+      "meta": ["Important", "Identity hygiene"]
+    },
+    {
+      "title": "Restrict to read-only on CRM writes where possible",
+      "rationale": "Reduces data modification risk.",
+      "meta": ["Strategic", "Least privilege"]
+    }
+  ],
+  "actions": [
+    "Reduce tool access",
+    "Require human approval",
+    "Restrict to read-only",
+    "Remove sensitive action",
+    "Replace shared credential",
+    "Suspend agent"
+  ]
+}

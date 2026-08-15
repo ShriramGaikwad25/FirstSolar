@@ -1,0 +1,229 @@
+/* When grouping by entitlement: show checkbox ONLY on entitlement (group) rows, not on account (leaf) rows */
+.app-owner-page .ag-row:not(.ag-row-group) .ag-checkbox-input-wrapper,
+.app-owner-page .ag-row:not(.ag-row-group) .ag-selection-checkbox-input-wrapper,
+.app-owner-page .ag-row:not(.ag-row-group) [class*="ag-selection"],
+.app-owner-page .ag-row:not(.ag-row-group) .ag-selection-checkbox,
+.app-owner-page .ag-row:not(.ag-row-group) input[type="checkbox"] {
+  display: none !important;
+}
+
+/* Hide expand icons in the AppOwner page */
+.app-owner-page .ag-group-expanded,
+.app-owner-page .ag-group-contracted,
+.app-owner-page .ag-group-expand,
+.app-owner-page .ag-group-contract,
+.app-owner-page .ag-group-expanded .ag-icon,
+.app-owner-page .ag-group-contracted .ag-icon,
+.app-owner-page .ag-group-expand .ag-icon,
+.app-owner-page .ag-group-contract .ag-icon,
+.app-owner-page .ag-row-group-expanded,
+.app-owner-page .ag-row-group-contracted {
+  display: none !important;
+}
+
+/* Additional rules to ensure all expand icons are hidden */
+.app-owner-page .ag-icon-tree-closed,
+.app-owner-page .ag-icon-tree-open,
+.app-owner-page .ag-icon-tree-closed:before,
+.app-owner-page .ag-icon-tree-open:before,
+.app-owner-page .ag-icon-expanded,
+.app-owner-page .ag-icon-contracted,
+.app-owner-page .ag-icon-expanded:before,
+.app-owner-page .ag-icon-contracted:before {
+  display: none !important;
+}
+
+.ag-theme-quartz .ag-cell-wrapper {
+  padding-left: 4px !important; /* reduced from default ~8px */
+}
+
+/* Reduce spacing between checkbox and first column */
+.ag-theme-quartz .ag-row .ag-cell:first-child {
+  padding-left: 4px !important;
+}
+
+.ag-theme-quartz .ag-row .ag-cell:nth-child(2) {
+  padding-left: 4px !important;
+}
+
+/* Optional: shrink checkbox size */
+.ag-theme-quartz .ag-checkbox-input-wrapper {
+  transform: scale(0.85);
+  margin-right: 4px;
+}
+
+/* Reduce checkbox column width and spacing */
+.ag-theme-quartz .ag-row .ag-cell[col-id="0"] {
+  padding: 4px 2px !important;
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+}
+
+/* General cell padding reduction */
+.ag-theme-quartz .ag-cell {
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+/* Specific spacing for first data column after checkbox */
+.ag-theme-quartz .ag-row .ag-cell:nth-child(2) {
+  padding-left: 2px !important;
+}
+
+.ag-cell-no-padding {
+  padding-left: 0px !important;
+}
+
+/* Side panel styles */
+.side-panel {
+  transition: all 0.3s ease-in-out;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+  height: calc(100vh - 4rem);
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+  position: fixed;
+  top: 4rem;
+  right: 0;
+  z-index: 50;
+  transform: translateX(0);
+}
+
+.side-panel-header {
+  background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+  border-bottom: 2px solid #e5e7eb;
+  position: relative;
+}
+
+.side-panel-header h2 {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.side-panel-header .w-2 {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* AI Insights column hover effect */
+.ai-insights-cell {
+  transition: all 0.2s ease-in-out;
+}
+
+.ai-insights-cell:hover {
+  background-color: #f3f4f6;
+  transform: scale(1.05);
+}
+
+/* Header content improvements for better alignment */
+.header-content {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.header-content > div {
+  flex-shrink: 0;
+}
+
+/* Space between checkbox and entitlement name when grouped by entitlement */
+.app-owner-page .ag-row-group .ag-cell:first-child {
+  padding-right: 20px !important;
+}
+.app-owner-page .ag-row-group .ag-cell:nth-child(2) {
+  padding-left: 20px !important;
+}
+.app-owner-page .ag-row-group .ag-cell[col-id="entitlementSelect"] {
+  padding-left: 20px !important;
+}
+.app-owner-page .ag-row-group .entitlement-checkbox-cell {
+  margin-left: 8px !important;
+}
+
+/* Group header styling for entitlement grouping */
+.ag-theme-quartz .ag-row-group {
+  background-color: #f8fafc !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+}
+
+.ag-theme-quartz .ag-row-group .ag-group-cell-wrapper {
+  padding: 12px 8px !important;
+  background-color: #f1f5f9 !important;
+  border-left: 4px solid #3b82f6 !important;
+}
+
+.ag-theme-quartz .ag-row-group .ag-group-cell-wrapper .ag-group-value {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: #1e293b !important;
+}
+
+/* Entitlement description in group headers */
+.ag-theme-quartz .ag-row-group .ag-group-cell-wrapper .entitlement-description {
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  color: #64748b !important;
+  margin-top: 4px !important;
+  line-height: 1.4 !important;
+}
+
+/* Fix row alignment - ensure rows properly contain multi-line content */
+.ag-theme-quartz .ag-row {
+  min-height: 48px !important;
+  align-items: flex-start !important;
+}
+
+/* Ensure cells with autoHeight are properly contained */
+.ag-theme-quartz .ag-cell[col-id="entitlementName"],
+.ag-theme-quartz .ag-cell[col-id="entitlementName"] .ag-cell-wrapper {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 48px !important;
+  align-items: flex-start !important;
+}
+
+/* Prevent text overlap between rows */
+.ag-theme-quartz .ag-row .ag-cell {
+  vertical-align: top !important;
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+/* Ensure entitlement column cells have proper spacing and left alignment */
+.ag-theme-quartz .ag-cell[col-id="entitlementName"] {
+  padding: 8px 4px !important;
+  line-height: 1.5 !important;
+  text-align: left !important;
+  justify-content: flex-start !important;
+  align-items: flex-start !important;
+}
+
+/* Ensure entitlement column content starts from the left */
+.ag-theme-quartz .ag-cell[col-id="entitlementName"] .ag-cell-wrapper {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+/* Responsive header adjustments */
+@media (max-width: 768px) {
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: 8px 0;
+  }
+  
+  .header-content > div {
+    margin-bottom: 4px;
+  }
+}

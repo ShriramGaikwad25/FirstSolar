@@ -1,0 +1,2454 @@
+[
+  {
+    "manager_id": "06c72e41-b830-480f-b767-a72916101ef2",
+    "manager_name": "Bobby Curry",
+    "cluster_users": [
+      "brookepeterson",
+      "chelsea.morgan",
+      "david.mcknight",
+      "ian.williams",
+      "julie.wilkinson",
+      "katherine.martinez",
+      "larry.davidson",
+      "mary.garcia",
+      "paul.alvarez",
+      "rodney.davis",
+      "ryanflores",
+      "theodore.dillon",
+      "veronica.villegas"
+    ],
+    "non_cluster_users": [
+      "marissa.johnson",
+      "patricia.gutierrez",
+      "shelly.fisher"
+    ],
+    "groups": [
+      {
+        "group_id": "06c72e41-b830-480f-b767-a72916101ef2_1",
+        "group_size": 13,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 3,
+            "shared_entitlement_footprint": 39,
+            "total_entitlements_in_cluster": 55,
+            "density_score": 0.7091
+          }
+        ],
+        "users": [
+          {
+            "username": "brookepeterson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "chelsea.morgan",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "david.mcknight",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "ian.williams",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "julie.wilkinson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "katherine.martinez",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "larry.davidson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "mary.garcia",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "paul.alvarez",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "rodney.davis",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "ryanflores",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "theodore.dillon",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "veronica.villegas",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "08cca53b-cc21-402c-9045-7d6d5f071929",
+    "manager_name": "Connie Lee",
+    "cluster_users": [
+      "diana.ellis",
+      "emily.lopez",
+      "jason.farmer"
+    ],
+    "non_cluster_users": [],
+    "groups": [
+      {
+        "group_id": "08cca53b-cc21-402c-9045-7d6d5f071929_1",
+        "group_size": 3,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_IAM_TEAM",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_PRIV_IDM_SYNC",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 5,
+            "shared_entitlement_footprint": 15,
+            "total_entitlements_in_cluster": 19,
+            "density_score": 0.7895
+          }
+        ],
+        "users": [
+          {
+            "username": "diana.ellis",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_IAM_TEAM",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_PRIV_IDM_SYNC",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "emily.lopez",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_IAM_TEAM",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_PRIV_IDM_SYNC",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "jason.farmer",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_IAM_TEAM",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_PRIV_IDM_SYNC",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "157a797e-d4dc-4763-bce5-89b03e3f8698",
+    "manager_name": "Jeffrey Martin",
+    "cluster_users": [
+      "cynthia.holland",
+      "jill.alvarado",
+      "stephen.barrera"
+    ],
+    "non_cluster_users": [
+      "kristina.boyer",
+      "megan.jones"
+    ],
+    "groups": [
+      {
+        "group_id": "157a797e-d4dc-4763-bce5-89b03e3f8698_1",
+        "group_size": 3,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_HR_SHARED",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "Human Resources Unique",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_BENEFITS_SPECIALIST",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "HCM_HR_SPECIALIST",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 7,
+            "shared_entitlement_footprint": 21,
+            "total_entitlements_in_cluster": 26,
+            "density_score": 0.8077
+          }
+        ],
+        "users": [
+          {
+            "username": "cynthia.holland",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_BENEFITS_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "jill.alvarado",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_BENEFITS_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "stephen.barrera",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_BENEFITS_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "0c377547-f0a4-453c-9129-ba13da1fba77",
+    "manager_name": "Joshua Moon",
+    "cluster_users": [
+      "brian.mays",
+      "erica.hines",
+      "evan.kemp",
+      "jason.black",
+      "rebecca.hamilton"
+    ],
+    "non_cluster_users": [],
+    "groups": [
+      {
+        "group_id": "0c377547-f0a4-453c-9129-ba13da1fba77_1",
+        "group_size": 5,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_OPERATIONS_SHARED",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "Operations Management Unique",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "SAP_PROC_REQ_CREATE",
+            "application": "SAP"
+          },
+          {
+            "entitlement_name": "SAP_READ_ONLY_FINANCE",
+            "application": "SAP"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 8,
+            "shared_entitlement_footprint": 40,
+            "total_entitlements_in_cluster": 43,
+            "density_score": 0.9302
+          }
+        ],
+        "users": [
+          {
+            "username": "brian.mays",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_PROC_REQ_CREATE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "erica.hines",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_PROC_REQ_CREATE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "evan.kemp",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_PROC_REQ_CREATE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "jason.black",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_PROC_REQ_CREATE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "rebecca.hamilton",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_PROC_REQ_CREATE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "13389776-c4cd-42ac-8ef8-b5f014e946a6",
+    "manager_name": "Kevin Garcia",
+    "cluster_users": [
+      "charlene.johnson",
+      "eddie.chavez",
+      "james.robertson",
+      "kevin.montgomery",
+      "kristin.sanders",
+      "rachel.avila",
+      "regina.brown",
+      "sharon.jenkins"
+    ],
+    "non_cluster_users": [],
+    "groups": [
+      {
+        "group_id": "13389776-c4cd-42ac-8ef8-b5f014e946a6_1",
+        "group_size": 8,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_FILE_SHARE_FINANCE",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_FINANCE_SHARED",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "Finance Department Unique",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "SAP_READ_ONLY_FINANCE",
+            "application": "SAP"
+          },
+          {
+            "entitlement_name": "Z_FI_GL_RD",
+            "application": "SAP"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 8,
+            "shared_entitlement_footprint": 64,
+            "total_entitlements_in_cluster": 94,
+            "density_score": 0.6809
+          }
+        ],
+        "users": [
+          {
+            "username": "charlene.johnson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "eddie.chavez",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "james.robertson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "kevin.montgomery",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "kristin.sanders",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "rachel.avila",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "regina.brown",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "sharon.jenkins",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "132d9379-f404-4e68-8a9b-eae01f8e7e22",
+    "manager_name": "Michael Sherman",
+    "cluster_users": [
+      "angela.jackson",
+      "erica.reyes",
+      "kevin.garcia",
+      "kimberly.ford",
+      "timothy.wright",
+      "vincent.lopez"
+    ],
+    "non_cluster_users": [],
+    "groups": [
+      {
+        "group_id": "132d9379-f404-4e68-8a9b-eae01f8e7e22_1",
+        "group_size": 6,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_FILE_SHARE_FINANCE",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_FINANCE_SHARED",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "Finance Department Unique",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "SAP_READ_ONLY_FINANCE",
+            "application": "SAP"
+          },
+          {
+            "entitlement_name": "Z_FI_GL_RD",
+            "application": "SAP"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 8,
+            "shared_entitlement_footprint": 48,
+            "total_entitlements_in_cluster": 63,
+            "density_score": 0.7619
+          }
+        ],
+        "users": [
+          {
+            "username": "angela.jackson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "erica.reyes",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "kevin.garcia",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "kimberly.ford",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "timothy.wright",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          },
+          {
+            "username": "vincent.lopez",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_FINANCE",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FINANCE_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Finance Department Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "SAP_READ_ONLY_FINANCE",
+                "application": "SAP"
+              },
+              {
+                "entitlement_name": "Z_FI_GL_RD",
+                "application": "SAP"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "07328f0f-a70d-44aa-b0b0-4075eb7c3672",
+    "manager_name": "Michael Watkins",
+    "cluster_users": [
+      "anthony.jenkins",
+      "jennifer.williamson",
+      "jeremiah.marshall",
+      "matthew.jarvis",
+      "nathan.wells",
+      "njones",
+      "timothy.mcconnell"
+    ],
+    "non_cluster_users": [
+      "connie.lee"
+    ],
+    "groups": [
+      {
+        "group_id": "07328f0f-a70d-44aa-b0b0-4075eb7c3672_1",
+        "group_size": 7,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 3,
+            "shared_entitlement_footprint": 21,
+            "total_entitlements_in_cluster": 32,
+            "density_score": 0.6562
+          }
+        ],
+        "users": [
+          {
+            "username": "anthony.jenkins",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "jennifer.williamson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "jeremiah.marshall",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "matthew.jarvis",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "nathan.wells",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "njones",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "timothy.mcconnell",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "07bb9f47-ace7-4da0-a20c-3c97973d0669",
+    "manager_name": "Nathan Wells",
+    "cluster_users": [],
+    "non_cluster_users": [
+      "bobby.curry",
+      "sarah.wright"
+    ],
+    "groups": []
+  },
+  {
+    "manager_id": "0d8cd4ab-4f42-4edf-918d-23df70e55b78",
+    "manager_name": "Regina Hancock",
+    "cluster_users": [
+      "benjamin.hebert",
+      "cory.mcgrath",
+      "courtney.king",
+      "dylan.lee",
+      "edward.green",
+      "elizabeth.miller",
+      "joshua.moon",
+      "kara.johnson",
+      "karen.russo",
+      "kevin.ortiz",
+      "laura.roberts",
+      "laura.taylor",
+      "terrence.lee",
+      "victoria.jones"
+    ],
+    "non_cluster_users": [],
+    "groups": [
+      {
+        "group_id": "0d8cd4ab-4f42-4edf-918d-23df70e55b78_1",
+        "group_size": 14,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_OPERATIONS_SHARED",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "Operations Management Unique",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 6,
+            "shared_entitlement_footprint": 84,
+            "total_entitlements_in_cluster": 101,
+            "density_score": 0.8317
+          }
+        ],
+        "users": [
+          {
+            "username": "benjamin.hebert",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "cory.mcgrath",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "courtney.king",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "dylan.lee",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "edward.green",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "elizabeth.miller",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "joshua.moon",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "kara.johnson",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "karen.russo",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "kevin.ortiz",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "laura.roberts",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "laura.taylor",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "terrence.lee",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "victoria.jones",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_FILE_SHARE_OPERATIONS",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_OPERATIONS_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Operations Management Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "manager_id": "1431d026-a91c-4b7a-a5b1-83ff77a6f254",
+    "manager_name": "Renee Giles",
+    "cluster_users": [
+      "andrew.scott",
+      "carol.cherry",
+      "donald.arroyo",
+      "jeffrey.martin",
+      "laura.estrada",
+      "meredith.pope",
+      "michael.miller",
+      "paul.moreno",
+      "william.brennan"
+    ],
+    "non_cluster_users": [],
+    "groups": [
+      {
+        "group_id": "1431d026-a91c-4b7a-a5b1-83ff77a6f254_1",
+        "group_size": 9,
+        "shared_entitlements": [
+          {
+            "entitlement_name": "AD_ALL_EMPLOYEES",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_HR_SHARED",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "AD_REMOTE_VPN",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "Human Resources Unique",
+            "application": "Active Directory"
+          },
+          {
+            "entitlement_name": "HCM_HR_SPECIALIST",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+            "application": "Oracle_Fusion_HCM"
+          },
+          {
+            "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+            "application": "Oracle_Fusion_HCM"
+          }
+        ],
+        "analytics": [
+          {
+            "shared_entitlement_count": 7,
+            "shared_entitlement_footprint": 63,
+            "total_entitlements_in_cluster": 70,
+            "density_score": 0.9
+          }
+        ],
+        "users": [
+          {
+            "username": "andrew.scott",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "carol.cherry",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "donald.arroyo",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "jeffrey.martin",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "laura.estrada",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "meredith.pope",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "michael.miller",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "paul.moreno",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          },
+          {
+            "username": "william.brennan",
+            "entitlements": [
+              {
+                "entitlement_name": "AD_ALL_EMPLOYEES",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_HR_SHARED",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "AD_REMOTE_VPN",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "Human Resources Unique",
+                "application": "Active Directory"
+              },
+              {
+                "entitlement_name": "HCM_HR_SPECIALIST",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "HCM_WORKER_SELF_SERVICE",
+                "application": "Oracle_Fusion_HCM"
+              },
+              {
+                "entitlement_name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+                "application": "Oracle_Fusion_HCM"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+]
