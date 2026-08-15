@@ -1,0 +1,1018 @@
+[
+  {
+    "Account": "svc_fin_batch01",
+    "Application": "SAP",
+    "Entitlement": "ZISU_CS_DISPLAY_NOTIFICATION",
+    "Description": "Oversees end‑to‑end payroll flows, validations, and costing. Ensures secure handling of sensitive pay data and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "2/12/2026"
+  },
+  {
+    "Account": "svc_fin_batch01",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CTRL",
+    "Description": "Performs directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "High",
+    "Last Login": "2/12/2026"
+  },
+  {
+    "Account": "svc_fin_batch01",
+    "Application": "SAP",
+    "Entitlement": "Z:S_RFC_OBJ_PRODUCTION",
+    "Description": "Performs utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "2/12/2026"
+  },
+  {
+    "Account": "svc_fin_batch01",
+    "Application": "SAP",
+    "Entitlement": "ZISU_CS_TASK_MAINTAIN",
+    "Description": "Manages HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "High",
+    "Last Login": "2/12/2026"
+  },
+  {
+    "Account": "svc_ap_integration",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_CS_ACC_OFFICER",
+    "Description": "Supervises utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/18/2026"
+  },
+  {
+    "Account": "svc_ap_integration",
+    "Application": "SAP",
+    "Entitlement": "Z_CO_CE_MASS_DISP",
+    "Description": "Performs requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/18/2026"
+  },
+  {
+    "Account": "svc_ap_integration",
+    "Application": "SAP",
+    "Entitlement": "ZBILL_FILE4_DATA_ACCESS",
+    "Description": "Manages HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/18/2026"
+  },
+  {
+    "Account": "svc_hr_sync",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_DM_REVENUE_ACC",
+    "Description": "Executes directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/20/2026"
+  },
+  {
+    "Account": "svc_hr_sync",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_DISP",
+    "Description": "Supports powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/20/2026"
+  },
+  {
+    "Account": "svc_payroll_job",
+    "Application": "SAP",
+    "Entitlement": "ZFI_PM_SETTLEMENT_RULE",
+    "Description": "Operates powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/17/2026"
+  },
+  {
+    "Account": "svc_payroll_job",
+    "Application": "SAP",
+    "Entitlement": "ZISU_BILLING_INVOICE_DISPLAY",
+    "Description": "Handles core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/17/2026"
+  },
+  {
+    "Account": "svc_mm_interface",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_SE16",
+    "Description": "Handles core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/21/2026"
+  },
+  {
+    "Account": "svc_mm_interface",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_WORKFLOW_FI_RETENTION",
+    "Description": "Leads financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/21/2026"
+  },
+  {
+    "Account": "svc_mm_interface",
+    "Application": "SAP",
+    "Entitlement": "ZISU_COLLECTIVE_BILL_TRANS_EXE",
+    "Description": "Performs powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/21/2026"
+  },
+  {
+    "Account": "svc_mm_interface",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_EC86",
+    "Description": "Operates powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/21/2026"
+  },
+  {
+    "Account": "svc_sd_pricing",
+    "Application": "SAP",
+    "Entitlement": "ZEWEMM01",
+    "Description": "Operates requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_sd_pricing",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_POST_ENTRY",
+    "Description": "Executes powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_sd_pricing",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_FPSEC2",
+    "Description": "Executes core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_sd_pricing",
+    "Application": "SAP",
+    "Entitlement": "ZPETTY_CASH",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_fi_closing",
+    "Application": "SAP",
+    "Entitlement": "ZEWE_MM_REPORTS",
+    "Description": "Supports utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/20/2026"
+  },
+  {
+    "Account": "svc_fi_closing",
+    "Application": "SAP",
+    "Entitlement": "ZISU_FICA_FEWA_PART_EXEMPTIONS",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/20/2026"
+  },
+  {
+    "Account": "svc_fi_closing",
+    "Application": "SAP",
+    "Entitlement": "ZOT_EFM_ESS",
+    "Description": "Handles front‑end access to self‑service and apps. Ensures efficient navigation without backend changes under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/20/2026"
+  },
+  {
+    "Account": "svc_fi_closing",
+    "Application": "SAP",
+    "Entitlement": "ZFEWA_ISU_CS_NOTIFICATION_ROLE",
+    "Description": "Operates powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/20/2026"
+  },
+  {
+    "Account": "svc_audit_extract",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_HR_CRITICAL_ZHR_LETTERS",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/06/2026"
+  },
+  {
+    "Account": "svc_audit_extract",
+    "Application": "SAP",
+    "Entitlement": "ZEWE:ACCOUNTING_ANALYST",
+    "Description": "Directs HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/06/2026"
+  },
+  {
+    "Account": "svc_audit_extract",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_MAS_ALL_AP",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/06/2026"
+  },
+  {
+    "Account": "svc_basis_monitor",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FICA_GEN_ENQ",
+    "Description": "Executes core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/25/2026"
+  },
+  {
+    "Account": "svc_basis_monitor",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_PER_END",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/25/2026"
+  },
+  {
+    "Account": "svc_user_mgmt",
+    "Application": "SAP",
+    "Entitlement": "ZISU_CS_DISPLAY_NOTIFICATION",
+    "Description": "Oversees end‑to‑end payroll flows, validations, and costing. Ensures secure handling of sensitive pay data and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/02/2026"
+  },
+  {
+    "Account": "svc_user_mgmt",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_DOC_REV",
+    "Description": "Handles utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/02/2026"
+  },
+  {
+    "Account": "svc_user_mgmt",
+    "Application": "SAP",
+    "Entitlement": "ZMM_PR_REL_EU",
+    "Description": "Executes requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/02/2026"
+  },
+  {
+    "Account": "svc_user_mgmt",
+    "Application": "SAP",
+    "Entitlement": "Z_CO_CE_MAS",
+    "Description": "Supports financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/02/2026"
+  },
+  {
+    "Account": "svc_vendor_sync",
+    "Application": "SAP",
+    "Entitlement": "SAP_FI_AR_CASH_POSTING",
+    "Description": "Post AR cash receipts and related customer account transactions.",
+    "Risk": "Medium",
+    "Last Login": "02/11/2026"
+  },
+  {
+    "Account": "svc_vendor_sync",
+    "Application": "SAP",
+    "Entitlement": "ZMM_PUR_EXT_FI",
+    "Description": "Operates financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "02/11/2026"
+  },
+  {
+    "Account": "svc_vendor_sync",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_CS_MGR_REV_ACC",
+    "Description": "Performs utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "02/11/2026"
+  },
+  {
+    "Account": "svc_invoice_proc",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_BILL_MGR_REV_ACC",
+    "Description": "Supports powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/16/2026"
+  },
+  {
+    "Account": "svc_invoice_proc",
+    "Application": "SAP",
+    "Entitlement": "ZFEWA_ISU_CS_NOTIFICATION_ROLE",
+    "Description": "Operates powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/16/2026"
+  },
+  {
+    "Account": "svc_invoice_proc",
+    "Application": "SAP",
+    "Entitlement": "Z:FICA_FP08_FP07_ONLY",
+    "Description": "Executes core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/16/2026"
+  },
+  {
+    "Account": "svc_invoice_proc",
+    "Application": "SAP",
+    "Entitlement": "ZMM_ENG_PO_REL",
+    "Description": "Performs directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "High",
+    "Last Login": "02/16/2026"
+  },
+  {
+    "Account": "svc_gl_recon",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_MANUAL_INVOICING",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_gl_recon",
+    "Application": "SAP",
+    "Entitlement": "ZEWENEW_REVENUE_CRITICAL_FK02",
+    "Description": "Governs core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_gl_recon",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_MM_RELEASE",
+    "Description": "Operates financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_gl_recon",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_MGT_ACCOUNTS_FPT7_FPG1",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/01/2026"
+  },
+  {
+    "Account": "svc_asset_mgmt",
+    "Application": "SAP",
+    "Entitlement": "Z_CO_PCA_MAS",
+    "Description": "Owns end‑to‑end payroll flows, validations, and costing. Ensures secure handling of sensitive pay data and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/30/2026"
+  },
+  {
+    "Account": "svc_asset_mgmt",
+    "Application": "SAP",
+    "Entitlement": "ZEWEMM01",
+    "Description": "Operates requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/30/2026"
+  },
+  {
+    "Account": "svc_asset_mgmt",
+    "Application": "SAP",
+    "Entitlement": "ZEWENEW_CS_NOEDIT_PERSON_RESP",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/30/2026"
+  },
+  {
+    "Account": "svc_reporting_job",
+    "Application": "SAP",
+    "Entitlement": "ZISU_BILLING_INVOICE_DISPLAY",
+    "Description": "Handles core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/18/2026"
+  },
+  {
+    "Account": "svc_reporting_job",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_PARK",
+    "Description": "Owns requisition and candidate lifecycle through offers. Ensures privacy controls, fair hiring, and audit steps under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/18/2026"
+  },
+  {
+    "Account": "svc_reporting_job",
+    "Application": "SAP",
+    "Entitlement": "ZS4F_DM_REVENUE",
+    "Description": "Operates core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/18/2026"
+  },
+  {
+    "Account": "svc_reporting_job",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CAA2",
+    "Description": "Executes core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/18/2026"
+  },
+  {
+    "Account": "svc_tax_engine",
+    "Application": "SAP",
+    "Entitlement": "ZISU_CS_CREATE_NOTIFICATION",
+    "Description": "Directs time rules, accruals, and exception handling. Ensures calendars, approvals, and payroll alignment under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/11/2026"
+  },
+  {
+    "Account": "svc_tax_engine",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_HR_CRITICAL_PA20",
+    "Description": "Handles requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/11/2026"
+  },
+  {
+    "Account": "svc_treasury_int",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_PS_PROJ_FINANCE",
+    "Description": "Performs powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/09/2026"
+  },
+  {
+    "Account": "svc_treasury_int",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_ZCSE_DISCONNECT",
+    "Description": "Operates cost structures, allocations, and internal orders. Ensures driver integrity, planning, and settlements under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/09/2026"
+  },
+  {
+    "Account": "svc_treasury_int",
+    "Application": "SAP",
+    "Entitlement": "ZMM_PR_CRE_EU",
+    "Description": "Handles requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/09/2026"
+  },
+  {
+    "Account": "svc_treasury_int",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FI_CRITICAL",
+    "Description": "Enables learning catalog curation and assignment tracking. Ensures certifications, reminders, and analytics under governed workflows.",
+    "Risk": "High",
+    "Last Login": "03/09/2026"
+  },
+  {
+    "Account": "svc_bi_extract",
+    "Application": "SAP",
+    "Entitlement": "SAP_PROC_REQ_CREATE",
+    "Description": "Create procurement requisitions and initiate buying workflow.",
+    "Risk": "Medium",
+    "Last Login": "02/24/2026"
+  },
+  {
+    "Account": "svc_bi_extract",
+    "Application": "SAP",
+    "Entitlement": "ZS4F_FICO_VP_FINANCE",
+    "Description": "Handles utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "02/24/2026"
+  },
+  {
+    "Account": "svc_bi_extract",
+    "Application": "SAP",
+    "Entitlement": "Z_SAP_S_RFCACL",
+    "Description": "Handles cost structures, allocations, and internal orders. Ensures driver integrity, planning, and settlements under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "02/24/2026"
+  },
+  {
+    "Account": "svc_edi_gateway",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CTRL",
+    "Description": "Performs directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/22/2026"
+  },
+  {
+    "Account": "svc_edi_gateway",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_F-57",
+    "Description": "Handles utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/22/2026"
+  },
+  {
+    "Account": "svc_edi_gateway",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_ZPAYMENT",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/22/2026"
+  },
+  {
+    "Account": "svc_edi_gateway",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FI_CRITICAL_ZCON_REG",
+    "Description": "Supports financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "High",
+    "Last Login": "01/22/2026"
+  },
+  {
+    "Account": "svc_data_migration",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_DM_MGR_REV_ACC",
+    "Description": "Supports core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/23/2026"
+  },
+  {
+    "Account": "svc_data_migration",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_DM_CUST_ACC_SPVR_ZDM_AS",
+    "Description": "Executes core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/23/2026"
+  },
+  {
+    "Account": "svc_data_migration",
+    "Application": "SAP",
+    "Entitlement": "ZSR_ANALYST_ACCOUNTING&TAX",
+    "Description": "Operates requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/23/2026"
+  },
+  {
+    "Account": "ext_vendor_001",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITIC_ZFICA003",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "06/07/2025"
+  },
+  {
+    "Account": "ext_vendor_001",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_DOC_REV",
+    "Description": "Handles utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "06/07/2025"
+  },
+  {
+    "Account": "ext_vendor_001",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_TAX_PAYABLE",
+    "Description": "Verifies core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "06/07/2025"
+  },
+  {
+    "Account": "ext_vendor_002",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_EC",
+    "Description": "Oversees utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "04/30/2025"
+  },
+  {
+    "Account": "ext_vendor_002",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_ACCOUNTANT_TR",
+    "Description": "Performs powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "04/30/2025"
+  },
+  {
+    "Account": "ext_vendor_002",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_MAS_TR_DISP",
+    "Description": "Supports front‑end access to self‑service and apps. Ensures efficient navigation without backend changes under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "04/30/2025"
+  },
+  {
+    "Account": "ext_audit_user",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FICA_ACC_OFFICER",
+    "Description": "Operates bulk data loads and integration endpoints. Ensures template governance, monitoring, and change control under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/11/2025"
+  },
+  {
+    "Account": "ext_audit_user",
+    "Application": "SAP",
+    "Entitlement": "ZMM_VP_PO_REL",
+    "Description": "Operates powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/11/2025"
+  },
+  {
+    "Account": "ext_consult_fin",
+    "Application": "SAP",
+    "Entitlement": "ZEWE_ZMM_ENG_PO_REL",
+    "Description": "Handles financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "05/13/2025"
+  },
+  {
+    "Account": "ext_consult_fin",
+    "Application": "SAP",
+    "Entitlement": "ZEWE_FI_CRITICAL_FBV0",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "05/13/2025"
+  },
+  {
+    "Account": "ext_mm_support",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_AP_TRANS1",
+    "Description": "Directs learning catalog curation and assignment tracking. Ensures certifications, reminders, and analytics under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "08/24/2025"
+  },
+  {
+    "Account": "ext_mm_support",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_PHY_INV_DOC_DISPLAY",
+    "Description": "Executes powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "08/24/2025"
+  },
+  {
+    "Account": "ext_mm_support",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FICA_ACC_MAIN_REVERSE",
+    "Description": "Executes financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "08/24/2025"
+  },
+  {
+    "Account": "ext_sd_support",
+    "Application": "SAP",
+    "Entitlement": "ZEWENEW_CS_NOEDIT_PERSON_RESP",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "08/31/2025"
+  },
+  {
+    "Account": "ext_sd_support",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_BILLING_REPORTS",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "08/31/2025"
+  },
+  {
+    "Account": "ext_fi_consult",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_FPE2",
+    "Description": "Handles powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "09/22/2025"
+  },
+  {
+    "Account": "ext_fi_consult",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_FP05",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "09/22/2025"
+  },
+  {
+    "Account": "ext_fi_consult",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_DM_KEY_CREDIT_OFF",
+    "Description": "Operates HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "09/22/2025"
+  },
+  {
+    "Account": "ext_hr_partner",
+    "Application": "SAP",
+    "Entitlement": "SAP_FI_AR_CASH_POSTING",
+    "Description": "Post AR cash receipts and related customer account transactions.",
+    "Risk": "Low",
+    "Last Login": "08/27/2025"
+  },
+  {
+    "Account": "ext_hr_partner",
+    "Application": "SAP",
+    "Entitlement": "ZEWEMM_PE_PHY",
+    "Description": "Handles directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "08/27/2025"
+  },
+  {
+    "Account": "ext_hr_partner",
+    "Application": "SAP",
+    "Entitlement": "ZEWE_MM_REPORTS",
+    "Description": "Supports utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "08/27/2025"
+  },
+  {
+    "Account": "ext_hr_partner",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_SR_ACCOUNTANT_001",
+    "Description": "Performs core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "08/27/2025"
+  },
+  {
+    "Account": "batch_user_fin01",
+    "Application": "SAP",
+    "Entitlement": "Z_CO_CCA_SKF_MAIN",
+    "Description": "Operates directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "07/20/2025"
+  },
+  {
+    "Account": "batch_user_fin01",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_COST_ACCOUNTANT_001",
+    "Description": "Operates learning catalog curation and assignment tracking. Ensures certifications, reminders, and analytics under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "07/20/2025"
+  },
+  {
+    "Account": "batch_user_ap02",
+    "Application": "SAP",
+    "Entitlement": "ZEWENEW_CS_NOEDIT_PERSON_RESP",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "04/07/2025"
+  },
+  {
+    "Account": "batch_user_ap02",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FICA_KEY_CREDIT_OFF",
+    "Description": "Handles HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "04/07/2025"
+  },
+  {
+    "Account": "batch_user_mm03",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_FP25",
+    "Description": "Operates HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "06/05/2025"
+  },
+  {
+    "Account": "batch_user_mm03",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FICA_EWALLET",
+    "Description": "Operates utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "06/05/2025"
+  },
+  {
+    "Account": "batch_user_sd04",
+    "Application": "SAP",
+    "Entitlement": "ZISU_FICA_FEWA_FI_DEPT_OFFICER",
+    "Description": "Handles front‑end access to self‑service and apps. Ensures efficient navigation without backend changes under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "09/29/2025"
+  },
+  {
+    "Account": "batch_user_sd04",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_SECRETARY_FINANCE",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "09/29/2025"
+  },
+  {
+    "Account": "batch_user_sd04",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_POST",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "09/29/2025"
+  },
+  {
+    "Account": "batch_user_sd04",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FI_SEC",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "09/29/2025"
+  },
+  {
+    "Account": "batch_user_fi05",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_CS_ADMIN_ASST",
+    "Description": "Directs utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/14/2025"
+  },
+  {
+    "Account": "batch_user_fi05",
+    "Application": "SAP",
+    "Entitlement": "ZHCM_MSS_FEWA_MANAGER",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/14/2025"
+  },
+  {
+    "Account": "batch_user_fi05",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_WORKFLOW_FI_RETENTION",
+    "Description": "Leads financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/14/2025"
+  },
+  {
+    "Account": "batch_user_fi05",
+    "Application": "SAP",
+    "Entitlement": "Z_CO_CCA_SKF_MAIN",
+    "Description": "Operates directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/14/2025"
+  },
+  {
+    "Account": "batch_user_hr06",
+    "Application": "SAP",
+    "Entitlement": "/OTX/RM_ADMIN",
+    "Description": "Handles directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/05/2026"
+  },
+  {
+    "Account": "batch_user_hr06",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_ACCOUNTS_CLERK_FA",
+    "Description": "Handles utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/05/2026"
+  },
+  {
+    "Account": "batch_user_hr06",
+    "Application": "SAP",
+    "Entitlement": "ZD_FM_ALL",
+    "Description": "Interprets HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/05/2026"
+  },
+  {
+    "Account": "batch_user_hr06",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_AP_TRANS1",
+    "Description": "Directs learning catalog curation and assignment tracking. Ensures certifications, reminders, and analytics under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "01/05/2026"
+  },
+  {
+    "Account": "batch_user_gl07",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_REVENUE_CRITICAL_ZPAYMENT",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "09/20/2025"
+  },
+  {
+    "Account": "batch_user_gl07",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_PS_REPORTS",
+    "Description": "Handles HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "09/20/2025"
+  },
+  {
+    "Account": "batch_user_gl07",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_MAS_ALL",
+    "Description": "Oversees core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "09/20/2025"
+  },
+  {
+    "Account": "batch_user_ar08",
+    "Application": "SAP",
+    "Entitlement": "ZISU_DIR_ROLE",
+    "Description": "Executes core SAP business activities. Ensures policy‑aligned execution and oversight under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "10/01/2025"
+  },
+  {
+    "Account": "batch_user_ar08",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_MAS_ALL_AA",
+    "Description": "Performs financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "10/01/2025"
+  },
+  {
+    "Account": "batch_user_ar08",
+    "Application": "SAP",
+    "Entitlement": "ZMM_PR_CRE_EU",
+    "Description": "Handles requisitions, POs, releases, and supplier compliance. Ensures delegated approvals, thresholds, and audit trails under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "10/01/2025"
+  },
+  {
+    "Account": "batch_user_ar08",
+    "Application": "SAP",
+    "Entitlement": "ZMM_PUR_EXT_FI",
+    "Description": "Operates financial postings, inquiries, and period controls. Ensures balance integrity, reconciliations, and approvals under governed workflows.",
+    "Risk": "Low",
+    "Last Login": "10/01/2025"
+  },
+  {
+    "Account": "sys_integration01",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_PARK",
+    "Description": "Owns requisition and candidate lifecycle through offers. Ensures privacy controls, fair hiring, and audit steps under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "11/13/2025"
+  },
+  {
+    "Account": "sys_integration01",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_GL_DISP",
+    "Description": "Supports powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "11/13/2025"
+  },
+  {
+    "Account": "sys_integration01",
+    "Application": "SAP",
+    "Entitlement": "ZISU_BILLING_INVOICE_REPORTS",
+    "Description": "Handles utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "11/13/2025"
+  },
+  {
+    "Account": "sys_integration02",
+    "Application": "SAP",
+    "Entitlement": "ZAPP_FICO_MANAGER_AP&PAYROLL",
+    "Description": "Supports directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/23/2025"
+  },
+  {
+    "Account": "sys_integration02",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_PS_PROJ_FINANCE",
+    "Description": "Performs powerful technical functions and integrations. Ensures change control, monitoring, and traceability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/23/2025"
+  },
+  {
+    "Account": "sys_integration02",
+    "Application": "SAP",
+    "Entitlement": "Z_FI_MAS_ALL_AR",
+    "Description": "Performs cost structures, allocations, and internal orders. Ensures driver integrity, planning, and settlements under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "07/23/2025"
+  },
+  {
+    "Account": "sys_integration03",
+    "Application": "SAP",
+    "Entitlement": "ZSR_SR_ACCOUNTANT_FIXED_ASSETS",
+    "Description": "Supports HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "03/25/2025"
+  },
+  {
+    "Account": "sys_integration03",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FI_CRITICAL_FB70_FD10N",
+    "Description": "Supports directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "03/25/2025"
+  },
+  {
+    "Account": "sys_integration03",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_DM_KEY_CREDIT_OFF",
+    "Description": "Operates HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "03/25/2025"
+  },
+  {
+    "Account": "sys_integration03",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FI_BUDGET_PLANNING",
+    "Description": "Manages HR transactions and worker data maintenance. Ensures accuracy, approvals, and privacy safeguards under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "03/25/2025"
+  },
+  {
+    "Account": "sys_integration04",
+    "Application": "SAP",
+    "Entitlement": "ZNEW_FI_CRITICAL_FB50",
+    "Description": "Leads benefit plan setup, eligibility, and enrollment. Ensures vendor feeds, audits, and evidence of insurability under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "05/31/2025"
+  },
+  {
+    "Account": "sys_integration04",
+    "Application": "SAP",
+    "Entitlement": "ZISU_FICA_FEWA_SUPVSR_CASHIER",
+    "Description": "Handles cost structures, allocations, and internal orders. Ensures driver integrity, planning, and settlements under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "05/31/2025"
+  },
+  {
+    "Account": "sys_integration04",
+    "Application": "SAP",
+    "Entitlement": "ZEWEMM_PE_PHY",
+    "Description": "Handles directory group membership for routing access. Ensures SSO mapping and least‑privilege enablement under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "05/31/2025"
+  },
+  {
+    "Account": "sys_integration04",
+    "Application": "SAP",
+    "Entitlement": "ZFEWA_HR_TEM_ESS",
+    "Description": "Executes utilities billing, invoicing, and collections. Ensures regulated workflows, dispute handling, and evidence under governed workflows.",
+    "Risk": "Medium",
+    "Last Login": "05/31/2025"
+  }
+]

@@ -1,0 +1,142 @@
+{
+  "typeLabel": "Certificate / PKI Identity",
+  "identityHeader": {
+    "Name": "api.payments.internal",
+    "Identity ID": "CERT-118201",
+    "Type": "mTLS Client/Server Certificate",
+    "Environment": "Production",
+    "Lifecycle State": "Active",
+    "Last Reviewed": "2025-08-16"
+  },
+  "badges": [
+    ["Expiring in 18 days", "danger"],
+    ["Broad Trust", "warning"],
+    ["No Backup Owner", "warning"]
+  ],
+  "businessContext": {
+    "Business Purpose": "Mutual TLS for payments service communication",
+    "Technical Purpose": "Service identity for API and worker mTLS",
+    "Associated Service": "Payments Platform",
+    "Source System": "Internal Prod CA",
+    "Target Systems": "Settlement Gateway, Fraud Engine, Billing Recon",
+    "Created Date": "2024-10-11",
+    "Exception Status": "None"
+  },
+  "ownership": {
+    "Primary Owner": "S. Kapoor",
+    "Backup Owner": "None",
+    "Technical Custodian": "Enterprise PKI",
+    "Business Owner": "Payments Platform",
+    "Owning Team": "Payments Engineering",
+    "Escalation Contact": "PKI On-call",
+    "Last Ownership Attestation": "2025-09-01",
+    "Ownership Confidence": "88 / 100"
+  },
+  "auth": {
+    "Auth Type": "Certificate",
+    "Credential Type": "mTLS certificate",
+    "Credential Age": "145 days",
+    "Last Rotated / Renewed": "2024-10-11",
+    "Expiry Date": "2025-10-11",
+    "Rotation / Renewal Status": "Renewal due soon",
+    "Storage Location": "VM local store",
+    "Vaulted": "No",
+    "Federation / Managed Identity Supported": "N/A",
+    "Safer Alternative Available": "No",
+    "Trust Scope Summary": "Trusted by multiple payment-related internal services"
+  },
+  "plainSummary": "Can authenticate payments API and worker services to internal gateways using mTLS.",
+  "accessSummary": {
+    "Access Level": "Medium",
+    "Sensitive Targets": "Settlement gateway, fraud engine",
+    "Data Classes Reachable": "Payment processing metadata",
+    "Administrative Capabilities": "None",
+    "Cross-Environment Access": "No",
+    "Blast Radius Estimate": "High if revoked unexpectedly"
+  },
+  "usage": {
+    "lastUsed": "15m ago",
+    "frequency": "Continuous",
+    "details": {
+      "Last Authenticated": "2026-03-04 10:59 UTC",
+      "Peak Usage Pattern": "Continuous service traffic",
+      "Failed Auth Attempts": "1 in 30d",
+      "Dormancy": "Active"
+    }
+  },
+  "typeCards": [
+    {
+      "title": "Trust Relationships",
+      "fields": {
+        "Presented By": "payments-api-prod, payments-worker-prod",
+        "Trusted By": "settlement-gateway, fraud-engine, billing-recon",
+        "Trust Stores": "API gateway trust store, service mesh root bundle"
+      }
+    },
+    {
+      "title": "Key Protection",
+      "fields": {
+        "Private Key Location": "VM local store",
+        "HSM-Backed": "No",
+        "Exportable Key": "Yes"
+      }
+    },
+    {
+      "title": "Renewal / Reissue",
+      "fields": {
+        "Renewal Method": "Manual",
+        "Auto Renew": "No",
+        "Replacement Certificate Present": "No"
+      }
+    },
+    {
+      "title": "Revocation Readiness",
+      "fields": {
+        "Revocation Supported": "Yes",
+        "Revoke Impact Confidence": "Medium",
+        "Crypto Compliance": "Pass"
+      }
+    }
+  ],
+  "prompts": [
+    "Is ownership still correct?",
+    "Is broad trust still justified?",
+    "Can this be renewed safely?",
+    "Is key protection adequate?"
+  ],
+  "guidance": [
+    "This certificate is expiring soon with no replacement visible.",
+    "Broad trust and exportable key material raise operational risk."
+  ],
+  "risk": {
+    "score": "82",
+    "severity": "High",
+    "factors": ["Expiring soon", "Broad trust", "Exportable key"],
+    "confidence": "Renewal is clearly needed; trust reduction needs dependency validation."
+  },
+  "recommendations": [
+    {
+      "title": "Renew certificate now",
+      "rationale": "Expiration is near and the identity is active.",
+      "meta": ["Best next step", "Continuity"]
+    },
+    {
+      "title": "Assign backup owner",
+      "rationale": "Improves ownership continuity for renewal and incident handling.",
+      "meta": ["Important", "Ownership"]
+    },
+    {
+      "title": "Evaluate narrower trust scope",
+      "rationale": "Current trust may exceed actual service dependency.",
+      "meta": ["Strategic", "Risk reduction"]
+    }
+  ],
+  "actions": [
+    "Renew certificate",
+    "Reissue certificate",
+    "Reduce trust scope",
+    "Rotate key material",
+    "Revoke certificate",
+    "Reassign owner"
+  ]
+}

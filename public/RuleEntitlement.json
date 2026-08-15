@@ -1,0 +1,330 @@
+[
+  {
+    "Rule_ID": "R1",
+    "Application": "SAP_S4",
+    "CatalogID": "026a63e9-a5b8-4e53-bf88-b09ef4a59343",
+    "Entitlement_ID": "0ded933d-08ca-4f73-977c-36eb870360fe",
+    "Entitlement_Name": "ZMM_PR_CRE_EU",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R1",
+    "Application": "SAP_S4",
+    "CatalogID": "87e18cd9-d05a-46fe-b173-e5414f2ccaa3",
+    "Entitlement_ID": "5e50acd0-e111-46ec-9817-b7c00088b9cb",
+    "Entitlement_Name": "ZEWEMM01",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R1",
+    "Application": "SAP_S4",
+    "CatalogID": "8c8428ef-216a-4f6d-b439-91e18ed317a9",
+    "Entitlement_ID": "ceaed209-b9a7-40d4-ab75-239fdf56bc03",
+    "Entitlement_Name": "ZMM_ENG_PO",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R2",
+    "Application": "SAP_S4",
+    "CatalogID": "1b25ad35-e486-44a9-bb23-ab6154925943",
+    "Entitlement_ID": "87b153e5-54d0-42b9-b5e4-c6fee6e9e525",
+    "Entitlement_Name": "ZISU_BILLING_INVOICE_EXECUTION",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R2",
+    "Application": "SAP_S4",
+    "CatalogID": "3ed2f451-193d-4c5e-bdd6-302be99b066d",
+    "Entitlement_ID": "b4eb9309-bd7b-4fda-919d-cb5b71585a56",
+    "Entitlement_Name": "ZNEW_REVENUE_MANUAL_INVOICING",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R2",
+    "Application": "SAP_S4",
+    "CatalogID": "1dd2c97f-e58d-4d92-84a9-22ec869c5683",
+    "Entitlement_ID": "1d791168-d31d-476d-af81-12cc5c8a0507",
+    "Entitlement_Name": "Z_FI_GL_PARK",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R3",
+    "Application": "SAP_S4",
+    "CatalogID": "0988dade-61d1-4296-b45b-b5001e6553aa",
+    "Entitlement_ID": "a7b9f34d-b221-401a-94d2-da66107e2ce8",
+    "Entitlement_Name": "ZNEW_FICA_CRITICAL_FPAY2",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R3",
+    "Application": "SAP_S4",
+    "CatalogID": "097f4d62-7da4-41b8-86f7-c90d15f3bb85",
+    "Entitlement_ID": "65234e42-3cfb-405f-9b9f-958708a39b04",
+    "Entitlement_Name": "ZNEW_FICA_ACC_PROC_SPVR",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R3",
+    "Application": "SAP_S4",
+    "CatalogID": "e3ca3d68-5797-4d0f-8110-8a7f697cb6d3",
+    "Entitlement_ID": "92baf9bb-4fed-45f1-b7b6-510592a600d6",
+    "Entitlement_Name": "ZISU_FICA_FEWA_PMT_ERR_SPELIST",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R4",
+    "Application": "SAP_S4",
+    "CatalogID": "bbbeb5c8-d495-408c-8329-b33abe4ff722",
+    "Entitlement_ID": "944aa03b-7307-401a-847b-91f42cc4a157",
+    "Entitlement_Name": "ZISU_CS_DISPLAY_SALES_ORDER",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R4",
+    "Application": "SAP_S4",
+    "CatalogID": "2e1e53d1-ecfc-4de2-a722-62ecef91f46e",
+    "Entitlement_ID": "c637e2b7-1f4a-4a6e-b9cc-c0b1f58c19cb",
+    "Entitlement_Name": "ZNEW_REVENUE_MGR",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R4",
+    "Application": "SAP_S4",
+    "CatalogID": "03c56792-4eb5-43dd-9a57-15efd9f5d10c",
+    "Entitlement_ID": "b5f75422-cb84-4c3d-8f86-a4054aad5d88",
+    "Entitlement_Name": "ZNEW_REVENUE_CAA2",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R5",
+    "Application": "SAP_S4",
+    "CatalogID": "00e57d92-2132-412b-a896-18948bebd43e",
+    "Entitlement_ID": "0425f11d-869a-4caa-8574-5c8d4b4a8bcc",
+    "Entitlement_Name": "ZNEW_CS_KEY_CREDIT_OFF",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R5",
+    "Application": "SAP_S4",
+    "CatalogID": "6319dd60-f5d3-40c0-8b34-c7a49c93773a",
+    "Entitlement_ID": "3d434080-4a79-47b4-88fb-8ddb9ec34851",
+    "Entitlement_Name": "ZNEW_BILL_KEY_CREDIT_OFF",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R5",
+    "Application": "SAP_S4",
+    "CatalogID": "2c9be527-3319-4e1f-b9f3-d75cf0243151",
+    "Entitlement_ID": "1647e28c-2d97-44ff-98ef-4e07e1eb404c",
+    "Entitlement_Name": "ZNEW_DM_KEY_CREDIT_OFF",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R6",
+    "Application": "Open LDAP",
+    "CatalogID": "d31c561c-090d-4af6-a35e-f5db2a357a9a",
+    "Entitlement_ID": "83f0ebc0-8c1e-4928-9d66-9f721e5df140",
+    "Entitlement_Name": "IT Support Unique",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R6",
+    "Application": "Open LDAP",
+    "CatalogID": "8a6599f5-c99d-4b71-a7cd-ab3bd70106a6",
+    "Entitlement_ID": "969e760e-42af-4b61-9d7b-6823ae67a7da",
+    "Entitlement_Name": "Operations Management Unique",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R6",
+    "Application": "Open LDAP",
+    "CatalogID": "261e6182-567a-45a0-aca3-5a1dd73fa0e9",
+    "Entitlement_ID": "2b8ccaf9-3027-40c5-bdc4-710a65972adf",
+    "Entitlement_Name": "Project Management Unique",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R7",
+    "Application": "Open LDAP",
+    "CatalogID": "ab45bcd5-7827-4730-af82-738af86e7f30",
+    "Entitlement_ID": "74c4e400-8226-4452-88a6-bc38d7863fdf",
+    "Entitlement_Name": "Infrastructure Team Unique",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R7",
+    "Application": "Open LDAP",
+    "CatalogID": "daf998e2-e618-4106-9880-3a0d6eab9c17",
+    "Entitlement_ID": "efe9bccb-e255-4b1d-864b-41b278007261",
+    "Entitlement_Name": "Security Operations Unique",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R7",
+    "Application": "Open LDAP",
+    "CatalogID": "9f4580d1-65fc-439e-a75a-29ed27381d4d",
+    "Entitlement_ID": "f71013c7-b343-49fa-94c1-a08ae0b35c67",
+    "Entitlement_Name": "Executive Leadership Unique",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R8",
+    "Application": "Open LDAP",
+    "CatalogID": "2a8c9e87-686c-432d-9b82-f222b03a3f58",
+    "Entitlement_ID": "7e2f1c92-03d3-43e9-942d-5a443d625ab2",
+    "Entitlement_Name": "Finance Department Unique",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R8",
+    "Application": "Open LDAP",
+    "CatalogID": "5abfc636-e026-43ec-9b53-eb9f154fa832",
+    "Entitlement_ID": "d99d4248-2e2b-4406-8340-a8a8e7d38f1f",
+    "Entitlement_Name": "Human Resources Unique",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R8",
+    "Application": "Open LDAP",
+    "CatalogID": "5ab466dc-c050-4ea9-8d95-a247f9fd3068",
+    "Entitlement_ID": "861e1ac8-d42d-437a-ad00-372da9bb70f9",
+    "Entitlement_Name": "Vendor Relations Unique",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R9",
+    "Application": "Open LDAP",
+    "CatalogID": "9f4580d1-65fc-439e-a75a-29ed27381d4d",
+    "Entitlement_ID": "f71013c7-b343-49fa-94c1-a08ae0b35c67",
+    "Entitlement_Name": "Executive Leadership Unique",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R9",
+    "Application": "Open LDAP",
+    "CatalogID": "a5d12859-a844-4168-aa89-0116968a57b9",
+    "Entitlement_ID": "b0000b9c-5c9f-41e7-9190-409180e49ebf",
+    "Entitlement_Name": "Compliance Team Unique",
+    "Risk": "Low"
+  },
+  {
+    "Rule_ID": "R9",
+    "Application": "Open LDAP",
+    "CatalogID": "8498f382-dcdd-4cd0-aa45-f16bd7f0437d",
+    "Entitlement_ID": "2292d49b-e434-4432-9213-285c72179747",
+    "Entitlement_Name": "Legal Department Unique",
+    "Risk": "Low"
+  },
+  {
+    "Rule_ID": "R10",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "0d833201-071f-4a5a-8d95-4f07c47151bf",
+    "Entitlement_ID": "3bbff1a7-7826-49bf-9eaa-0034136a7b1b",
+    "Entitlement_Name": "ORA_IRC_RECRUITER_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R10",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "a190491a-a0b7-4f9c-ba66-4290b3b4a21e",
+    "Entitlement_ID": "46e63d16-0a05-4344-888d-e7adf9c197f7",
+    "Entitlement_Name": "ORA_IRC_RECRUITING_MANAGER_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R10",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "1f023e30-840d-4572-9290-166cdf6a3573",
+    "Entitlement_ID": "07df4582-3a47-4113-9dae-a1fb3f753f6f",
+    "Entitlement_Name": "ORA_PER_RECRUITING_ADMINISTRATOR_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R11",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "0604f46f-1d81-4a00-899c-cdae8974e55f",
+    "Entitlement_ID": "82caaf4d-843d-4ab1-9383-6f6e4065b180",
+    "Entitlement_Name": "GSE_TERMINATED_EMP",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R11",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "19dc9c01-cf77-49a2-b2e6-4f33aada9413",
+    "Entitlement_ID": "8b3c6003-1c3f-4250-91a9-44f5a6cf6f8e",
+    "Entitlement_Name": "PER_HUMAN_RESOURCE_SPECIALIST_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R11",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "493cdf37-31f9-4e1f-9c6a-1491c34e2489",
+    "Entitlement_ID": "01a12f0d-c07d-4c28-8a8e-d31a4d64d35a",
+    "Entitlement_Name": "ORA_PER_HUMAN_RESOURCE_MANAGER_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R12",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "8dbe16b2-d114-4d59-8c28-eeccdc714459",
+    "Entitlement_ID": "da8e3bd7-2463-44d8-8d2e-70a735a70d29",
+    "Entitlement_Name": "ORA_PAY_PAYROLL_ADMINISTRATOR_JOB",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R12",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "a6bc7a14-1dfa-4adb-9f53-c6a76697f165",
+    "Entitlement_ID": "42886dde-5d7a-4978-a694-d2ecb5a97397",
+    "Entitlement_Name": "ORA_PAY_PAYROLL_MANAGER_JOB",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R12",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "a20fc924-3f68-44cd-9915-370107c9bcf7",
+    "Entitlement_ID": "69d88a67-8f66-4a1c-8be9-74fd265ce182",
+    "Entitlement_Name": "ORA_HRY_PAYROLL_COORDINATOR_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R13",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "2479cec2-2aea-4036-978f-b9f0c711faec",
+    "Entitlement_ID": "cc39b788-72d5-4a15-86de-789af970bb54",
+    "Entitlement_Name": "ORA_HRC_HUMAN_CAPITAL_MANAGEMENT_APPLICATION_ADMINISTRATOR_JOB",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R13",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "34ec44b2-6b5a-4a12-b0e8-4472f53a812d",
+    "Entitlement_ID": "ec13b5a6-ff92-4355-a8a6-f130cd08658f",
+    "Entitlement_Name": "ORA_HRC_HUMAN_CAPITAL_MANAGEMENT_INTEGRATION_SPECIALIST_JOB",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R13",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "2974b578-127a-4dbb-8c4f-2ccd55de6ee4",
+    "Entitlement_ID": "4d803e9f-10ef-4a7c-8828-a4fb008f7a13",
+    "Entitlement_Name": "DS_HCM_DATA_LOADER",
+    "Risk": "Medium"
+  },
+  {
+    "Rule_ID": "R13",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "8a584e21-e8a0-4b9f-94fc-83cd1d4acf21",
+    "Entitlement_ID": "61bf849a-311f-453f-ad2d-72e0981f53ff",
+    "Entitlement_Name": "ORA_ASE_IT_AUDITOR_JOB",
+    "Risk": "High"
+  },
+  {
+    "Rule_ID": "R13",
+    "Application": "Oracle_Fusion_HCM",
+    "CatalogID": "287e1832-835d-4e85-b57e-af9e3080247e",
+    "Entitlement_ID": "0ca26943-f6f6-4bce-a748-76eb0ece6203",
+    "Entitlement_Name": "GSE_CAMPAIGN_MANAGER",
+    "Risk": "High"
+  }
+]

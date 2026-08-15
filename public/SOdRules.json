@@ -1,0 +1,132 @@
+[
+  {
+    "Rule_ID": "R1",
+    "Rule_Name": "Supplier Setup Access",
+    "Description": "Rule R1 defines supplier master data and vendor setup capabilities in procure-to-pay. Users matched to this rule can create or maintain supplier records that downstream processes rely on for purchasing and payment.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP1",
+    "Business Process Name": "Procure-to-Pay",
+    "Actions": "Edit, View"
+  },
+  {
+    "Rule_ID": "R2",
+    "Rule_Name": "Invoice Processing Access",
+    "Description": "Rule R2 covers invoice capture, validation, and posting activities. It identifies users who can initiate or advance supplier invoices through financial workflows prior to payment.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP1",
+    "Business Process Name": "Procure-to-Pay",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R3",
+    "Rule_Name": "Payment Release Access",
+    "Description": "Rule R3 governs payment execution, release, and critical disbursement controls. It flags entitlements that allow a user to approve or trigger outbound payments.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP1",
+    "Business Process Name": "Procure-to-Pay",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R4",
+    "Rule_Name": "Revenue Order Access",
+    "Description": "Rule R4 relates to revenue recognition and sales order operations. Users under this rule can influence customer-facing order or billing flows that affect reported revenue.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP2",
+    "Business Process Name": "Order-to-Cash",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R5",
+    "Rule_Name": "Credit Decision Access",
+    "Description": "Rule R5 captures credit limit, credit hold, and related commercial decision rights. It is used to detect combinations of access that could override normal credit governance.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP2",
+    "Business Process Name": "Order-to-Cash",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R6",
+    "Rule_Name": "Directory Support Provisioning Access",
+    "Description": "Rule R6 represents operational directory or IAM support tasks such as routine provisioning requests. It distinguishes day-to-day support from full administrative control.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP3",
+    "Business Process Name": "Identity & Directory",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R7",
+    "Rule_Name": "Privileged Directory Administration Access",
+    "Description": "Rule R7 identifies highly privileged identity and directory administration entitlements. These capabilities can broadly change accounts, groups, or platform security settings.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP3",
+    "Business Process Name": "Identity & Directory",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R8",
+    "Rule_Name": "Access Assignment Access",
+    "Description": "Rule R8 covers roles or entitlements that allow a user to assign application or enterprise access to others. It is a key control point in access governance and SoD.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP4",
+    "Business Process Name": "Access Governance",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R9",
+    "Rule_Name": "Access Approval Authority",
+    "Description": "Rule R9 reflects approval or certification authority over access requests or role changes. Users mapped here can approve escalations or exceptions in access workflows.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP4",
+    "Business Process Name": "Access Governance",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R10",
+    "Rule_Name": "Recruiting Operations Access",
+    "Description": "Rule R10 includes recruiting, candidate, and hiring-process entitlements. It is evaluated when SoD policies concern separation between hiring actions and downstream HR maintenance.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP5",
+    "Business Process Name": "Human Capital Management",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R11",
+    "Rule_Name": "Worker Termination and HR Maintenance Access",
+    "Description": "Rule R11 covers worker lifecycle maintenance including termination, status changes, and sensitive HR record updates. It is contrasted with recruiting or payroll rules in SoD scenarios.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP5",
+    "Business Process Name": "Human Capital Management",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R12",
+    "Rule_Name": "Payroll Administration Access",
+    "Description": "Rule R12 defines payroll calculation, run, and adjustment capabilities. It is used where SoD requires separation between HR master data changes and payroll processing.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP5",
+    "Business Process Name": "Human Capital Management",
+    "Actions": ""
+  },
+  {
+    "Rule_ID": "R13",
+    "Rule_Name": "HCM Platform Administration and Data Movement Access",
+    "Description": "Rule R13 represents broad HCM platform administration, configuration, or data movement privileges. These entitlements can impact multiple tenants of worker and payroll data.",
+    "Owner": "",
+    "Created On": "",
+    "Business Process ID": "BP6",
+    "Business Process Name": "HCM Platform",
+    "Actions": ""
+  }
+]

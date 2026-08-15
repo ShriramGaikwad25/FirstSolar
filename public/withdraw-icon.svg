@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- Red slot/opening at top -->
+  <rect x="2" y="1" width="20" height="6" rx="2" fill="#FF0033" stroke="#000" stroke-width="1.25"/>
+  <!-- White document/card being dispensed -->
+  <rect x="5" y="5" width="14" height="18" rx="2" fill="#FFF" stroke="#000" stroke-width="1.25"/>
+  <!-- Downward arrow: shaft -->
+  <line x1="12" y1="9" x2="12" y2="15" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Downward arrow: arrowhead -->
+  <path d="M12 18L8 14h8L12 18z" fill="#000"/>
+</svg>

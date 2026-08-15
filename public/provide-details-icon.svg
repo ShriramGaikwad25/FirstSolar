@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- Circular refresh arrows on the left -->
+  <path
+    d="M5 12a6 6 0 0 1 9.9-4.3"
+    stroke="#000"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M8.2 4.4 5 4v3.2"
+    fill="none"
+    stroke="#000"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M13 12a6 6 0 0 1-9.9 4.3"
+    stroke="#000"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="M4.8 19.6 8 20v-3.2"
+    fill="none"
+    stroke="#000"
+    stroke-width="1.8"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Edit / pencil over a box on the right -->
+  <!-- Box outline -->
+  <path
+    d="M13 10h5a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-3"
+    fill="none"
+    stroke="#000"
+    stroke-width="1.6"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <!-- Pencil -->
+  <path
+    d="M13.5 9.5 17 6a1.2 1.2 0 0 1 1.7 0l.8.8a1.2 1.2 0 0 1 0 1.7l-3.5 3.5-3.2.7.7-3.2Z"
+    fill="#000"
+  />
+</svg>

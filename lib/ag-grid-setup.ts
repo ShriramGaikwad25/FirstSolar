@@ -1,0 +1,7 @@
+import {
+  ModuleRegistry,
+  AllEnterpriseModule,
+  LicenseManager,
+} from "ag-grid-enterprise";
+ModuleRegistry.registerModules([AllEnterpriseModule]);
+LicenseManager.setLicenseKey("Using_this_{AG_Grid}_Enterprise_key_{AG-104383}_in_excess_of_the_licence_granted_is_not_permitted___Please_report_misuse_to_legal@ag-grid.com___For_help_with_changing_this_key_please_contact_info@ag-grid.com___{KeyForge_llc}_is_granted_a_{Single_Application}_Developer_License_for_the_application_{KeyForge_ISPM}_only_for_{1}_Front-End_JavaScript_developer___All_Front-End_JavaScript_developers_working_on_{KeyForge_ISPM}_need_to_be_licensed___{KeyForge_ISPM}_has_not_been_granted_a_Deployment_License_Add-on___This_key_works_with_{AG_Grid}_Enterprise_versions_released_before_{1_October_2026}____[v3]_[01]_MTc5MDgwOTIwMDAwMA==0b69f6263fac7794744c4ab7c7fde284");
