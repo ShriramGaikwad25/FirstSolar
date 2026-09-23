@@ -1489,6 +1489,12 @@
   font-weight: 600;
 }
 
+.trigger-item.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .trigger-name {
   font-weight: 500;
   flex: 1;

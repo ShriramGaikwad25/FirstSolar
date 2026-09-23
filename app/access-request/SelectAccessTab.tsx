@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { themeQuartz } from "ag-grid-community";
 import type { ColDef } from "ag-grid-enterprise";
-import { Search, ShoppingCart, Users, Check, User, Info, Calendar, ChevronDown, X } from "lucide-react";
+import { Search, ShoppingCart, Users, Check, User, ChevronDown, X } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import HorizontalTabs from "@/components/HorizontalTabs";
 import CustomPagination from "@/components/agTable/CustomPagination";
@@ -1080,9 +1080,6 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button className="p-2 hover:bg-gray-300 rounded-full transition-colors">
-                  <Info className="w-5 h-5 text-gray-600" />
-                </button>
                 <button
                   onClick={() => handleAddToCart(role)}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
@@ -1093,9 +1090,6 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 >
                   <ShoppingCart className="w-4 h-4" />
                   {isInCart(role.id) ? "Remove" : "Add To Cart"}
-                </button>
-                <button className="p-2 hover:bg-gray-300 rounded-full transition-colors">
-                  <Calendar className="w-5 h-5 text-gray-600" />
                 </button>
               </div>
             </div>

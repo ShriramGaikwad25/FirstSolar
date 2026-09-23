@@ -1329,21 +1329,31 @@ export default function SchedulerManager() {
                   <p>No jobs match your search</p>
                 </div>
               ) : (
-                filteredSchedules.map((schedule) => (
-                  <div
-                    key={schedule.id}
-                    className={`trigger-item ${
-                      selectedSchedule?.id === schedule.id ? "selected" : ""
-                    } ${schedule.status}`}
-                    onClick={() => {
-                      // Only set selection; data fetching is driven by effect below
-                      setSelectedSchedule(schedule);
-                    }}
-                  >
-                    <span className={`status-indicator ${schedule.status}`} />
-                    <div className="trigger-name">{schedule.name}</div>
-                  </div>
-                ))
+                filteredSchedules.map((schedule) => {
+                  const isSelected = selectedSchedule?.id === schedule.id;
+                  // Block re-selection while the currently selected job's
+                  // details/history are still loading, to avoid overlapping
+                  // fetches and stale data flashes.
+                  const selectionBlocked =
+                    !isSelected && (jobDetailsLoading || jobHistoryLoading);
+                  return (
+                    <div
+                      key={schedule.id}
+                      className={`trigger-item ${isSelected ? "selected" : ""} ${
+                        schedule.status
+                      } ${selectionBlocked ? "disabled" : ""}`}
+                      aria-disabled={selectionBlocked}
+                      onClick={() => {
+                        if (selectionBlocked) return;
+                        // Only set selection; data fetching is driven by effect below
+                        setSelectedSchedule(schedule);
+                      }}
+                    >
+                      <span className={`status-indicator ${schedule.status}`} />
+                      <div className="trigger-name">{schedule.name}</div>
+                    </div>
+                  );
+                })
               )}
             </div>
           )}
