@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 const AgGridReact = dynamic(() => import("ag-grid-react").then((mod) => mod.AgGridReact), { ssr: false });
 import "@/lib/ag-grid-setup";
 import { ColDef, ICellRendererParams } from "ag-grid-enterprise";
-import { getReviewerId } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth, getCurrentUser, getCookie, COOKIE_NAMES } from "@/lib/auth";
 import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 import {
   type MyApprovalsStatusFilter,
@@ -125,201 +125,125 @@ const TrackRequest: React.FC = () => {
       return;
     }
 
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
+      String(reviewerId).trim()
+    )}`;
     setLoading(true);
     setError(null);
 
-    const body = {
-      query: "select * from vw_access_request_full_json where requested_by_user_id = ?::uuid",
-      parameters: [String(reviewerId).trim()],
-    };
+    /** Response is a page of submissions: { dbResponse: { data: [...], page: { totalPages, ... } } }. */
+    const fetchPage = (page: number) =>
+      apiRequestWithAuth<any>(`${baseUrl}?page=${page}&size=100`, { method: "GET" });
 
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Request failed: ${res.status}`);
+    const extractPageItems = (pageData: any): any[] =>
+      Array.isArray(pageData?.dbResponse?.data) ? pageData.dbResponse.data : [];
+
+    fetchPage(0)
+      .then(async (firstPageData) => {
+        console.log("Track Request (table) API raw response (page 0):", firstPageData);
+        const totalPages: number = Number(firstPageData?.dbResponse?.page?.totalPages ?? 1) || 1;
+
+        let allSubmissions = extractPageItems(firstPageData);
+        if (totalPages > 1) {
+          const remainingPages = await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 1))
+          );
+          for (const pageData of remainingPages) {
+            allSubmissions = allSubmissions.concat(extractPageItems(pageData));
+          }
         }
-        return res.json();
+        return allSubmissions;
       })
-      .then((data) => {
-        let rawRows: any[] = [];
-        if (Array.isArray(data)) rawRows = data;
-        else if (Array.isArray((data as any).resultSet)) rawRows = (data as any).resultSet;
-        else if (Array.isArray((data as any).rows)) rawRows = (data as any).rows;
-
-        if (!rawRows || rawRows.length === 0) {
+      .then((submissions: any[]) => {
+        if (!submissions || submissions.length === 0) {
           setRequests([]);
           return;
         }
-        const mapped: Request[] = rawRows
-          .filter((row) => {
-            const requestJson = row?.request_json ?? {};
-            const workflowInstanceId = requestJson?.workflow_instance?.id;
-            return workflowInstanceId !== null && workflowInstanceId !== undefined && String(workflowInstanceId).trim() !== "";
-          })
-          .flatMap((row) => {
-          const requestJson =
-            row?.request_json ??
-            row?.requestJson ??
-            row?.request ??
-            row?.data ??
-            {};
 
-          const contextJsonFromRow = row?.context_json ?? row?.contextJson ?? null;
-          const contextJsonFromWorkflow =
-            requestJson?.workflow_instance?.context_json ??
-            requestJson?.workflowInstance?.context_json ??
-            requestJson?.workflow_instance?.contextJson ??
-            requestJson?.workflowInstance?.contextJson ??
-            null;
-
-          const sodResults =
-            contextJsonFromRow?.sodResults ??
-            contextJsonFromRow?.sod_results ??
-            contextJsonFromRow?.sodresults ??
-            contextJsonFromWorkflow?.sodResults ??
-            contextJsonFromWorkflow?.sod_results ??
-            contextJsonFromWorkflow?.sodresults ??
-            requestJson?.workflow_instance?.context_json?.sodResults ??
-            requestJson?.workflow_instance?.context_json?.sod_results ??
-            requestJson?.workflow_instance?.context_json?.sodresults ??
-            requestJson?.workflowInstance?.context_json?.sodResults ??
-            requestJson?.workflowInstance?.context_json?.sod_results ??
-            requestJson?.workflowInstance?.context_json?.sodresults ??
-            requestJson?.workflow_instance?.contextJson?.sodResults ??
-            requestJson?.workflow_instance?.contextJson?.sod_results ??
-            requestJson?.workflow_instance?.contextJson?.sodresults ??
-            requestJson?.workflowInstance?.contextJson?.sodResults;
-
-          const hasGlobalSodConflict = Boolean(sodResults?.hasConflict);
-          /** Names/ids the SOD engine flagged — used to pin the conflict to the right access item. */
-          const conflictingRoleNames: string[] = Array.isArray(sodResults?.conflictingRoles)
-            ? sodResults.conflictingRoles.map((r: any) => String(r).trim()).filter(Boolean)
-            : [];
-
-          const accessRequest = requestJson.access_request ?? {};
-          const requestedBy = accessRequest.requested_by ?? {};
-          const requestedFor = accessRequest.requested_for ?? {};
-          const accessItems: any[] = Array.isArray(requestJson.access_items) ? requestJson.access_items : [];
-
-          const requesterNameFromObject =
-            requestedBy.display_name ||
-            [requestedBy.first_name, requestedBy.last_name].filter(Boolean).join(" ") ||
-            requestedBy.username ||
-            "";
-
-          const beneficiaryNameFromObject =
-            requestedFor.display_name ||
-            [requestedFor.first_name, requestedFor.last_name].filter(Boolean).join(" ") ||
-            requestedFor.username ||
-            "";
-
-          const requestedOn: string | undefined = accessRequest.created_at;
-          const raisedOn = formatTrackDate(requestedOn);
-
-          let daysOpen = 0;
-          if (requestedOn) {
-            const d = new Date(requestedOn);
-            if (!Number.isNaN(d.getTime())) {
-              const now = new Date();
-              const diffMs = now.getTime() - d.getTime();
-              daysOpen = Math.max(0, Math.round(diffMs / (1000 * 60 * 60 * 24)));
-            }
+        // uidTenant cookie stores {userid, tenantId} (no email) — same fallback HeaderContent uses.
+        const currentUserLabel = (() => {
+          try {
+            const raw = getCookie(COOKIE_NAMES.UID_TENANT);
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (parsed?.userid) return String(parsed.userid);
+          } catch {
+            // ignore
           }
+          return getCurrentUser()?.email || "";
+        })();
 
-          const rawStatus =
-            (typeof accessRequest.status === "string" && accessRequest.status.trim()) ||
-            (typeof row.status === "string" && row.status.trim()) ||
-            "";
-          const status = rawStatus ? rawStatus.replace(/_/g, " ") : "Request Submitted";
+        // Tracks workflowInstanceIds already emitted so a duplicate (e.g. an unsplit submission
+        // whose items all share one workflowInstanceId) only shows up as a single row.
+        const seenWorkflowInstanceIds = new Set<number>();
 
-          const workflowInstanceId = requestJson?.workflow_instance?.id;
-          const requestId =
-            workflowInstanceId ??
-            row.request_id ??
-            accessRequest.id ??
-            row.requestid ??
-            row.id ??
-            "";
+        const mapped: Request[] = submissions.flatMap((submission) => {
+          const createdAt: string | undefined = submission?.createdAt;
+          const raisedOn = formatTrackDate(createdAt);
+          const daysOpen = Number(submission?.daysOpen ?? 0);
+          const justification = String(submission?.justification ?? "");
+          const submissionRequestId = String(
+            submission?.requestId ?? submission?.submissionId ?? ""
+          );
 
-          const rowLevelConflict = Boolean(row.hasConflict ?? row.has_conflict);
+          const beneficiaryNames: string[] = Array.isArray(submission?.requestedForDisplayNames)
+            ? submission.requestedForDisplayNames.filter(Boolean)
+            : [];
+          const beneficiaryName = beneficiaryNames.join(", ") || "-";
 
-          // One grid row per requested access item; a request with no items still gets a single row
-          // so it never disappears from the tracker.
-          const itemsToRender: any[] = accessItems.length > 0 ? accessItems : [{}];
+          // One grid row per requested access item; a submission with no items still gets a
+          // single row so it never disappears from the tracker.
+          const itemNames: any[] = Array.isArray(submission?.itemNames) ? submission.itemNames : [];
+          const itemsToRender: any[] = itemNames.length > 0 ? itemNames : [{}];
 
-          return itemsToRender.map((item, index) => {
-            const catalog = item?.catalog ?? {};
-            const entitlementMeta = item?.entitlement_metadata ?? {};
+          return itemsToRender
+            .map((item, index) => {
+              const entitlementName = String(item?.lineitem ?? "");
+              const rawStatus = String(item?.status ?? submission?.status ?? "").trim();
+              const status = rawStatus ? rawStatus.replace(/_/g, " ") : "Request Submitted";
+              const itemRequestUuid = String(item?.requestUuids ?? "").trim();
+              const routeId = itemRequestUuid || submissionRequestId;
 
-            const entitlementName =
-              catalog.name || catalog.entitlementname || catalog.entitlementName || "";
-            const systemName =
-              catalog.applicationname ||
-              catalog.applicationName ||
-              catalog.application_name ||
-              "";
+              const rawWorkflowInstanceId = item?.workflowInstanceIds;
+              const workflowInstanceId =
+                rawWorkflowInstanceId != null ? Number(rawWorkflowInstanceId) : null;
 
-            const entityTypeFromCatalog =
-              catalog.type ||
-              catalog.entitlementtype ||
-              (catalog.metadata?.entitlementType as string) ||
-              "Entitlement";
+              if (workflowInstanceId != null) {
+                if (seenWorkflowInstanceIds.has(workflowInstanceId)) {
+                  return null;
+                }
+                seenWorkflowInstanceIds.add(workflowInstanceId);
+              }
 
-            const justification: string =
-              (accessRequest.justification as string) ||
-              (entitlementMeta.comments as string) ||
-              (item?.item_comments as string) ||
-              "";
-
-            const startDate = entitlementMeta.startDate ? String(entitlementMeta.startDate) : raisedOn;
-            const endDate = entitlementMeta.endDate ? String(entitlementMeta.endDate) : "";
-
-            // Item-level SOD: prefer the item's own flag, otherwise pin the request-level conflict to
-            // the named conflicting role(s); with no names available, fall back to flagging the request.
-            const itemNameKey = String(entitlementName).trim();
-            const itemIdKey = String(catalog.catalogId ?? catalog.catalogid ?? "").trim();
-            const hasConflict =
-              Boolean(item?.hasConflict ?? item?.has_conflict) ||
-              ((hasGlobalSodConflict || rowLevelConflict) &&
-                (conflictingRoleNames.length === 0 ||
-                  conflictingRoleNames.some(
-                    (name) => name === itemNameKey || name === itemIdKey
-                  )));
-
-            return {
-              id: requestId,
-              routeId: requestId,
-              subId: index + 1,
-              beneficiaryName: String(beneficiaryNameFromObject),
-              requesterName: String(requesterNameFromObject),
-              systemName: String(systemName),
-              entitlementName: String(entitlementName),
-              displayName: String(entitlementName),
-              entityType: String(entityTypeFromCatalog),
-              daysOpen,
-              status,
-              raisedOnRaw: requestedOn ?? "",
-              hasConflict,
-              expiryDate: addDaysToCreatedOn(requestedOn ?? "", TRACK_REQUEST_EXPIRY_DAYS),
-              canWithdraw: status.toLowerCase().includes("awaiting") || status.toLowerCase().includes("pending"),
-              canProvideAdditionalDetails: status.toLowerCase().includes("provide information"),
-              details: {
-                dateCreated: raisedOn,
-                type: String(entityTypeFromCatalog),
-                name: String(entitlementName || ""),
-                justification,
-                startDate,
-                endDate,
-                globalComments: justification || undefined,
-              },
-              history: [],
-            };
-          });
+              return {
+                id: submissionRequestId,
+                routeId,
+                subId: workflowInstanceId ?? index + 1,
+                beneficiaryName,
+                requesterName: currentUserLabel || "-",
+                systemName: "",
+                entitlementName,
+                displayName: entitlementName,
+                entityType: "Entitlement",
+                daysOpen,
+                status,
+                raisedOnRaw: createdAt ?? "",
+                hasConflict: false,
+                expiryDate: addDaysToCreatedOn(createdAt ?? "", TRACK_REQUEST_EXPIRY_DAYS),
+                canWithdraw: status.toLowerCase().includes("awaiting") || status.toLowerCase().includes("pending"),
+                canProvideAdditionalDetails: status.toLowerCase().includes("provide information"),
+                details: {
+                  dateCreated: raisedOn,
+                  type: "Entitlement",
+                  name: entitlementName,
+                  justification,
+                  startDate: raisedOn,
+                  endDate: "",
+                  globalComments: justification || undefined,
+                },
+                history: [],
+              };
+            })
+            .filter((row) => row !== null) as Request[];
         });
 
         setRequests(mapped);
@@ -472,8 +396,8 @@ const TrackRequest: React.FC = () => {
       {
         headerName: "Requester",
         field: "requesterName",
-        flex: 0.85,
-        minWidth: 130,
+        flex: 1.15,
+        minWidth: 155,
         sortable: true,
         ...wrappedTextCol,
       },
@@ -522,8 +446,8 @@ const TrackRequest: React.FC = () => {
       {
         headerName: "System",
         field: "systemName",
-        flex: 1,
-        minWidth: 140,
+        flex: 0.85,
+        minWidth: 125,
         ...wrappedTextCol,
         valueGetter: (params) => params.data?.systemName || "-",
       },
@@ -539,15 +463,14 @@ const TrackRequest: React.FC = () => {
       {
         headerName: "Status",
         field: "status",
-        flex: 1.1,
-        minWidth: 190,
-        ...wrappedTextCol,
+        flex: 0.85,
+        minWidth: 165,
         cellRenderer: (params: ICellRendererParams) => {
           const status = params.data?.status as string;
           return (
             <div className="flex w-full min-w-0 items-center py-0.5">
               <span
-                className={`min-w-0 flex-1 whitespace-normal break-words px-2 py-1 text-xs font-normal leading-snug rounded-md ${getAccessRequestStatusBadgeClasses(
+                className={`min-w-0 whitespace-nowrap px-2 py-1 text-xs font-normal leading-snug rounded-md ${getAccessRequestStatusBadgeClasses(
                   status
                 )}`}
               >
