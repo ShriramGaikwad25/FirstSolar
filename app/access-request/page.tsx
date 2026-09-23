@@ -639,7 +639,7 @@ const AccessRequest: React.FC = () => {
 
     try {
       const res = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/submitrequest/${reviewerId}`,
+        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/submitrequest/splitmode/${reviewerId}`,
         {
           method: "POST",
           headers: {
