@@ -10,12 +10,12 @@ interface RightSidebarContextValue {
 	closeOnOutsideClick: boolean;
 	openSidebar: (
 		content: SidebarContent,
-		options?: { widthPx?: number; title?: string; closeOnOutsideClick?: boolean }
+		options?: { widthPx?: number; title?: React.ReactNode; closeOnOutsideClick?: boolean }
 	) => void;
 	closeSidebar: () => void;
 	setWidth: (widthPx: number) => void;
 	content: SidebarContent;
-	title?: string;
+	title?: React.ReactNode;
 }
 
 const RightSidebarContext = createContext<RightSidebarContextValue | undefined>(undefined);
@@ -24,12 +24,12 @@ export const RightSidebarProvider = ({ children }: { children: React.ReactNode }
 	const [isOpen, setIsOpen] = useState(false);
 	const [widthPx, setWidthPx] = useState(500);
 	const [content, setContent] = useState<SidebarContent>(null);
-	const [title, setTitle] = useState<string | undefined>(undefined);
+	const [title, setTitle] = useState<React.ReactNode | undefined>(undefined);
 	const [closeOnOutsideClick, setCloseOnOutsideClick] = useState(true);
 
 	const openSidebar = useCallback((
 		newContent: SidebarContent,
-		options?: { widthPx?: number; title?: string; closeOnOutsideClick?: boolean }
+		options?: { widthPx?: number; title?: React.ReactNode; closeOnOutsideClick?: boolean }
 	) => {
 		if (options?.widthPx) setWidthPx(options.widthPx);
 		setTitle(options?.title);

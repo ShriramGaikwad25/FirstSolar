@@ -13,7 +13,7 @@ import {
   CircleX,
   ArrowRightCircle,
   ChevronDown,
-  ChevronRight,
+  ChevronUp,
   AlertTriangle,
   Info,
   Briefcase,
@@ -953,60 +953,42 @@ const CatalogPageContent = () => {
         headerName: "Actions",
         width: 250,
         cellRenderer: (params: ICellRendererParams) => {
+          const isApproved = lastAction === "Approve";
+          const isRejected = params.data?.status === "Rejected";
           return (
-            <div className="flex space-x-4 h-full items-start">
+            <div className="flex gap-2 h-full items-center">
               {error && <div className="text-red-500 text-sm">{error}</div>}
               <button
                 onClick={handleApprove}
                 title="Approve"
                 aria-label="Approve selected rows"
-                className={`p-1 rounded transition-colors duration-200 ${
-                  lastAction === "Approve"
-                    ? "bg-green-500"
-                    : "hover:bg-green-100"
+                className={`w-8 h-8 flex items-center justify-center border rounded-md transition-colors ${
+                  isApproved
+                    ? "bg-green-600 border-green-600 text-white"
+                    : "border-gray-300 text-green-600 hover:bg-green-50 hover:border-green-400"
                 }`}
               >
-                <CircleCheck
-                  className="cursor-pointer"
-                  color="#1c821cff"
-                  strokeWidth="1"
-                  size="32"
-                  fill={lastAction === "Approve" ? "#1c821cff" : "none"}
-                />
+                <CircleCheck size={18} />
               </button>
               <button
                 onClick={handleRevoke}
                 title="Revoke"
                 aria-label="Revoke selected rows"
-                className={`p-1 rounded ${
-                  params.data?.status === "Rejected" ? "bg-red-100" : ""
+                className={`w-8 h-8 flex items-center justify-center border rounded-md transition-colors ${
+                  isRejected
+                    ? "bg-red-600 border-red-600 text-white"
+                    : "border-gray-300 text-red-600 hover:bg-red-50 hover:border-red-400"
                 }`}
               >
-                <CircleX
-                  className="cursor-pointer hover:opacity-80 transform rotate-90"
-                  color="#FF2D55"
-                  strokeWidth="1"
-                  size="32"
-                  fill={params.data?.status === "Rejected" ? "#FF2D55" : "none"}
-                />
+                <CircleX size={18} />
               </button>
               <button
                 onClick={handleComment}
                 title="Comment"
                 aria-label="Add comment"
-                className="p-1 rounded"
+                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
               >
-                <svg
-                  width="30"
-                  height="30"
-                  viewBox="0 0 32 32"
-                  className="cursor-pointer hover:opacity-80"
-                >
-                  <path
-                    d="M0.700195 0V19.5546H3.5802V25.7765C3.57994 25.9525 3.62203 26.1247 3.70113 26.2711C3.78022 26.4176 3.89277 26.5318 4.02449 26.5992C4.15621 26.6666 4.30118 26.6842 4.44101 26.6498C4.58085 26.6153 4.70926 26.5304 4.80996 26.4058C6.65316 24.1232 10.3583 19.5546 10.3583 19.5546H25.1802V0H0.700195ZM2.1402 1.77769H23.7402V17.7769H9.76212L5.0202 23.6308V17.7769H2.1402V1.77769ZM5.0202 5.33307V7.11076H16.5402V5.33307H5.0202ZM26.6202 5.33307V7.11076H28.0602V23.11H25.1802V28.9639L20.4383 23.11H9.34019L7.9002 24.8877H19.8421C19.8421 24.8877 23.5472 29.4563 25.3904 31.7389C25.4911 31.8635 25.6195 31.9484 25.7594 31.9828C25.8992 32.0173 26.0442 31.9997 26.1759 31.9323C26.3076 31.8648 26.4202 31.7507 26.4993 31.6042C26.5784 31.4578 26.6204 31.2856 26.6202 31.1096V24.8877H29.5002V5.33307H26.6202ZM5.0202 8.88845V10.6661H10.7802V8.88845H5.0202ZM5.0202 12.4438V14.2215H19.4202V12.4438H5.0202Z"
-                    fill="#2684FF"
-                  />
-                </svg>
+                <MessageSquare size={16} />
               </button>
               <button
                 onClick={() => {
@@ -1070,12 +1052,14 @@ const CatalogPageContent = () => {
                       id: keyof typeof sectionsOpen;
                       label: string;
                       icon: typeof Info;
+                      badgeClass: string;
+                      borderClass: string;
                     }> = [
-                      { id: "general", label: "General", icon: Info },
-                      { id: "business", label: "Business", icon: Briefcase },
-                      { id: "technical", label: "Technical", icon: Cpu },
-                      { id: "security", label: "Security", icon: ShieldCheck },
-                      { id: "lifecycle", label: "Lifecycle", icon: RefreshCw },
+                      { id: "general", label: "General", icon: Info, badgeClass: "bg-blue-100 text-blue-700", borderClass: "border-l-blue-400" },
+                      { id: "business", label: "Business", icon: Briefcase, badgeClass: "bg-amber-100 text-amber-700", borderClass: "border-l-amber-400" },
+                      { id: "technical", label: "Technical", icon: Cpu, badgeClass: "bg-purple-100 text-purple-700", borderClass: "border-l-purple-400" },
+                      { id: "security", label: "Security", icon: ShieldCheck, badgeClass: "bg-red-100 text-red-700", borderClass: "border-l-red-400" },
+                      { id: "lifecycle", label: "Lifecycle", icon: RefreshCw, badgeClass: "bg-teal-100 text-teal-700", borderClass: "border-l-teal-400" },
                     ];
 
                     return (
@@ -1132,28 +1116,30 @@ const CatalogPageContent = () => {
 
                         {/* Accordion sections */}
                         <div className="space-y-3">
-                          {sections.map(({ id, label, icon: Icon }) => (
+                          {sections.map(({ id, label, icon: Icon, badgeClass, borderClass }) => (
                             <div
                               key={id}
-                              className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm"
+                              className={`overflow-hidden rounded-xl border border-gray-200 border-l-4 ${borderClass} bg-white shadow-sm`}
                             >
                               <button
                                 type="button"
                                 onClick={() => toggleSection(id)}
-                                className="flex w-full items-center justify-between gap-2 bg-gray-50 px-4 py-3 text-left text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
+                                className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-50"
                               >
                                 <span className="flex items-center gap-2">
-                                  <Icon size={16} className="text-gray-500" />
+                                  <span className={`flex items-center justify-center w-7 h-7 rounded-md ${badgeClass}`}>
+                                    <Icon size={15} />
+                                  </span>
                                   {label}
                                 </span>
                                 {sectionsOpen[id] ? (
-                                  <ChevronDown size={18} className="text-gray-400" />
+                                  <ChevronUp size={18} className="text-gray-500" />
                                 ) : (
-                                  <ChevronRight size={18} className="text-gray-400" />
+                                  <ChevronDown size={18} className="text-gray-500" />
                                 )}
                               </button>
                               {sectionsOpen[id] && (
-                                <div className="grid grid-cols-2 gap-4 p-4">
+                                <div className="grid grid-cols-2 gap-4 p-4 border-t border-gray-100">
                                   {id === "general" && (
                                     <>
                                       <Field label="Ent Type" value={row?.["Ent Type"] || row?.type} />
@@ -1239,14 +1225,10 @@ const CatalogPageContent = () => {
                   });
                 }}
                 title="Info"
-                className="cursor-pointer rounded-sm hover:opacity-80"
+                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 transition-colors"
                 aria-label="View details"
               >
-                <ArrowRightCircle
-                  color="#2563eb"
-                  size="42"
-                  className="transform scale-[0.6]"
-                />
+                <ArrowRightCircle size={18} />
               </button>
             </div>
           );

@@ -153,7 +153,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
       <div className="rounded bg-blue-50/40 overflow-hidden">
         <div className="flex items-stretch gap-2 p-2 min-w-0">
           <div className="flex-1 min-w-0 rounded bg-gray-50/80 px-1.5 py-1">
-            <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">User</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">User</p>
             <p className="text-xs font-semibold text-gray-900 break-words leading-tight">{headerLeft.primary}</p>
             <p className="text-[10px] text-gray-500 truncate">{headerLeft.secondary}</p>
           </div>
@@ -163,7 +163,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
             </svg>
           </div>
           <div className="flex-1 min-w-0 rounded bg-gray-50/80 px-1.5 py-1">
-            {/* <p className="text-[10px] font-medium uppercase tracking-wide text-gray-500">IAM role</p> */}
+            {/* <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">IAM role</p> */}
             <p className="text-xs font-semibold text-gray-900 break-words leading-tight">{headerRight.primary}</p>
             <p className="text-[10px] text-gray-500 truncate">{applicationName || headerRight.secondary}</p>
           </div>
@@ -172,7 +172,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
 
       {/* Access Assignment History (request_history) */}
       <div className="rounded border border-gray-200 border-l-4 border-l-sky-500 bg-sky-50/40 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-sky-800">Access Assignment History</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800">Access Assignment History</p>
         <p className="text-xs text-gray-700 mt-1 whitespace-pre-wrap">
           {requestHistoryText ?? (
             <span className="italic text-gray-500">No access assignment history available.</span>
@@ -182,7 +182,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
 
       {/* Peer Analysis */}
       <div className="rounded border border-gray-200 border-l-4 border-l-indigo-500 bg-indigo-50/40 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-700">Peer Analysis</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">Peer Analysis</p>
         <div className="text-xs text-gray-700 space-y-0.5 mt-1">
           {insight && Array.isArray(insight.peer_analysis) && insight.peer_analysis.length > 0 ? (
             insight.peer_analysis.map((entry: any, i: number) => (
@@ -202,7 +202,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
 
       {/* Policy Violation (compliance_violation) */}
       <div className="rounded border border-gray-200 border-l-4 border-l-rose-600 bg-rose-50/50 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-rose-800">Policy Violation</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-800">Policy Violation</p>
         <p className="text-xs text-gray-800 mt-1 whitespace-pre-wrap">
           {policyViolationText ? (
             policyViolationText
@@ -216,7 +216,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
 
       {/* Last Access Review Action */}
       <div className="rounded border border-gray-200 border-l-4 border-l-emerald-500 bg-emerald-50/40 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
           Last Access Review Action (Past Action / Latest Decision)
         </p>
         <p className="text-xs text-gray-700 mt-1 whitespace-pre-wrap">
@@ -230,7 +230,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
 
       {/* Access Sensitivity Risk Tag (Risk Assessment) */}
       <div className="rounded border border-gray-200 border-l-4 border-l-amber-500 bg-amber-50/40 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-amber-800">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
           Access Sensitivity Risk Tag (Risk Assessment)
         </p>
         {insight?.risk_assessment && hasRiskAssessmentContent(insight.risk_assessment) ? (
@@ -275,7 +275,7 @@ const TaskSummaryPanel: React.FC<TaskSummaryPanelProps> = ({
 
       {/* Six Month History */}
       <div className="rounded border border-gray-200 border-l-4 border-l-violet-500 bg-violet-50/40 p-2">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-700">Six Month History</p>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-violet-700">Six Month History</p>
         <p className="text-xs text-gray-700 mt-1 whitespace-pre-wrap">
           {sixMonthText ? (
             sixMonthText

@@ -9,6 +9,7 @@ import AddDetailsSidebarContent, { getRiskColor, type Role } from "./AddDetailsS
 
 interface ReviewTabProps {
   catalogRoles?: Role[];
+  requestAction?: "request" | "remove";
 }
 
 function getApplicationName(role: Role): string {
@@ -24,7 +25,8 @@ function getApplicationName(role: Role): string {
   return typeof v === "string" ? v.trim() : "";
 }
 
-const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [] }) => {
+const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction = "request" }) => {
+  const isRemove = requestAction === "remove";
   const { items } = useCart();
   const { selectedUsers } = useSelectedUsers();
   const { getItemDetail, globalAccessType, globalSettings, requestType, attachmentFileByItem } = useItemDetails();
@@ -58,10 +60,12 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [] }) => {
         </div>
         <div className="w-full p-3 border border-gray-200 rounded-md bg-gray-50">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs sm:text-sm">
-            <div className="flex items-center gap-1">
-              <span className="font-medium text-gray-700">Request Type:</span>
-              <span className="text-gray-600">{requestType}</span>
-            </div>
+            {!isRemove && (
+              <div className="flex items-center gap-1">
+                <span className="font-medium text-gray-700">Request Type:</span>
+                <span className="text-gray-600">{requestType}</span>
+              </div>
+            )}
             <div className="flex items-center gap-1 min-w-0">
               <span className="font-medium text-gray-700 whitespace-nowrap">Global Comment:</span>
               <span className="text-gray-600 whitespace-pre-wrap break-words">
@@ -179,25 +183,37 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [] }) => {
                         )}
                       </div>
                     </div>
-                    <div className="text-left">
-                      <span className="text-xs text-gray-600">
-                        Access Type: {isIndefinite ? "Indefinite Access" : "Duration"}
-                      </span>
-                    </div>
+                    {isRemove ? (
+                      /* Remove Access: single Effective Date (today or the picked future date) */
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                        <span className="text-xs text-gray-700">
+                          Effective Date: {detail?.startDate ? formatDate(detail.startDate) : "Today"}
+                        </span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-left">
+                          <span className="text-xs text-gray-600">
+                            Access Type: {isIndefinite ? "Indefinite Access" : "Duration"}
+                          </span>
+                        </div>
 
-                    {/* Row 2 */}
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="text-xs text-gray-700">
-                        Start: {detail?.startDate ? formatDate(detail.startDate) : "Not set"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-left">
-                      <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                      <span className="text-xs text-gray-700">
-                        End: {isIndefinite ? "Indefinite" : (detail?.endDate ? formatDate(detail.endDate) : "Not set")}
-                      </span>
-                    </div>
+                        {/* Row 2 */}
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="text-xs text-gray-700">
+                            Start: {detail?.startDate ? formatDate(detail.startDate) : "Not set"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 text-left">
+                          <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                          <span className="text-xs text-gray-700">
+                            End: {isIndefinite ? "Indefinite" : (detail?.endDate ? formatDate(detail.endDate) : "Not set")}
+                          </span>
+                        </div>
+                      </>
+                    )}
 
                     {/* Row 3 */}
                     <div className="text-xs min-w-0">

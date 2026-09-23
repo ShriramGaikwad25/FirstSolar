@@ -20,6 +20,7 @@ const RESERVED_FIRST_SEGMENTS = new Set(
     'app-owner',
     'campaigns',
     'catalog',
+    'dashboard',
     'entitlement-owner',
     'non-human-identity',
     'non-human-identity-1',

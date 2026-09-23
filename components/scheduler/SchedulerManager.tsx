@@ -14,6 +14,13 @@ import {
   ChevronRight,
   ChevronDown,
   Edit,
+  Info,
+  List,
+  Zap,
+  History,
+  Search,
+  Plus,
+  X,
 } from "lucide-react";
 import { config } from "../../lib/config";
 import { apiRequestWithAuth } from "@/lib/auth";
@@ -84,6 +91,17 @@ const EMPTY_NEW_JOB_DATA = {
   cronExpression: "",
   data: {},
 };
+
+// Visual (display-only) mapping from job status to a light-tint badge style.
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  active: "bg-green-100 text-green-700",
+  paused: "bg-amber-100 text-amber-700",
+  completed: "bg-blue-100 text-blue-700",
+  stopped: "bg-gray-100 text-gray-600",
+};
+
+const getStatusBadgeClasses = (status?: string) =>
+  STATUS_BADGE_STYLES[status || "stopped"] || STATUS_BADGE_STYLES.stopped;
 
 export default function SchedulerManager() {
   const [popup, setPopup] = useState<{
@@ -1115,9 +1133,19 @@ export default function SchedulerManager() {
           <div className="job-header">
             <div className="job-title">
               <div className="job-title-row">
+                <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                  <Clock className="h-4 w-4" />
+                </span>
                 <h1>{selectedSchedule.name}</h1>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${getStatusBadgeClasses(
+                    selectedSchedule.status
+                  )}`}
+                >
+                  {selectedSchedule.status}
+                </span>
                 <button
-                  className="edit-job-btn"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-600 transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600"
                   onClick={() => {
                     setShowMiddlePanel(true);
                     setIsJsonDataExpanded(false);
@@ -1128,15 +1156,13 @@ export default function SchedulerManager() {
                   }}
                   title="Edit Job"
                 >
-                  <Edit className="edit-icon" />
+                  <Edit className="h-4 w-4" />
                 </button>
               </div>
             </div>
             <div className="job-controls">
               <button
-                className={`control-btn start-btn ${
-                  selectedSchedule.isRunning ? "active" : ""
-                }`}
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                 onClick={() =>
                   triggerJobManually(
                     selectedSchedule.groupName || "",
@@ -1152,7 +1178,7 @@ export default function SchedulerManager() {
                   </>
                 ) : (
                   <>
-                    <Play className="btn-icon" />
+                    <Play className="h-4 w-4" />
                     Run
                   </>
                 )}
@@ -1165,7 +1191,7 @@ export default function SchedulerManager() {
                 return isPaused;
               })() ? (
                 <button
-                  className="control-btn resume-btn"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() =>
                     resumeJob(
                       selectedSchedule.groupName || "",
@@ -1181,14 +1207,14 @@ export default function SchedulerManager() {
                     </>
                   ) : (
                     <>
-                      <Play className="btn-icon" />
+                      <Play className="h-4 w-4" />
                       Resume
                     </>
                   )}
                 </button>
               ) : (
                 <button
-                  className="control-btn pause-btn"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() =>
                     pauseJob(
                       selectedSchedule.groupName || "",
@@ -1204,7 +1230,7 @@ export default function SchedulerManager() {
                     </>
                   ) : (
                     <>
-                      <Pause className="btn-icon" />
+                      <Pause className="h-4 w-4" />
                       Pause
                     </>
                   )}
@@ -1214,6 +1240,9 @@ export default function SchedulerManager() {
           </div>
         ) : (
           <div className="no-job-selected-header">
+            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-gray-400">
+              <Info className="h-5 w-5" />
+            </span>
             <h1>Select a Job</h1>
             <p>Choose a job from the left panel to view details and controls</p>
           </div>
@@ -1225,9 +1254,14 @@ export default function SchedulerManager() {
         {/* Left Panel - Jobs List Only */}
         <div className="triggers-panel">
           <div className="triggers-header">
-            <h3>JOBS</h3>
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-blue-100 text-blue-700">
+                <List className="h-4 w-4" />
+              </span>
+              <h3>JOBS</h3>
+            </div>
             <button
-              className="new-trigger-btn"
+              className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => {
                 if (!showNewJobForm) {
                   setNewJobData(EMPTY_NEW_JOB_DATA);
@@ -1240,17 +1274,30 @@ export default function SchedulerManager() {
               }}
               disabled={loading}
             >
-              {showNewJobForm ? "Cancel" : "New"}
+              {showNewJobForm ? (
+                <>
+                  <X className="h-3.5 w-3.5" />
+                  Cancel
+                </>
+              ) : (
+                <>
+                  <Plus className="h-3.5 w-3.5" />
+                  New
+                </>
+              )}
             </button>
           </div>
           <div className="job-search-wrapper">
-            <input
-              type="text"
-              className="job-search-input"
-              placeholder="Search jobs..."
-              value={jobSearchTerm}
-              onChange={(e) => setJobSearchTerm(e.target.value)}
-            />
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                className="job-search-input"
+                placeholder="Search jobs..."
+                value={jobSearchTerm}
+                onChange={(e) => setJobSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
 
           {loading ? (
@@ -1293,6 +1340,7 @@ export default function SchedulerManager() {
                       setSelectedSchedule(schedule);
                     }}
                   >
+                    <span className={`status-indicator ${schedule.status}`} />
                     <div className="trigger-name">{schedule.name}</div>
                   </div>
                 ))
@@ -1305,21 +1353,31 @@ export default function SchedulerManager() {
         {showMiddlePanel && (
           <div className="details-panel">
             <div className="details-panel-header">
-              <h3>JOB DETAILS</h3>
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-100 text-purple-700">
+                  <Info className="h-4 w-4" />
+                </span>
+                <h3>JOB DETAILS</h3>
+              </div>
               <button
-                className="close-panel-btn"
+                className="flex h-7 w-7 items-center justify-center rounded-md border border-gray-300 text-gray-500 transition-colors hover:border-gray-400 hover:bg-gray-50"
                 onClick={() => {
                   setShowMiddlePanel(false);
                   setShowNewJobForm(false);
                 }}
                 title="Close Panel"
               >
-                ×
+                <X className="h-4 w-4" />
               </button>
             </div>
             {showNewJobForm ? (
             <div className="new-job-form">
-              <h3>CREATE NEW JOB</h3>
+              <h3 className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-md bg-green-100 text-green-700">
+                  <Plus className="h-3.5 w-3.5" />
+                </span>
+                CREATE NEW JOB
+              </h3>
 
               {/* Basic Job Info */}
               <div className="form-group">
@@ -1503,7 +1561,10 @@ export default function SchedulerManager() {
                       Creating...
                     </>
                   ) : (
-                    "Create Job"
+                    <>
+                      <Plus className="h-3.5 w-3.5" />
+                      Create Job
+                    </>
                   )}
                 </button>
               </div>
@@ -1635,7 +1696,12 @@ export default function SchedulerManager() {
         {!showNewJobForm && (
           <div className={`job-panel ${!showMiddlePanel ? 'job-panel-full' : ''}`}>
             <div className="jobs-section">
-              <h3>TRIGGERS</h3>
+              <h3 className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-100 text-indigo-700">
+                  <Zap className="h-4 w-4" />
+                </span>
+                TRIGGERS
+              </h3>
 
               {/* Single Trigger Card */}
               <div className="trigger-card-section">
@@ -1732,7 +1798,12 @@ export default function SchedulerManager() {
 
             {/* Job History Section */}
             <div className="history-section">
-              <h3>JOB HISTORY</h3>
+              <h3 className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                  <History className="h-4 w-4" />
+                </span>
+                JOB HISTORY
+              </h3>
 
               {jobHistoryLoading ? (
                 <div className="history-loading">

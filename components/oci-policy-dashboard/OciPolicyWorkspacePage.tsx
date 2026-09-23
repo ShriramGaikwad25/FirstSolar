@@ -594,7 +594,7 @@ export default function OciPolicyWorkspacePage({ policyName }: { policyName: str
                     { label: "Owner", value: policy.owner || "—" },
                   ].map((info) => (
                     <div key={info.label} className="rounded-lg border border-gray-200 p-3">
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                      <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                         {info.label}
                       </div>
                       <div className="mt-0.5 text-sm font-semibold text-gray-800 [overflow-wrap:anywhere]">

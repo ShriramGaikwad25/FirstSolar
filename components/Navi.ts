@@ -46,37 +46,8 @@ export interface NavItem {
 export const navLinks: NavItem[] = [
   {
     name: "Dashboard",
-    href: "/",
+    href: "/dashboard",
     icon: LayoutDashboard,
-  },
-  {
-    name: "Access Review(s)",
-    href: "/access-review",
-    icon: ListTodo,
-    subItems: [
-      { name: "Access Review", href: "/access-review", icon: ListTodo },
-      { name: "Manage Campaign", href: "/campaigns", icon: ListTree },
-      {
-        name: "Continuous Compliance",
-        href: "/campaigns/continuous-compliance",
-        icon: CheckCircle,
-      },
-    ],
-  },
-  {
-    name: "Request Management",
-    href: "/access-request",
-    icon: ClipboardList,
-    subItems: [
-      { name: "Access Request", href: "/access-request", icon: ClipboardList },
-      { name: "JIT Access", href: "/jit-access", icon: Zap },
-      { name: "Track Request", href: "/track-request", icon: Search },
-      {
-        name: "My Approvals",
-        href: "/access-request/pending-approvals",
-        icon: AlertCircle,
-      },
-    ],
   },
   {
     name: "My Workspace",
@@ -90,73 +61,36 @@ export const navLinks: NavItem[] = [
     ],
   },
   {
-    name: "Risk Analysis",
-    href: "/risk-analysis",
-    icon: LineChart,
-    subItems: riskAnalysisSubItems,
-  },
-  {
-    name: "Audit and Compliance",
-    href: "/reports",
-    icon: Shield,
-    subItems: [
-      { name: "Reporting", href: "/oracle-reports", icon: FileText },
-      { name: "Profiles", href: "/profiles", icon: UserCircle2Icon },
-      { name: "SoD Audit", href: "/reports/sod-audit", icon: AlertCircle },
-      {
-        name: "NHI Dashboard",
-        href: "/reports/nhi-dashboard",
-        icon: LayoutDashboard,
-        beta: true,
-      },
-    ],
-  },
-  {
-    name: "Policy Dashboard",
-    href: "/oci-policy-analysis",
-    icon: ShieldAlert,
-    subItems: [
-      { name: "Policy Dashboard", href: "/oci-policy-analysis", icon: LayoutDashboard },
-      { name: "Policy Optimization", href: "/oci-policy-analysis/policy-optimization", icon: Target },
-      { name: "Group Access", href: "/oci-policy-analysis/group-access", icon: Users },
-      { name: "Tags", href: "/oci-policy-analysis/tags", icon: Tags },
-      { name: "Tags-2", href: "/oci-policy-analysis/tags-2", icon: Sparkles },
-      { name: "Policy Builder", href: "/oci-policy-analysis/policy-builder", icon: FileCode2 },
-      { name: "Risk Overview", href: "/oci-policy-risk-management", icon: LayoutDashboard },
-      { name: "Tenant Posture", href: "/oci-policy-risk-management/tenant-posture", icon: Building2 },
-      { name: "Guardrails", href: "/oci-policy-risk-management/guardrails", icon: ShieldCheck },
-      { name: "Risk Remediation", href: "/oci-policy-risk-management/risk-remediation", icon: Wrench },
-    ],
-  },
-  {
     name: "Administration",
     href: "/settings",
     icon: Settings,
     subItems: [
       { name: "Integrations", href: "/settings/app-inventory", icon: Package },
-      {
-        name: "Roles",
-        href: "/settings/gateway/manage-business-roles",
-        icon: Shield,
-      },
       { name: "Scheduler", href: "/settings/gateway/scheduler", icon: Clock },
-      {
-        name: "Access Policy",
-        href: "/settings/gateway/manage-access-policy",
-        icon: Lock,
-      },
-      {
-        name: "Approval Policy",
-        href: "/settings/gateway/manage-approval-policies",
-        icon: Workflow,
-      },
-      {
-        name: "Workflow Builder",
-        href: "/settings/gateway/workflow-builder",
-        icon: Workflow,
-      },
-      { name: "SoD", href: "/settings/gateway/sod", icon: Shield },
-      { name: "Generic", href: "/settings/gateway", icon: Server },
+      { name: "Approval Policy", href: "/settings/gateway/manage-approval-policies", icon: Workflow },
+      { name: "Workflow Builder", href: "/settings/gateway/workflow-builder", icon: Workflow },
+      { name: "Email Templates", href: "/settings/gateway/email-templates", icon: FileText },
+      { name: "Entitlement management", href: "/settings/gateway/entitlement-management", icon: FileCode2 },
+      { name: "AI Insights Configuration", href: "/settings/gateway/ai-insights-configuration", icon: Sparkles },
+    ],
+  },
+  {
+    name: "Risk Analysis",
+    href: "/risk-analysis",
+    icon: LineChart,
+    subItems: riskAnalysisSubItems.filter((i) =>
+      ["Dashboard", "Rulesets", "Rules", "Functions", "Violations"].includes(i.name)
+    ),
+  },
+  {
+    name: "Request Management",
+    href: "/access-request",
+    icon: ClipboardList,
+    subItems: [
+      { name: "Access Management", href: "/access-request", icon: ClipboardList },
+      { name: "JIT Access", href: "/jit-access", icon: Zap },
+      { name: "Track Request", href: "/track-request", icon: Search },
+      { name: "My Approvals", href: "/access-request/pending-approvals", icon: AlertCircle },
     ],
   },
 ];

@@ -1121,7 +1121,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
             className="absolute -left-[calc(1rem+1px)] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#1759e4] shadow-[0_0_0_2px_rgba(255,255,255,0.95)]"
             aria-hidden
           />
-          <span className="text-[10px] font-semibold uppercase tracking-[0.06em] text-[#1759e4]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#1759e4]">
             Fork — all start together
           </span>
         </div>
@@ -1157,7 +1157,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
             className="absolute -left-[calc(1rem+1px)] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#16a34a] shadow-[0_0_0_2px_rgba(255,255,255,0.95)]"
             aria-hidden
           />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-green-800">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-green-800">
             Join — wait for all to complete
           </p>
         </div>

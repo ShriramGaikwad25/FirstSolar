@@ -168,7 +168,7 @@ function CompartmentCell({
                 role="dialog"
                 aria-label="Compartment OCID"
               >
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 mb-1">
                   Compartment OCID
                 </p>
                 <p className="break-all font-mono text-[11px] leading-relaxed text-slate-800">

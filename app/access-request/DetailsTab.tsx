@@ -5,6 +5,11 @@ import { useItemDetails } from "@/contexts/ItemDetailsContext";
 import { Calendar, Edit, Save, X, Paperclip, ChevronDown, ChevronUp } from "lucide-react";
 
 const getTodayDateString = () => new Date().toISOString().split("T")[0];
+const getTomorrowDateString = () => {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
+};
 
 interface ItemDates {
   [itemId: string]: {
@@ -17,7 +22,12 @@ interface ItemDates {
   };
 }
 
-const DetailsTab: React.FC = () => {
+interface DetailsTabProps {
+  requestAction?: "request" | "remove";
+}
+
+const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) => {
+  const isRemove = requestAction === "remove";
   const { items } = useCart();
   const { 
     setItemDetail, 
@@ -31,6 +41,7 @@ const DetailsTab: React.FC = () => {
   } = useItemDetails();
   const [itemDates, setItemDates] = useState<ItemDates>({});
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [globalEffectiveMode, setGlobalEffectiveMode] = useState<"today" | "future">("today");
   const fileInputRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
   const initializedItemsRef = React.useRef<Set<string>>(new Set());
   const prevGlobalSettingsRef = React.useRef(globalSettings);
@@ -52,8 +63,7 @@ const DetailsTab: React.FC = () => {
           existingDetail?.isIndefinite ?? globalSettings.isIndefinite;
 
         newDates[item.id] = {
-          startDate:
-            existingDetail?.startDate || globalSettings.startDate,
+          startDate: existingDetail?.startDate || globalSettings.startDate,
           endDate:
             existingDetail?.endDate ||
             (isIndefinite ? "" : globalSettings.endDate),
@@ -184,6 +194,17 @@ const DetailsTab: React.FC = () => {
     });
   };
 
+  const handleGlobalEffectiveModeChange = (mode: "today" | "future") => {
+    setGlobalEffectiveMode(mode);
+    const today = getTodayDateString();
+    if (mode === "today") {
+      setGlobalSettings({ startDate: today });
+    } else if (!globalSettings.startDate || globalSettings.startDate <= today) {
+      // Force an explicit pick instead of silently keeping today's date
+      setGlobalSettings({ startDate: "" });
+    }
+  };
+
   const handleDateChange = (itemId: string, field: "startDate" | "endDate", value: string) => {
     setItemDates((prev) => {
       const updated = {
@@ -240,7 +261,6 @@ const DetailsTab: React.FC = () => {
     }, 0);
   };
 
-
   if (items.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -259,14 +279,15 @@ const DetailsTab: React.FC = () => {
         
         <div className="space-y-4">
           {/* Access Type, Request Type, Start Date, End Date - all in one row, same height */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 ${isRemove ? "lg:grid-cols-2" : "lg:grid-cols-4"} gap-4 items-stretch`}>
+            {!isRemove && (
             <div className="relative flex flex-col min-h-[72px]">
               <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
                 Access Type
               </label>
               <div className="flex-1 min-h-[42px] flex items-center p-3 bg-white rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2">
-                  <span 
+                  <span
                     className={`text-sm font-medium cursor-pointer ${
                       globalIsIndefinite ? "text-blue-600 font-semibold" : "text-gray-600"
                     }`}
@@ -284,7 +305,7 @@ const DetailsTab: React.FC = () => {
                     <div className="absolute w-full h-full bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-all"></div>
                     <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all peer-checked:translate-x-6"></div>
                   </label>
-                  <span 
+                  <span
                     className={`text-sm font-medium cursor-pointer ${
                       !globalIsIndefinite ? "text-blue-600 font-semibold" : "text-gray-600"
                     }`}
@@ -295,6 +316,44 @@ const DetailsTab: React.FC = () => {
                 </div>
               </div>
             </div>
+            )}
+            {isRemove ? (
+              <div className="relative flex flex-col min-h-[72px]">
+                <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
+                  Effective Date
+                </label>
+                <div className="flex-1 min-h-[42px] flex items-center p-3 bg-white rounded-lg border border-gray-200">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-sm font-medium cursor-pointer ${
+                        globalEffectiveMode === "today" ? "text-blue-600 font-semibold" : "text-gray-600"
+                      }`}
+                      onClick={() => handleGlobalEffectiveModeChange("today")}
+                    >
+                      Today
+                    </span>
+                    <label className="relative inline-block w-12 h-6 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={globalEffectiveMode === "future"}
+                        onChange={(e) => handleGlobalEffectiveModeChange(e.target.checked ? "future" : "today")}
+                      />
+                      <div className="absolute w-full h-full bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-all" />
+                      <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all peer-checked:translate-x-6" />
+                    </label>
+                    <span
+                      className={`text-sm font-medium cursor-pointer ${
+                        globalEffectiveMode === "future" ? "text-blue-600 font-semibold" : "text-gray-600"
+                      }`}
+                      onClick={() => handleGlobalEffectiveModeChange("future")}
+                    >
+                      Future Date
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div className="relative flex flex-col min-h-[72px]">
               <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
                 Request Type
@@ -330,23 +389,27 @@ const DetailsTab: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="relative flex flex-col min-h-[72px]">
-              <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
-                Start Date
-              </label>
-              <div className="flex-1 min-h-[42px] flex items-center">
-                <div className="relative w-full">
-                  <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-                  <input
-                    type="date"
-                    value={globalSettings.startDate}
-                    onChange={(e) => handleGlobalDateChange("startDate", e.target.value)}
-                    disabled={globalIsIndefinite}
-                    className={`w-full h-[42px] pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${globalIsIndefinite ? "opacity-60 cursor-not-allowed" : ""}`}
-                  />
+            )}
+            {isRemove && globalEffectiveMode === "future" && (
+              <div className="relative flex flex-col min-h-[72px]">
+                <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
+                  Select Date
+                </label>
+                <div className="flex-1 min-h-[42px] flex items-center">
+                  <div className="relative w-full">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                    <input
+                      type="date"
+                      value={globalSettings.startDate}
+                      onChange={(e) => handleGlobalDateChange("startDate", e.target.value)}
+                      min={getTomorrowDateString()}
+                      className="w-full h-[42px] pl-10 pr-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+            {!isRemove && (
             <div className="relative flex flex-col min-h-[72px]">
               <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
                 End Date
@@ -365,6 +428,7 @@ const DetailsTab: React.FC = () => {
                 </div>
               </div>
             </div>
+            )}
           </div>
 
           {/* Global Comment */}
@@ -502,6 +566,16 @@ const DetailsTab: React.FC = () => {
                   : "border-gray-200 bg-white hover:bg-gray-50"
               }`}
             >
+              {isRemove ? (
+                <div className="w-full flex items-center gap-2 p-4">
+                  <h4 className="text-sm font-semibold text-gray-900 truncate">{item.name}</h4>
+                  {item.risk && (
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium border shrink-0 ${getRiskColor(item.risk)}`}>
+                      {item.risk} Risk
+                    </span>
+                  )}
+                </div>
+              ) : (
               <button
                 type="button"
                 onClick={toggleExpanded}
@@ -520,8 +594,9 @@ const DetailsTab: React.FC = () => {
                   {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                 </span>
               </button>
+              )}
 
-              {isExpanded && (
+              {!isRemove && isExpanded && (
               <div className="px-4 pb-4 pt-0 border-t border-gray-100">
                 <div className="mb-3">
                 {/* Access Type Toggle, Start Date, and End Date in same row */}
@@ -533,7 +608,7 @@ const DetailsTab: React.FC = () => {
                     </label>
                     <div className="p-2 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="flex items-center gap-2">
-                        <span 
+                        <span
                           className={`text-xs font-medium cursor-pointer ${
                             isIndefinite ? "text-blue-600 font-semibold" : "text-gray-600"
                           }`}
@@ -541,7 +616,7 @@ const DetailsTab: React.FC = () => {
                         >
                           Indefinite
                         </span>
-                        
+
                         <label className="relative inline-block w-10 h-5 cursor-pointer">
                           <input
                             type="checkbox"
@@ -552,8 +627,8 @@ const DetailsTab: React.FC = () => {
                           <div className="absolute w-full h-full bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-all"></div>
                           <div className="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-md transition-all peer-checked:translate-x-5"></div>
                         </label>
-                        
-                        <span 
+
+                        <span
                           className={`text-xs font-medium cursor-pointer ${
                             !isIndefinite ? "text-blue-600 font-semibold" : "text-gray-600"
                           }`}

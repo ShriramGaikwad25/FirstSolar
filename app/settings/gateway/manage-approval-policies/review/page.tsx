@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { AlertCircle, Printer, SquarePen, ChevronLeft } from "lucide-react";
+import { AlertCircle, SquarePen, FileText, Filter, Workflow } from "lucide-react";
 import { executeQuery } from "@/lib/api";
 import { useRouter } from "next/navigation";
-import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 
 const APPROVAL_POLICY_VIEW_STORAGE_KEY = "approvalPolicyViewDraft";
 
@@ -325,7 +324,6 @@ async function fetchWorkflowTemplateById(
 
 export default function ApprovalPolicyReviewPage() {
   const router = useRouter();
-  const { isVisible: isSidebarVisible, sidebarWidthPx } = useLeftSidebar();
   const [data, setData] = useState<ApprovalPolicyViewData>(EMPTY_DATA);
   const [hasData, setHasData] = useState(false);
   const [policyRaw, setPolicyRaw] = useState<Record<string, unknown> | null>(
@@ -530,41 +528,9 @@ export default function ApprovalPolicyReviewPage() {
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-slate-50 to-gray-100">
-      <div
-        className="fixed top-[60px] z-20 bg-white/95 backdrop-blur border-b border-gray-200 px-6 py-2.5"
-        style={{
-          left: isSidebarVisible ? sidebarWidthPx : 0,
-          right: 0,
-          transition: "left 300ms ease-in-out",
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => router.push("/settings/gateway/manage-approval-policies")}
-          className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-        >
-          <ChevronLeft className="mr-1 h-4 w-4" />
-          Back to Approval Policies
-        </button>
-      </div>
-      <div className="h-[52px]" aria-hidden />
-      <div className="absolute top-0 right-0 z-20 print:hidden p-0 m-0">
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="inline-flex items-center justify-center p-0 m-0 border-0 bg-transparent text-gray-600 shadow-none hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 rounded"
-          title="Print page"
-          aria-label="Print page"
-        >
-          <Printer className="h-5 w-5" />
-        </button>
-      </div>
       <div className="mx-auto w-full max-w-6xl">
-        <div className="space-y-4 py-3 px-6">
-        <div className="flex items-center justify-between gap-2 mb-1">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Review and Submit Approval Policy
-          </h1>
+        <div className="space-y-4 px-6">
+        <div className="flex items-center justify-end gap-2 mb-1">
           <div className="flex items-center gap-2">
             {hasData && (
               <button
@@ -606,49 +572,64 @@ export default function ApprovalPolicyReviewPage() {
             </div>
           ) : (
             <div className="space-y-4 text-xs">
-              {/* Approval Policy summary (matches wizard Step 4 layout) */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">Approval Policy</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                  <div>
-                    <div className="font-medium text-gray-600 mb-1">Name</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
+              {/* Approval Policy summary */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200 border-l-4 border-l-blue-400 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                    <FileText className="w-4 h-4" />
+                  </span>
+                  <h4 className="text-sm font-semibold text-gray-900">Approval Policy</h4>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
+                    <div className="text-gray-600 font-medium mb-1">Name</div>
+                    <div className="text-gray-900 break-words">
                       {data.name || <span className="text-gray-400">Not provided</span>}
                     </div>
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-600 mb-1">Owner</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
+                    <div className="text-gray-600 font-medium mb-1">Owner</div>
+                    <div className="text-gray-900 break-words">
                       {data.owner || <span className="text-gray-400">Not provided</span>}
                     </div>
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-600 mb-1">Priority</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
-                      {formatPriority(data.priority)}
-                    </div>
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
+                    <div className="text-gray-600 font-medium mb-1">Priority</div>
+                    <div className="text-gray-900">{formatPriority(data.priority)}</div>
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-600 mb-1">Status</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
-                      {data.status || <span className="text-gray-400">Not provided</span>}
-                    </div>
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
+                    <div className="text-gray-600 font-medium mb-1">Status</div>
+                    {data.status ? (
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                          data.status.toLowerCase() === "active"
+                            ? "bg-emerald-50 text-emerald-700"
+                            : data.status.toLowerCase() === "inactive"
+                              ? "bg-gray-100 text-gray-700"
+                              : "bg-amber-50 text-amber-700"
+                        }`}
+                      >
+                        {data.status}
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">Not provided</span>
+                    )}
                   </div>
-                  <div className="md:col-span-2">
-                    <div className="font-medium text-gray-600 mb-1">Description</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900 whitespace-pre-wrap">
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 md:col-span-2">
+                    <div className="text-gray-600 font-medium mb-1">Description</div>
+                    <div className="text-gray-900 break-words whitespace-pre-wrap">
                       {data.description || <span className="text-gray-400">Not provided</span>}
                     </div>
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-600 mb-1">Policy Code</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
+                    <div className="text-gray-600 font-medium mb-1">Policy Code</div>
+                    <div className="text-gray-900 break-words">
                       {data.code || <span className="text-gray-400">Not provided</span>}
                     </div>
                   </div>
-                  <div>
-                    <div className="font-medium text-gray-600 mb-1">Business Object Type</div>
-                    <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
+                  <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
+                    <div className="text-gray-600 font-medium mb-1">Business Object Type</div>
+                    <div className="text-gray-900 break-words">
                       {data.businessObjectType || <span className="text-gray-400">Not provided</span>}
                     </div>
                   </div>
@@ -656,24 +637,34 @@ export default function ApprovalPolicyReviewPage() {
               </div>
 
               {/* Conditions: full selector_json from the policy row */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">Conditions</h4>
+              <div className="bg-white rounded-lg p-4 border border-gray-200 border-l-4 border-l-purple-400 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-100 text-purple-700">
+                    <Filter className="w-4 h-4" />
+                  </span>
+                  <h4 className="text-sm font-semibold text-gray-900">Conditions</h4>
+                </div>
                 {data.selectorJsonDisplay ? (
-                  <pre className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-[11px] text-gray-900 whitespace-pre-wrap overflow-auto max-h-96 font-mono leading-relaxed">
+                  <pre className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-[11px] text-gray-800 whitespace-pre-wrap overflow-auto max-h-96 font-mono leading-relaxed">
                     {data.selectorJsonDisplay}
                   </pre>
                 ) : (
-                  <p className="text-xs text-gray-400">
+                  <p className="text-gray-400">
                     No selector_json on this policy. This policy may apply when no more specific selector matches.
                   </p>
                 )}
               </div>
 
               {/* Attached workflow — loaded from kf_wf_template_t via API when possible */}
-              <div className="bg-white rounded-lg p-4 border border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                  Attached Workflow
-                </h4>
+              <div className="bg-white rounded-lg p-4 border border-gray-200 border-l-4 border-l-indigo-400 shadow-sm">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="flex items-center justify-center w-7 h-7 rounded-md bg-indigo-100 text-indigo-700">
+                    <Workflow className="w-4 h-4" />
+                  </span>
+                  <h4 className="text-sm font-semibold text-gray-900">
+                    Attached Workflow
+                  </h4>
+                </div>
                 {workflowLoading && !displayWorkflow ? (
                   <p className="text-xs text-gray-500">Loading workflow…</p>
                 ) : (
@@ -687,46 +678,46 @@ export default function ApprovalPolicyReviewPage() {
                       <p className="text-xs text-gray-500 mb-2">Refreshing workflow…</p>
                     )}
                     {displayWorkflow ? (
-                      <div className="space-y-1 text-xs text-gray-900">
-                        <div className="font-medium">
+                      <div className="space-y-2">
+                        <div className="text-sm font-semibold text-gray-900">
                           {displayWorkflow.name}
                           {displayWorkflow.code
                             ? ` (${displayWorkflow.code})`
                             : ""}
                         </div>
                         {displayWorkflow.description ? (
-                          <div className="text-gray-700 whitespace-pre-wrap">
+                          <div className="text-sm text-gray-700 whitespace-pre-wrap">
                             {displayWorkflow.description}
                           </div>
                         ) : null}
-                        <div className="flex flex-wrap gap-2 mt-1">
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {displayWorkflow.stages != null && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-medium">
+                              Stages: {displayWorkflow.stages}
+                            </span>
+                          )}
                           {(displayWorkflow.businessObjectType ||
                             data.businessObjectType) && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
                               {displayWorkflow.businessObjectType ??
                                 data.businessObjectType}
                             </span>
                           )}
-                          {displayWorkflow.stages != null && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700">
-                              Stages: {displayWorkflow.stages}
-                            </span>
-                          )}
                           {data.version != null && (
-                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
                               Version: {data.version}
                             </span>
                           )}
                         </div>
                         {groupedWorkflowSteps.length > 0 && (
                           <div className="mt-2 w-full rounded-md border border-gray-200 bg-gray-50 p-2.5">
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-600">
+                            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-600">
                               Workflow Steps
                             </p>
                             <div className="w-full min-w-0 overflow-hidden">
                               <div className="w-full flex flex-nowrap items-center gap-1.5 sm:gap-2">
                                 <div className="h-18 w-18 shrink-0 rounded-full border-2 border-slate-200 bg-white text-center flex items-center justify-center px-1.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
                                     Request Submitted
                                   </span>
                                 </div>
@@ -757,7 +748,7 @@ export default function ApprovalPolicyReviewPage() {
                                             <div className="text-xs font-semibold text-slate-700 leading-tight">
                                               {step.stepLabel}
                                             </div>
-                                            <div className="mt-1 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-800">
+                                            <div className="mt-1 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-emerald-800">
                                               {step.stepTypeCode}
                                             </div>
                                           </div>
@@ -772,7 +763,7 @@ export default function ApprovalPolicyReviewPage() {
 
                                 <span className="text-slate-400 text-base shrink-0 self-center">→</span>
                                 <div className="h-18 w-18 shrink-0 rounded-full border-2 border-slate-200 bg-white text-center flex items-center justify-center px-1.5">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
+                                  <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
                                     Request Completed
                                   </span>
                                 </div>
@@ -790,7 +781,6 @@ export default function ApprovalPolicyReviewPage() {
                   </>
                 )}
               </div>
-
             </div>
           )}
         </div>

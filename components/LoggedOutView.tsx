@@ -6,7 +6,7 @@ export function LoggedOutView() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 p-8">
       <div className="text-center max-w-md w-full bg-white rounded-lg shadow-sm border border-gray-200 px-8 py-10">
         <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full bg-green-100">
           <svg

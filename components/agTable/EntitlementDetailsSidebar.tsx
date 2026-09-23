@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, FolderIcon } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Briefcase, Cpu, ShieldCheck, RefreshCw } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { formatDateMMDDYY } from "@/utils/utils";
 
@@ -76,59 +76,59 @@ export default function EntitlementDetailsSidebar({
     key2: string,
     value2: any
   ) => (
-    <div className="flex space-x-4 text-sm text-gray-700">
-      <div className="flex-1">
-        <strong>{label1}:</strong>{" "}
+    <div className="grid grid-cols-2 gap-4">
+      <div className="min-w-0">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label1}</span>
         {isEditModeLocal ? (
           <input
             type="text"
             value={editableFieldsLocal[key1] || value1 || ""}
             onChange={(e) => setEditableFieldsLocal((prev: any) => ({ ...prev, [key1]: e.target.value }))}
-            className="form-input w-full text-sm border-gray-300 rounded"
+            className="form-input w-full text-sm border-gray-300 rounded mt-1"
           />
         ) : (
-          value1?.toString() || "N/A"
+          <div className="text-sm text-gray-900 font-medium mt-1 break-words">{value1?.toString() || "N/A"}</div>
         )}
       </div>
-      <div className="flex-1">
-        <strong>{label2}:</strong>{" "}
+      <div className="min-w-0">
+        <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label2}</span>
         {isEditModeLocal ? (
           <input
             type="text"
             value={editableFieldsLocal[key2] || value2 || ""}
             onChange={(e) => setEditableFieldsLocal((prev: any) => ({ ...prev, [key2]: e.target.value }))}
-            className="form-input w-full text-sm border-gray-300 rounded"
+            className="form-input w-full text-sm border-gray-300 rounded mt-1"
           />
         ) : (
-          value2?.toString() || "N/A"
+          <div className="text-sm text-gray-900 font-medium mt-1 break-words">{value2?.toString() || "N/A"}</div>
         )}
       </div>
     </div>
   );
 
   const renderSingleFieldLocal = (label: string, key: string, value: any) => (
-    <div className="text-sm text-gray-700">
-      <strong>{label}:</strong>{" "}
+    <div className="min-w-0">
+      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
       {isEditModeLocal ? (
         <input
           type="text"
           value={editableFieldsLocal[key] || value || ""}
           onChange={(e) => setEditableFieldsLocal((prev: any) => ({ ...prev, [key]: e.target.value }))}
-          className="form-input w-full text-sm border-gray-300 rounded"
+          className="form-input w-full text-sm border-gray-300 rounded mt-1"
         />
       ) : (
-        value?.toString() || "N/A"
+        <div className="text-sm text-gray-900 font-medium mt-1 break-words">{value?.toString() || "N/A"}</div>
       )}
     </div>
   );
 
   return (
     <div className="w-full">
-      <div className="p-4 bg-gray-50">
+      <div className="p-4">
         <div className="flex justify-between items-start">
           <div className="flex-1">
             {errorMessage ? (
-              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{errorMessage}</p>
               </div>
             ) : (
@@ -148,18 +148,18 @@ export default function EntitlementDetailsSidebar({
                       }));
                       autoResizeTextarea(e.target);
                     }}
-                    className="form-input w-full text-sm text-gray-600 mt-2 rounded overflow-hidden resize-none"
+                    className="form-input w-full text-sm text-gray-600 rounded overflow-hidden resize-none"
                     rows={2}
                   />
                 ) : (
-                  <>
-                    <h3 className="text-md font-semibold text-gray-600">Description :-</h3>
-                    <p className="text-sm text-gray-600 mt-1 break-words break-all whitespace-pre-wrap max-w-full">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</span>
+                    <p className="text-sm text-gray-700 mt-1 break-words whitespace-pre-wrap max-w-full">
                       {(data as any)?.["Ent Description"] ||
                         (data as any)?.["description"] ||
-                        "description: -"}
+                        "-"}
                     </p>
-                  </>
+                  </div>
                 )}
               </>
             )}
@@ -167,25 +167,27 @@ export default function EntitlementDetailsSidebar({
         </div>
       </div>
 
-      <div className="p-4 space-y-4">
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+      <div className="px-4 pb-4 space-y-4">
+        <div className="bg-white border border-gray-200 border-l-4 border-l-blue-400 rounded-lg shadow-sm overflow-hidden">
           <button
             type="button"
-            className="flex items-center justify-between w-full text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+            className="flex items-center justify-between w-full text-sm font-semibold text-gray-800 p-3 hover:bg-gray-50 transition-colors"
             onClick={() => toggleFrameLocal("general")}
           >
-            <span className="flex items-center">
-              <FolderIcon size={18} className="mr-2 text-gray-600" />
+            <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                <Info size={15} />
+              </span>
               General
             </span>
             {expandedFramesLocal.general ? (
-              <ChevronDown size={20} className="text-gray-600" />
+              <ChevronUp size={18} className="text-gray-500" />
             ) : (
-              <ChevronRight size={20} className="text-gray-600" />
+              <ChevronDown size={18} className="text-gray-500" />
             )}
           </button>
           {expandedFramesLocal.general && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-4 border-t border-gray-100">
               {renderSideBySideFieldLocal(
                 "Type",
                 "Ent Type",
@@ -206,25 +208,27 @@ export default function EntitlementDetailsSidebar({
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+        <div className="bg-white border border-gray-200 border-l-4 border-l-amber-400 rounded-lg shadow-sm overflow-hidden">
           <button
             type="button"
-            className="flex items-center w-full justify-between text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+            className="flex items-center w-full justify-between text-left text-sm font-semibold text-gray-800 p-3 hover:bg-gray-50 transition-colors"
             onClick={() => toggleFrameLocal("business")}
           >
-            <span className="flex items-center">
-              <FolderIcon size={18} className="mr-2 text-gray-600" />
+            <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-amber-100 text-amber-700">
+                <Briefcase size={15} />
+              </span>
               Business
             </span>
             {expandedFramesLocal.business ? (
-              <ChevronDown size={20} className="text-gray-600" />
+              <ChevronUp size={18} className="text-gray-500" />
             ) : (
-              <ChevronRight size={20} className="text-gray-600" />
+              <ChevronDown size={18} className="text-gray-500" />
             )}
           </button>
 
           {expandedFramesLocal.business && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-4 border-t border-gray-100">
               {renderSingleFieldLocal(
                 "Objective",
                 "Business Objective",
@@ -255,24 +259,26 @@ export default function EntitlementDetailsSidebar({
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+        <div className="bg-white border border-gray-200 border-l-4 border-l-purple-400 rounded-lg shadow-sm overflow-hidden">
           <button
             type="button"
-            className="flex items-center w-full justify-between text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+            className="flex items-center w-full justify-between text-left text-sm font-semibold text-gray-800 p-3 hover:bg-gray-50 transition-colors"
             onClick={() => toggleFrameLocal("technical")}
           >
-            <span className="flex items-center">
-              <FolderIcon size={18} className="mr-2 text-gray-600" />
+            <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-100 text-purple-700">
+                <Cpu size={15} />
+              </span>
               Technical
             </span>
             {expandedFramesLocal.technical ? (
-              <ChevronDown size={20} className="text-gray-600" />
+              <ChevronUp size={18} className="text-gray-500" />
             ) : (
-              <ChevronRight size={20} className="text-gray-600" />
+              <ChevronDown size={18} className="text-gray-500" />
             )}
           </button>
           {expandedFramesLocal.technical && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-4 border-t border-gray-100">
               {renderSideBySideFieldLocal(
                 "Created On",
                 "Created On",
@@ -348,24 +354,26 @@ export default function EntitlementDetailsSidebar({
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+        <div className="bg-white border border-gray-200 border-l-4 border-l-red-400 rounded-lg shadow-sm overflow-hidden">
           <button
             type="button"
-            className="flex items-center w-full justify-between text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+            className="flex items-center w-full justify-between text-left text-sm font-semibold text-gray-800 p-3 hover:bg-gray-50 transition-colors"
             onClick={() => toggleFrameLocal("security")}
           >
-            <span className="flex items-center">
-              <FolderIcon size={18} className="mr-2 text-gray-600" />
+            <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-red-100 text-red-700">
+                <ShieldCheck size={15} />
+              </span>
               Security
             </span>
             {expandedFramesLocal.security ? (
-              <ChevronDown size={20} className="text-gray-600" />
+              <ChevronUp size={18} className="text-gray-500" />
             ) : (
-              <ChevronRight size={20} className="text-gray-600" />
+              <ChevronDown size={18} className="text-gray-500" />
             )}
           </button>
           {expandedFramesLocal.security && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-4 border-t border-gray-100">
               {renderSideBySideFieldLocal(
                 "Risk",
                 "Risk",
@@ -422,24 +430,26 @@ export default function EntitlementDetailsSidebar({
           )}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+        <div className="bg-white border border-gray-200 border-l-4 border-l-teal-400 rounded-lg shadow-sm overflow-hidden">
           <button
             type="button"
-            className="flex items-center w-full justify-between text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+            className="flex items-center w-full justify-between text-left text-sm font-semibold text-gray-800 p-3 hover:bg-gray-50 transition-colors"
             onClick={() => toggleFrameLocal("lifecycle")}
           >
-            <span className="flex items-center">
-              <FolderIcon size={18} className="mr-2 text-gray-600" />
+            <span className="flex items-center gap-2">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-teal-100 text-teal-700">
+                <RefreshCw size={15} />
+              </span>
               Lifecycle
             </span>
             {expandedFramesLocal.lifecycle ? (
-              <ChevronDown size={20} className="text-gray-600" />
+              <ChevronUp size={18} className="text-gray-500" />
             ) : (
-              <ChevronRight size={20} className="text-gray-600" />
+              <ChevronDown size={18} className="text-gray-500" />
             )}
           </button>
           {expandedFramesLocal.lifecycle && (
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-4 border-t border-gray-100">
               {renderSideBySideFieldLocal(
                 "Requestable",
                 "Requestable",
@@ -483,7 +493,7 @@ export default function EntitlementDetailsSidebar({
         </div>
       </div>
 
-      <div className="p-4 bg-gray-50 flex space-x-2">
+      <div className="p-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
         {!isEditModeLocal && (
           <button
             type="button"
@@ -491,21 +501,35 @@ export default function EntitlementDetailsSidebar({
               setIsEditModeLocal(true);
               setEditableFieldsLocal({ ...(data as any) });
             }}
-            className="w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
             aria-label="Edit entitlement"
           >
             Edit
           </button>
         )}
         {isEditModeLocal && (
-          <button
-            type="button"
-            onClick={() => onSave(editableFieldsLocal)}
-            className="w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
-            aria-label="Save edits"
-          >
-            Save
-          </button>
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                setIsEditModeLocal(false);
+                setEditableFieldsLocal({ ...(data as any) });
+                onClose();
+              }}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              aria-label="Cancel edits"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => onSave(editableFieldsLocal)}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
+              aria-label="Save edits"
+            >
+              Save
+            </button>
+          </>
         )}
       </div>
     </div>

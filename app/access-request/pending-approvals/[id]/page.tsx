@@ -10,10 +10,32 @@ import {
   CircleX,
   RotateCcw,
   Printer,
+  User,
+  AtSign,
+  Mail,
+  Hash,
+  Building2,
+  Briefcase,
+  UserCog,
+  type LucideIcon,
 } from "lucide-react";
 import { getReviewerId } from "@/lib/auth";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
-import InsightsIcon from "@/components/InsightsIcon";
+import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
+
+interface InstanceStep {
+  action: string;
+  date: string;
+  userActor: string;
+  status: string;
+  /** Free-text decision comment, when the backend provides one on the step/task. */
+  comment?: string;
+  sodViolations?: Array<{ message: string; severity: string }>;
+  sodClean?: boolean;
+  sodStatus?: string;
+  trainingWarnings?: Array<{ message: string }>;
+  trainingNotRequired?: boolean;
+}
 
 interface RequestLineItem {
   lineItemId: string;
@@ -22,6 +44,8 @@ interface RequestLineItem {
   name: string;
   displayName: string;
   applicationName: string;
+  /** Target-system account this entitlement is granted on; falls back to the beneficiary's username. */
+  accountName: string;
   type: string;
   startDate: string;
   endDate: string;
@@ -37,6 +61,8 @@ interface RequestLineItem {
 
 interface RequestDetails {
   dateCreated: string;
+  /** Date + time, for the header card's "Created" field. */
+  dateCreatedTime: string;
   type: string;
   justification: string;
 }
@@ -55,11 +81,21 @@ interface PendingApprovalDetail {
   taskId?: number | string;
   reviewerId: string;
   fallbackEntitlementId: string;
+  /** This page only lists OPEN approval tasks, so the header badge is always this. */
+  status: string;
   beneficiaryName: string;
+  beneficiaryUsername: string;
   requesterName: string;
+  requesterUsername: string;
+  requesterEmail: string;
+  requesterDepartment: string;
+  requesterJobTitle: string;
+  requesterEmployeeId: string;
+  requesterManager: string;
   durationDays?: number;
   details: RequestDetails;
   lineItems: RequestLineItem[];
+  instanceSteps: InstanceStep[];
   initialLineItemActions?: Record<string, "approve" | "reject" | null>;
   baselineLineItemActions?: Record<
     string,
@@ -81,6 +117,292 @@ const formatDate = (value: string | null | undefined): string => {
   }
   return value;
 };
+
+const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) return "";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return new Intl.DateTimeFormat("en-US", {
+    month: "2-digit",
+    day: "2-digit",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(parsed);
+};
+
+const normalizeStatus = (value: string | null | undefined): string => {
+  if (!value) return "";
+  return String(value)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const stepCodeToAction = (code: string | null | undefined): string => {
+  const normalized = String(code ?? "").toUpperCase();
+  if (normalized === "SOD_CHECK") return "Assigned for SOD Approval";
+  if (normalized === "MANAGER_APPROVAL") return "Assigned to User Manager";
+  if (normalized === "APP_OWNER_APPROVAL") return "Assigned to App Owner";
+  if (normalized === "PROVISION_SCIM") return "Request Fulfillment";
+  return normalized ? normalized.replace(/_/g, " ") : "";
+};
+
+const getTemplateStepOrder = (step: any): number => {
+  const raw =
+    step?.template_step_id ??
+    step?.templateStepId ??
+    step?.templatestepid ??
+    step?.template_stepid;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : Number.POSITIVE_INFINITY;
+};
+
+const sortStepsByTemplateOrder = (steps: any[]): any[] =>
+  [...steps].sort((a, b) => getTemplateStepOrder(a) - getTemplateStepOrder(b));
+
+const isStepLikeObject = (value: any): boolean => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value).map((k) => k.toLowerCase());
+  const hasStepIdentity = keys.some((k) =>
+    [
+      "step_code",
+      "stepcode",
+      "template_step_id",
+      "templatestepid",
+      "instance_step_id",
+      "instancestepid",
+      "step_name",
+      "stepname",
+    ].includes(k),
+  );
+  const hasActionAndStatus =
+    keys.some((k) =>
+      ["action", "action_item", "item_action", "action_name", "actionname"].includes(k),
+    ) && keys.some((k) => ["status", "step_status", "stepstatus", "state"].includes(k));
+  const looksLikeOutboxEvent =
+    keys.includes("event_type") || keys.includes("aggregatetype") || keys.includes("aggregate_type");
+  return (hasStepIdentity || hasActionAndStatus) && !looksLikeOutboxEvent;
+};
+
+const toStepsArray = (value: any): any[] => {
+  if (Array.isArray(value)) return value;
+  if (!value) return [];
+
+  if (typeof value === "string") {
+    try {
+      return toStepsArray(JSON.parse(value));
+    } catch {
+      return [];
+    }
+  }
+
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    const candidates = [
+      obj.instance_steps,
+      obj.instancesteps,
+      obj.instanceSteps,
+      obj.steps,
+      obj.workflow_steps,
+      obj.workflowSteps,
+      obj.data,
+      obj.result,
+    ];
+    for (const candidate of candidates) {
+      const arr = toStepsArray(candidate);
+      if (arr.length > 0) return arr;
+    }
+  }
+
+  return [];
+};
+
+const deepCollectStepArrays = (value: any, maxDepth = 6): any[][] => {
+  if (maxDepth < 0 || !value) return [];
+
+  if (Array.isArray(value)) {
+    const arrays: any[][] = [];
+    const allStepLike = value.length > 0 && value.every((v) => isStepLikeObject(v));
+    if (allStepLike) arrays.push(value);
+    for (const item of value) {
+      arrays.push(...deepCollectStepArrays(item, maxDepth - 1));
+    }
+    return arrays;
+  }
+
+  if (typeof value === "string") {
+    try {
+      return deepCollectStepArrays(JSON.parse(value), maxDepth - 1);
+    } catch {
+      return [];
+    }
+  }
+
+  if (typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    let arrays: any[][] = [];
+    for (const child of Object.values(obj)) {
+      arrays = arrays.concat(deepCollectStepArrays(child, maxDepth - 1));
+    }
+    return arrays;
+  }
+
+  return [];
+};
+
+const pickBestStepArray = (...sources: any[]): any[] => {
+  const explicitCandidate = sources
+    .map((s) => toStepsArray(s))
+    .find((arr) => arr.length > 0 && arr.every((v) => isStepLikeObject(v)));
+  if (explicitCandidate) return explicitCandidate;
+
+  let best: any[] = [];
+  for (const source of sources) {
+    const arrays = deepCollectStepArrays(source);
+    for (const arr of arrays) {
+      if (arr.length > best.length) best = arr;
+    }
+  }
+  return best;
+};
+
+const resolveStepActionLabel = (
+  step: any,
+  actionFromCode: string,
+  actionFromFields: string,
+): string => {
+  let action = String(actionFromCode ? actionFromCode : actionFromFields).trim();
+  const isCustomApproval =
+    action.toUpperCase() === "CUSTOM APPROVAL" ||
+    String(step?.step_code ?? "").toUpperCase().replace(/_/g, " ") === "CUSTOM APPROVAL";
+  if (!isCustomApproval) return action;
+
+  const taskNameRaw =
+    step?.task?.name ?? step?.Task?.name ?? step?.tasks?.[0]?.name ?? step?.tasks?.[0]?.Task?.name;
+  const taskName =
+    typeof taskNameRaw === "string"
+      ? taskNameRaw.trim()
+      : taskNameRaw != null && taskNameRaw !== ""
+        ? String(taskNameRaw).trim()
+        : "";
+  return taskName || "CUSTOM APPROVAL";
+};
+
+const mapInstanceSteps = (
+  steps: any[],
+  trainingValidation?: any,
+  sodValidation?: any,
+): InstanceStep[] =>
+  steps.map((step) => {
+    const actionFromCode = stepCodeToAction(step?.step_code);
+    const isTrainingCheckStep = String(step?.step_code ?? "").toUpperCase().includes("TRAINING");
+    const trainingStatus = trainingValidation?.status ?? trainingValidation?.Status;
+    const trainingWarningsRaw = trainingValidation?.warnings ?? trainingValidation?.Warnings;
+    const trainingCompletedNotRequired =
+      isTrainingCheckStep &&
+      String(trainingStatus ?? "").toUpperCase() === "COMPLETED" &&
+      Array.isArray(trainingWarningsRaw) &&
+      trainingWarningsRaw.length === 0;
+    const trainingWarnings =
+      isTrainingCheckStep && Array.isArray(trainingWarningsRaw) && trainingWarningsRaw.length > 0
+        ? trainingWarningsRaw.map((w: any) => ({ message: String(w?.message ?? w?.Message ?? "") }))
+        : undefined;
+
+    const isSodStep = String(step?.step_code ?? "").toUpperCase().includes("SOD");
+    const sodViolationsRaw = sodValidation?.violations ?? sodValidation?.Violations;
+    const sodStatusRaw = sodValidation?.status ?? sodValidation?.Status;
+    const sodViolations =
+      isSodStep && Array.isArray(sodViolationsRaw) && sodViolationsRaw.length > 0
+        ? sodViolationsRaw.map((v: any) => ({
+            message: String(v?.message ?? v?.Message ?? ""),
+            severity: String(v?.severity ?? v?.Severity ?? ""),
+          }))
+        : undefined;
+    const sodClean = isSodStep && Array.isArray(sodViolationsRaw) && sodViolationsRaw.length === 0;
+
+    const actionFromFields =
+      step?.action ??
+      step?.action_item ??
+      step?.item_action ??
+      step?.actionItem ??
+      step?.action_name ??
+      step?.actionName ??
+      step?.step_name ??
+      step?.stepName ??
+      step?.name ??
+      "";
+
+    return {
+      action: resolveStepActionLabel(step, actionFromCode, actionFromFields),
+      date: String(
+        formatDateTime(
+          step?.created_at ??
+            step?.updated_at ??
+            step?.completed_at ??
+            step?.date ??
+            step?.action_date ??
+            step?.actionDate ??
+            step?.createdon ??
+            step?.createdOn ??
+            step?.requestedon ??
+            step?.requestedOn ??
+            step?.timestamp,
+        ),
+      ),
+      userActor: String(
+        step?.tasks?.[0]?.assignee?.display_name ??
+          [step?.tasks?.[0]?.assignee?.first_name, step?.tasks?.[0]?.assignee?.last_name]
+            .filter(Boolean)
+            .join(" ") ??
+          step?.tasks?.[0]?.assignee?.username ??
+          step?.user_actor ??
+          step?.userActor ??
+          step?.assigned_to ??
+          step?.assignedTo ??
+          step?.actor ??
+          step?.user ??
+          step?.performed_by ??
+          step?.performedBy ??
+          step?.username ??
+          "",
+      ),
+      status: String(
+        normalizeStatus(
+          step?.status ??
+            step?.tasks?.[0]?.task_status ??
+            step?.tasks?.[0]?.step_state ??
+            step?.step_status ??
+            step?.stepStatus ??
+            step?.state ??
+            step?.current_status ??
+            step?.currentStatus,
+        ),
+      ),
+      comment:
+        (
+          step?.comment ??
+          step?.comments ??
+          step?.decision_comment ??
+          step?.decisionComment ??
+          step?.approver_comment ??
+          step?.approverComment ??
+          step?.tasks?.[0]?.comment ??
+          step?.tasks?.[0]?.comments ??
+          step?.tasks?.[0]?.decision_comment ??
+          step?.notes ??
+          ""
+        )
+          .toString()
+          .trim() || undefined,
+      sodViolations,
+      sodClean,
+      sodStatus: sodClean ? String(sodStatusRaw ?? "") : undefined,
+      trainingWarnings,
+      trainingNotRequired: trainingCompletedNotRequired,
+    };
+  });
 
 const toStringSafe = (value: unknown): string =>
   value === null || value === undefined ? "" : String(value);
@@ -247,6 +569,104 @@ function saveRequesterCommentsToStorage(
   }
 }
 
+/** Uppercase label + value pair used in the header summary row. */
+const HeaderField: React.FC<{ label: string; value: React.ReactNode; accent?: boolean }> = ({
+  label,
+  value,
+  accent,
+}) => (
+  <div className="min-w-0">
+    <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</div>
+    <div
+      className={`mt-0.5 truncate text-sm font-semibold ${accent ? "text-blue-700" : "text-gray-900"}`}
+    >
+      {value}
+    </div>
+  </div>
+);
+
+/** Uppercase label + value pair used inside the Request History / User Details cards. */
+const DetailField: React.FC<{ label: string; value: React.ReactNode; mono?: boolean }> = ({
+  label,
+  value,
+  mono,
+}) => (
+  <div className="min-w-0">
+    <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</div>
+    <div
+      className={`mt-0.5 whitespace-pre-wrap break-words text-sm text-gray-900 ${
+        mono ? "font-mono text-[12.5px]" : ""
+      }`}
+    >
+      {value}
+    </div>
+  </div>
+);
+
+/** Label + value pair with a leading icon, used for the User Details card's identity fields. */
+const IconDetailField: React.FC<{ icon: LucideIcon; label: string; value: React.ReactNode }> = ({
+  icon: Icon,
+  label,
+  value,
+}) => (
+  <div className="flex min-w-0 items-start gap-2.5">
+    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500">
+      <Icon className="h-3.5 w-3.5" />
+    </div>
+    <div className="min-w-0">
+      <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</div>
+      <div className="mt-0.5 truncate text-sm text-gray-900">{value}</div>
+    </div>
+  </div>
+);
+
+/** Compact single-line label + value row used for the SOD/training annotations under an approval step. */
+const StepMessageRow: React.FC<{ label: string; value: React.ReactNode; emphasize?: boolean }> = ({
+  label,
+  value,
+  emphasize,
+}) => (
+  <div className="w-full text-left text-[11px] leading-snug">
+    <span className="font-semibold uppercase tracking-wide text-blue-500">{label}:</span>{" "}
+    <span className={emphasize ? "font-semibold text-gray-800" : "text-gray-700"}>{value}</span>
+  </div>
+);
+
+/** Circle / pill / connector colors for one step of the approval stepper, by its status text. */
+const stepVisualClasses = (
+  status: string | undefined,
+): { circle: string; pill: string; line: string } => {
+  const s = (status || "").toLowerCase();
+  if (s.includes("reject")) {
+    return { circle: "bg-red-600", pill: "bg-red-100 text-red-700", line: "bg-red-400" };
+  }
+  if (s.includes("complet")) {
+    return { circle: "bg-green-600", pill: "bg-green-100 text-green-700", line: "bg-green-500" };
+  }
+  if (s.includes("pending") || s.includes("progress") || s.includes("running")) {
+    return { circle: "bg-blue-600", pill: "bg-blue-100 text-blue-700", line: "bg-gray-200" };
+  }
+  return { circle: "bg-gray-300", pill: "bg-gray-100 text-gray-600", line: "bg-gray-200" };
+};
+
+const isStepPending = (step: InstanceStep | undefined): boolean => {
+  if (!step) return false;
+  const s = (step.status || "").toLowerCase();
+  return !s || s.includes("pending");
+};
+
+const findApprovalStep = (
+  steps: InstanceStep[],
+  actionLabel: string,
+): InstanceStep | undefined => steps.find((s) => s.action === actionLabel);
+
+type DetailTab = "history" | "user";
+
+const DETAIL_TABS: Array<{ key: DetailTab; label: string }> = [
+  { key: "history", label: "Request History" },
+  { key: "user", label: "User Details" },
+];
+
 const PendingApprovalDetailPage = ({
   params,
 }: {
@@ -254,14 +674,11 @@ const PendingApprovalDetailPage = ({
 }) => {
   const { id } = React.use(params);
   const router = useRouter();
-  const {
-    openSidebar,
-    isOpen: isRightSidebarOpen,
-    title: rightSidebarTitle,
-  } = useRightSidebar();
+  const { openSidebar } = useRightSidebar();
   const [request, setRequest] = useState<PendingApprovalDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<DetailTab>("history");
   const [expandedLineItems, setExpandedLineItems] = useState<
     Record<string, boolean>
   >({});
@@ -297,9 +714,6 @@ const PendingApprovalDetailPage = ({
   const [infoRequestLoading, setInfoRequestLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [activeInsightsLineItemKey, setActiveInsightsLineItemKey] = useState<
-    string | null
-  >(null);
   const [baselineLineItemActions, setBaselineLineItemActions] = useState<
     Record<string, "approve" | "reject" | "consulted" | null>
   >({});
@@ -458,6 +872,36 @@ const PendingApprovalDetailPage = ({
               row.beneficiary ??
               row.user_name,
           );
+
+          // Richer identity fields — row-level requester/beneficiary objects (thin, from this
+          // task query) merged over the fuller access_request objects (same shape used by
+          // vw_access_request_full_json), so either source can fill in the gaps.
+          const requesterObj: Record<string, any> = {
+            ...toObjectSafe(requestJson?.access_request?.requested_by),
+            ...toObjectSafe(row?.requester),
+          };
+          const beneficiaryObj: Record<string, any> = {
+            ...toObjectSafe(requestJson?.access_request?.requested_for),
+            ...toObjectSafe(row?.beneficiary),
+          };
+          const requesterUsername = toStringSafe(
+            requesterObj.username ?? requesterObj.userid ?? requesterObj.email,
+          );
+          const beneficiaryUsername = toStringSafe(
+            beneficiaryObj.username ?? beneficiaryObj.userid ?? beneficiaryObj.email ?? beneficiaryName,
+          );
+          const requesterEmail = toStringSafe(requesterObj.email);
+          const requesterDepartment = toStringSafe(requesterObj.department);
+          const requesterJobTitle = toStringSafe(
+            requesterObj.title ?? requesterObj.jobtitle ?? requesterObj.job_title,
+          );
+          const requesterEmployeeId = toStringSafe(
+            requesterObj.employeeid ?? requesterObj.employee_id,
+          );
+          const requesterManager = toStringSafe(
+            requesterObj.manager_name ?? requesterObj.managername ?? requesterObj.manager,
+          );
+
           const createdOnRaw =
             row.created_on ??
             row.createdOn ??
@@ -465,6 +909,7 @@ const PendingApprovalDetailPage = ({
             row.assigned_on ??
             row.assignedOn;
           const createdOn = formatDate(toStringSafe(createdOnRaw));
+          const createdOnDateTime = formatDateTime(toStringSafe(createdOnRaw)) || createdOn;
           const justification = toStringSafe(
             row.requester_justification ??
               row.comments ??
@@ -558,6 +1003,12 @@ const PendingApprovalDetailPage = ({
                   catalog.applicationName ??
                   item?.application_name ??
                   item?.applicationName,
+              );
+              const accountName = toStringSafe(
+                item?.account_name ??
+                  item?.accountname ??
+                  item?.account?.name ??
+                  beneficiaryUsername,
               );
               const startDate = formatDate(toStringSafe(item?.item_startdate));
               const endDate = formatDate(toStringSafe(item?.item_enddate));
@@ -694,6 +1145,7 @@ const PendingApprovalDetailPage = ({
                 name: lineName,
                 displayName: lineName,
                 applicationName,
+                accountName,
                 type: lineType,
                 startDate,
                 endDate,
@@ -814,6 +1266,7 @@ const PendingApprovalDetailPage = ({
                     applicationName: toStringSafe(
                       row.application_name ?? row.applicationName ?? "",
                     ),
+                    accountName: beneficiaryUsername,
                     type: toStringSafe(
                       row.entity_type ?? row.entityType ?? "Entitlement",
                     ),
@@ -929,20 +1382,72 @@ const PendingApprovalDetailPage = ({
               )
             : undefined;
 
+          // Approval-history stepper: same request_json shape as the requester-facing tracker,
+          // so reuse the same step extraction (gracefully empty when this query's row doesn't
+          // carry workflow_instance data).
+          const requestJsonStepsRaw = pickBestStepArray(
+            requestJson?.instance_steps,
+            requestJson?.workflow_instance?.instance_steps,
+            requestJson?.workflowInstance?.instance_steps,
+            row?.instance_steps,
+            requestJson,
+            row,
+          );
+          const trainingValidation =
+            contextJson?.validation?.training ??
+            requestJson?.workflow_instance?.context_json?.validation?.training ??
+            requestJson?.workflowInstance?.context_json?.validation?.training ??
+            requestJson?.workflow_instance?.contextJson?.validation?.training ??
+            requestJson?.workflowInstance?.contextJson?.validation?.training;
+          const sodValidation =
+            contextJson?.validation?.sod ??
+            requestJson?.workflow_instance?.context_json?.validation?.sod ??
+            requestJson?.workflowInstance?.context_json?.validation?.sod ??
+            requestJson?.workflow_instance?.contextJson?.validation?.sod ??
+            requestJson?.workflowInstance?.contextJson?.validation?.sod;
+          const mappedWorkflowSteps = mapInstanceSteps(
+            sortStepsByTemplateOrder(requestJsonStepsRaw),
+            trainingValidation,
+            sodValidation,
+          );
+          const submittedStep: InstanceStep[] = createdOnRaw
+            ? [
+                {
+                  action: "Request Submitted",
+                  date: formatDateTime(toStringSafe(createdOnRaw)),
+                  userActor: requesterName ? `${requesterName} (Requester)` : "Requester",
+                  status: "Completed",
+                },
+              ]
+            : [];
+          const instanceSteps: InstanceStep[] =
+            mappedWorkflowSteps.length > 0 ? [...submittedStep, ...mappedWorkflowSteps] : [];
+
           return {
             id: requestId,
             taskId,
             reviewerId,
             fallbackEntitlementId: fallbackEntitlementId || requestId,
+            // Every row here comes from task_status = 'OPEN', so this task is always pending review.
+            status: "Pending",
             requesterName,
+            requesterUsername,
+            requesterEmail,
+            requesterDepartment,
+            requesterJobTitle,
+            requesterEmployeeId,
+            requesterManager,
             beneficiaryName,
+            beneficiaryUsername,
             durationDays,
             details: {
               dateCreated: createdOn,
+              dateCreatedTime: createdOnDateTime,
               type: toStringSafe(row.request_type ?? row.type ?? "Entitlement"),
               justification,
             },
             lineItems: normalizedLineItems,
+            instanceSteps,
             initialLineItemActions,
             baselineLineItemActions,
             sodPolicyDetails,
@@ -1168,219 +1673,6 @@ const PendingApprovalDetailPage = ({
     }
   };
 
-  const openInsightsSidebarForLineItem = useCallback(
-    (lineItemKey: string) => {
-      if (!request) return;
-      const lineItem = request.lineItems[Number(lineItemKey)];
-      if (!lineItem) return;
-
-      const selectedAction = lineItemActions[lineItemKey] ?? null;
-      const isLockedByServer =
-        (baselineLineItemActions[lineItemKey] ?? null) !== null;
-      const approveFilled = selectedAction === "approve";
-      const rejectFilled = selectedAction === "reject";
-      const isItemLoading = lineItemLoading[lineItemKey] ?? false;
-      const isActionsDisabled = isItemLoading || isLockedByServer;
-
-      openSidebar(
-        <div className="space-y-2">
-          <div className="rounded border border-gray-200 border-l-4 border-l-sky-500 bg-sky-50/40 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800">
-              Beneficiary Analysis
-            </p>
-            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-              {lineItem.beneficiaryAnalysis ? (
-                lineItem.beneficiaryAnalysis
-              ) : (
-                <span className="italic text-gray-500">
-                  No beneficiary analysis available.
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div className="rounded border border-gray-200 border-l-4 border-l-rose-600 bg-rose-50/50 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-800">
-              Contextual Risk
-            </p>
-            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-              {lineItem.contextualRisk ? (
-                lineItem.contextualRisk
-              ) : (
-                <span className="italic text-gray-500">
-                  No contextual risk details available.
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div className="rounded border border-gray-200 border-l-4 border-l-amber-500 bg-amber-50/40 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-              Risk Sensitivity Analysis
-            </p>
-            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-              {lineItem.riskSensitivityAnalysis ? (
-                lineItem.riskSensitivityAnalysis
-              ) : (
-                <span className="italic text-gray-500">
-                  No risk sensitivity analysis available.
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div className="rounded border border-gray-200 border-l-4 border-l-indigo-500 bg-indigo-50/40 p-3">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
-              Peer Analysis
-            </p>
-            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-              {lineItem.peerAnalysis ? (
-                lineItem.peerAnalysis
-              ) : (
-                <span className="italic text-gray-500">
-                  No peer analysis available.
-                </span>
-              )}
-            </p>
-          </div>
-
-          <div className="rounded border border-gray-200 border-l-4 border-l-blue-600 bg-blue-50/50 p-2">
-            <h3 className="text-xs font-semibold text-gray-800">
-              Should this user have this access?
-            </h3>
-            <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
-              <button
-                type="button"
-                title={approveFilled ? "Undo Approve" : "Approve"}
-                aria-label="Approve"
-                disabled={isActionsDisabled}
-                onClick={() => handleLineItemAction(lineItemKey, "approve")}
-                className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                <div className="relative inline-flex items-center justify-center w-8 h-8">
-                  <CircleCheck
-                    color="#1c821cff"
-                    strokeWidth="1"
-                    size="32"
-                    fill={approveFilled ? "#1c821cff" : "none"}
-                  />
-                  {approveFilled && (
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      className="absolute pointer-events-none"
-                      style={{
-                        left: "50%",
-                        top: "50%",
-                        transform: "translate(-50%, -50%)",
-                      }}
-                    >
-                      <path
-                        d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-                        fill="#ffffff"
-                      />
-                    </svg>
-                  )}
-                </div>
-              </button>
-              <button
-                type="button"
-                title={rejectFilled ? "Undo Reject" : "Reject"}
-                aria-label="Reject"
-                disabled={isActionsDisabled}
-                onClick={() => handleLineItemAction(lineItemKey, "reject")}
-                className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                <div className="relative inline-flex items-center justify-center w-8 h-8">
-                  <CircleX
-                    color="#FF2D55"
-                    strokeWidth="1"
-                    size="32"
-                    fill={rejectFilled ? "#FF2D55" : "none"}
-                  />
-                  {rejectFilled && (
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 24 24"
-                      className="absolute pointer-events-none"
-                      style={{
-                        left: "50%",
-                        top: "50%",
-                        transform: "translate(-50%, -50%)",
-                      }}
-                    >
-                      <path
-                        d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                        fill="#ffffff"
-                      />
-                    </svg>
-                  )}
-                </div>
-              </button>
-              <button
-                type="button"
-                title="Requester comment"
-                aria-label="Requester comment"
-                disabled={isItemLoading}
-                onClick={() => openCommentModal(null, lineItemKey)}
-                className={`p-1 rounded flex items-center justify-center ${isItemLoading ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                <svg
-                  width="30"
-                  height="30"
-                  viewBox="0 0 32 32"
-                  className="cursor-pointer hover:opacity-80"
-                >
-                  <path
-                    d="M0.700195 0V19.5546H3.5802V25.7765C3.57994 25.9525 3.62203 26.1247 3.70113 26.2711C3.78022 26.4176 3.89277 26.5318 4.02449 26.5992C4.15621 26.6666 4.30118 26.6842 4.44101 26.6498C4.58085 26.6153 4.70926 26.5304 4.80996 26.4058C6.65316 24.1232 10.3583 19.5546 10.3583 19.5546H25.1802V0H0.700195ZM2.1402 1.77769H23.7402V17.7769H9.76212L5.0202 23.6308V17.7769H2.1402V1.77769ZM5.0202 5.33307V7.11076H16.5402V5.33307H5.0202ZM26.6202 5.33307V7.11076H28.0602V23.11H25.1802V28.9639L20.4383 23.11H9.34019L7.9002 24.8877H19.8421C19.8421 24.8877 23.5472 29.4563 25.3904 31.7389C25.4911 31.8635 25.6195 31.9484 25.7594 31.9828C25.8992 32.0173 26.0442 31.9997 26.1759 31.9323C26.3076 31.8648 26.4202 31.7507 26.4993 31.6042C26.5784 31.4578 26.6204 31.2856 26.6202 31.1096V24.8877H29.5002V5.33307H26.6202ZM5.0202 8.88845V10.6661H10.7802V8.88845H5.0202ZM5.0202 12.4438V14.2215H19.4202V12.4438H5.0202Z"
-                    fill="#2684FF"
-                  />
-                </svg>
-              </button>
-              <button
-                type="button"
-                title="Request more information"
-                aria-label="Request more information"
-                disabled={isActionsDisabled}
-                onClick={() => {
-                  setInfoRequestItemKey(lineItemKey);
-                  setInfoRequestMessage("");
-                }}
-                className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-              >
-                <RotateCcw className="h-4 w-4 text-blue-600" />
-              </button>
-            </div>
-          </div>
-        </div>,
-        { widthPx: 500, title: "Insights" },
-      );
-    },
-    [
-      request,
-      lineItemActions,
-      baselineLineItemActions,
-      lineItemLoading,
-      openSidebar,
-    ],
-  );
-
-  useEffect(() => {
-    if (!activeInsightsLineItemKey) return;
-    if (!isRightSidebarOpen || rightSidebarTitle !== "Insights") return;
-    openInsightsSidebarForLineItem(activeInsightsLineItemKey);
-  }, [
-    activeInsightsLineItemKey,
-    isRightSidebarOpen,
-    rightSidebarTitle,
-    lineItemActions,
-    baselineLineItemActions,
-    lineItemLoading,
-    openInsightsSidebarForLineItem,
-  ]);
-
   if (loading) {
     return (
       <div className="p-6">
@@ -1426,50 +1718,146 @@ const PendingApprovalDetailPage = ({
         </button>
       </div>
       <div className="p-6 space-y-6">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-gray-600" />
-              <h2 className="text-sm font-semibold text-gray-900">
-                Request ID: {request.id}
-              </h2>
-            </div>
-            <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700 self-end sm:self-auto">
-              Request Type:{" "}
-              <span className="ml-1 font-semibold">{request.details.type}</span>
-            </div>
+        {/* Request Header Section */}
+        <div className="rounded-lg border border-dashed border-rose-200 bg-white p-4">
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <FileText className="h-5 w-5 shrink-0 text-gray-500" />
+            <h2 className="text-base font-semibold text-gray-900">
+              {request.beneficiaryName || request.requesterName || "Access Request"}
+            </h2>
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getAccessRequestStatusBadgeClasses(
+                request.status,
+              )}`}
+            >
+              {request.status}
+            </span>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
-            <div>
-              <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                Date Created
-              </div>
-              <div className="text-gray-900">{request.details.dateCreated}</div>
-            </div>
-            <div>
-              <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                Requester
-              </div>
-              <div className="text-gray-900">{request.requesterName}</div>
-            </div>
-            <div>
-              <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                Beneficiary
-              </div>
-              <div className="text-gray-900">{request.beneficiaryName}</div>
-            </div>
-            <div className="md:col-span-2">
-              <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                Justification
-              </div>
-              <div className="text-gray-900 whitespace-pre-wrap break-words">
-                {request.details.justification}
-              </div>
-            </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <HeaderField label="Request Id" value={request.id} />
+            <HeaderField label="Requester" value={request.requesterName || "-"} accent />
+            <HeaderField label="Beneficiary" value={request.beneficiaryName || "-"} accent />
+            <HeaderField
+              label="Created"
+              value={request.details.dateCreatedTime || request.details.dateCreated || "-"}
+            />
           </div>
         </div>
 
+        {/* Approval History — always visible, not tab-gated */}
+        {(() => {
+          const visibleInstanceSteps = request.instanceSteps.filter(
+            (step) => step.action !== "Assigned for SOD Approval",
+          );
+          const firstPendingIndex = visibleInstanceSteps.findIndex((step) =>
+            String(step.status ?? "").toLowerCase().includes("pending"),
+          );
+          if (visibleInstanceSteps.length === 0) {
+            return (
+              <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-sm text-gray-500">
+                No approval history yet.
+              </div>
+            );
+          }
+          return (
+            <div className="bg-white border border-gray-200 rounded-lg p-5 sm:p-6">
+              <div className="overflow-x-auto">
+                <div className="flex min-w-[640px] items-start">
+                  {visibleInstanceSteps.map((step, idx) => {
+                    const hideMetaColumns = firstPendingIndex !== -1 && idx >= firstPendingIndex;
+                    const visuals = stepVisualClasses(step.status);
+                    const prevVisuals =
+                      idx > 0 ? stepVisualClasses(visibleInstanceSteps[idx - 1].status) : null;
+                    return (
+                      <React.Fragment key={`${step.action}-${step.date}-${idx}`}>
+                        {idx > 0 && (
+                          <div
+                            className={`mt-4 h-0.5 flex-1 ${prevVisuals?.line ?? "bg-gray-200"}`}
+                          />
+                        )}
+                        <div className="flex w-40 shrink-0 flex-col items-center text-center sm:w-48">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white ${visuals.circle}`}
+                          >
+                            {idx + 1}
+                          </div>
+                          <div className="mt-2 text-sm font-semibold leading-snug text-gray-900">
+                            {step.action || "-"}
+                          </div>
+                          <span
+                            className={`mt-1.5 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${visuals.pill}`}
+                          >
+                            {step.status || "-"}
+                          </span>
+                          {!hideMetaColumns && (
+                            <div className="mt-1.5 text-xs leading-snug text-gray-500">
+                              {step.userActor || "—"} · {step.date || "-"}
+                            </div>
+                          )}
+                          {!hideMetaColumns && step.sodViolations && step.sodViolations.length > 0 && (
+                            <div className="mt-1.5 w-full space-y-0.5">
+                              {step.sodViolations.map((violation, vIdx) => (
+                                <div key={vIdx}>
+                                  <StepMessageRow label="Message" value={violation.message || "-"} />
+                                  <StepMessageRow
+                                    label="Severity"
+                                    value={violation.severity || "-"}
+                                    emphasize
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          {!hideMetaColumns && step.sodClean && (
+                            <div className="mt-1.5 w-full space-y-0.5">
+                              <StepMessageRow label="Message" value="No SOD violation found" />
+                              <StepMessageRow label="Status" value={step.sodStatus || "-"} emphasize />
+                            </div>
+                          )}
+                          {!hideMetaColumns && step.trainingWarnings && step.trainingWarnings.length > 0 && (
+                            <div className="mt-1.5 w-full space-y-0.5">
+                              {step.trainingWarnings.map((warning, wIdx) => (
+                                <StepMessageRow key={wIdx} label="Message" value={warning.message || "-"} />
+                              ))}
+                            </div>
+                          )}
+                          {!hideMetaColumns && step.trainingNotRequired && (
+                            <div className="mt-1.5 w-full">
+                              <StepMessageRow label="Message" value="Training not required" />
+                            </div>
+                          )}
+                        </div>
+                      </React.Fragment>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Tabs */}
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex gap-6" aria-label="Request detail tabs">
+            {DETAIL_TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                className={`border-b-2 px-1 pb-2 text-sm font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? "border-blue-600 text-blue-700"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+                }`}
+                aria-current={activeTab === tab.key ? "page" : undefined}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+
+        {activeTab === "history" && (
         <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
           {request.lineItems.map((lineItem, index) => {
             const lineItemKey = String(index);
@@ -1490,7 +1878,7 @@ const PendingApprovalDetailPage = ({
             return (
               <div
                 key={lineItemKey}
-                className="border border-gray-200 rounded-lg bg-gray-50"
+                className="border border-gray-200 rounded-lg bg-white"
               >
                 <div
                   role="button"
@@ -1525,9 +1913,13 @@ const PendingApprovalDetailPage = ({
                           High Risk
                         </span>
                       )}
-                      <span className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium border border-blue-300 bg-blue-50 text-blue-600">
-                        {lineItem.applicationName || "No Application"}
-                      </span>
+                      {lineItem.applicationName &&
+                        lineItem.applicationName.trim().toLowerCase() !==
+                          lineItem.name.trim().toLowerCase() && (
+                          <span className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium border border-blue-300 bg-blue-50 text-blue-600">
+                            {lineItem.applicationName}
+                          </span>
+                        )}
                       {lineItem.hasTrainingCheck && (
                         <span className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium border border-emerald-300 bg-emerald-50 text-emerald-600">
                           Training Check
@@ -1630,24 +2022,6 @@ const PendingApprovalDetailPage = ({
                         </button>
                       </div>
                     )}
-                    <div className="flex justify-end pr-10">
-                      <button
-                        type="button"
-                        title="AI Insights"
-                        aria-label="AI Insights"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveInsightsLineItemKey(lineItemKey);
-                          openInsightsSidebarForLineItem(lineItemKey);
-                        }}
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
-                      >
-                        <InsightsIcon
-                          size={18}
-                          className="shrink-0 text-amber-500"
-                        />
-                      </button>
-                    </div>
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
@@ -1808,36 +2182,72 @@ const PendingApprovalDetailPage = ({
                 </div>
 
                 {isItemExpanded && (
-                  <div className="px-4 py-3 space-y-3 text-sm">
+                  <div className="px-4 py-3.5 space-y-3.5 text-sm">
                     {itemError && (
                       <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-1.5">
                         {itemError}
                       </div>
                     )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                          Requester Comment
-                        </div>
-                        <div className="text-gray-900 whitespace-pre-wrap break-words">
-                          {request.details.justification || "No justification provided."}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                          Attachment
-                        </div>
-                        <span className="text-gray-500 text-sm">
-                          No Attachment
-                        </span>
-                      </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                      <DetailField label="Request Type" value={lineItem.type || "-"} />
+                      <DetailField label="Username" value={request.beneficiaryUsername || "-"} />
+                      <DetailField label="Account Name" value={lineItem.accountName || "-"} />
+                      <DetailField
+                        label="Security System"
+                        value={lineItem.applicationName || "-"}
+                      />
                     </div>
+
+                    <DetailField label="Entitlement" value={lineItem.name || "-"} mono />
+
+                    <DetailField
+                      label="Requester Comment"
+                      value={request.details.justification || "No additional comments provided."}
+                    />
                   </div>
                 )}
               </div>
             );
           })}
         </div>
+        )}
+
+        {activeTab === "user" && (
+          <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Requester
+            </div>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <IconDetailField icon={User} label="Name" value={request.requesterName || "-"} />
+              <IconDetailField
+                icon={AtSign}
+                label="Username"
+                value={request.requesterUsername || "-"}
+              />
+              <IconDetailField
+                icon={Hash}
+                label="Employee ID"
+                value={request.requesterEmployeeId || "-"}
+              />
+              <IconDetailField icon={Mail} label="Email" value={request.requesterEmail || "-"} />
+              <IconDetailField
+                icon={Building2}
+                label="Department"
+                value={request.requesterDepartment || "-"}
+              />
+              <IconDetailField
+                icon={Briefcase}
+                label="Job Title"
+                value={request.requesterJobTitle || "-"}
+              />
+              <IconDetailField
+                icon={UserCog}
+                label="Manager"
+                value={request.requesterManager || "-"}
+              />
+            </div>
+          </div>
+        )}
 
         {pendingActionCount > 0 && (
           <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2">

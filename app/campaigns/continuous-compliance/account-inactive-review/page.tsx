@@ -274,7 +274,7 @@ export default function AccountInactiveReviewPage() {
                   />
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-2 text-sm flex-1 min-w-0">
                     <div>
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                         Account
                       </div>
                       <div className="mt-0.5 font-semibold text-gray-900 break-all">
@@ -282,19 +282,19 @@ export default function AccountInactiveReviewPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                         Application
                       </div>
                       <div className="mt-0.5 text-gray-900">{account.application}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                         Last login
                       </div>
                       <div className="mt-0.5 text-gray-900">{account.lastLogin}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-medium uppercase tracking-wide text-gray-500">
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-gray-500">
                         Days inactive / Status
                       </div>
                       <div className="mt-0.5 text-gray-900">

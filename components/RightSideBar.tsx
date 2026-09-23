@@ -10,7 +10,7 @@ interface RightSidebarProps {
   closeOnOutsideClick?: boolean;
   children?: React.ReactNode;
   topOffsetPx?: number; // space below fixed header when navbar visible; default 60
-  title?: string; // optional title for the sidebar header
+  title?: React.ReactNode; // optional title/header content for the sidebar (string or custom node)
 }
 
 const DEFAULT_WIDTH = 500;
@@ -94,14 +94,18 @@ const RightSidebar = ({
           transition: 'top 0.2s ease-out, height 0.2s ease-out',
         }}
       >
-        <div className="flex justify-between items-center p-4 border-b">
+        <div className="flex justify-between items-center p-4 border-b gap-3">
           {title && (
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-blue-600 rounded-full shrink-0" aria-hidden />
-              <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-            </div>
+            typeof title === "string" ? (
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-1.5 h-6 bg-blue-600 rounded-full shrink-0" aria-hidden />
+                <h2 className="text-lg font-semibold text-gray-800 truncate">{title}</h2>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0">{title}</div>
+            )
           )}
-          <button 
+          <button
             onClick={onClose} 
             className="flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200"
             title="Close sidebar"

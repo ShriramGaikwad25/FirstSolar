@@ -486,9 +486,9 @@ const HeaderContent = () => {
   const getNavbarHeading = (): string | null => {
     if (!pathname) return null;
 
-    // Access Request area
+    // Access Management area
     if (pathname.startsWith("/access-request/pending-approvals")) return "My Approvals";
-    if (pathname.startsWith("/access-request")) return "Access Request";
+    if (pathname.startsWith("/access-request")) return "Access Management";
 
     // Gateway settings headings that previously rendered blank in header
     if (pathname === "/settings/gateway/manage-access-policy") return "Manage Access Policy";

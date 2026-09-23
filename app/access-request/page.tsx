@@ -2,9 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, X, ShoppingCart } from "lucide-react";
-import HorizontalTabs from "@/components/HorizontalTabs";
 import UserSearchTab from "./UserSearchTab";
-import UserGroupTab from "./UserGroupTab";
 import SelectAccessTab from "./SelectAccessTab";
 import DetailsTab from "./DetailsTab";
 import ReviewTab from "./ReviewTab";
@@ -243,6 +241,39 @@ function formatEntitlementDisplayName(raw: string): string {
   return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 }
 
+function SegmentedToggle({
+  options,
+  value,
+  onChange,
+}: {
+  options: Array<{ value: string; label: string; activeClassName?: string }>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full bg-gray-100 p-1">
+      {options.map((option) => {
+        const isActive = option.value === value;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={isActive}
+            className={`px-4 sm:px-5 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
+              isActive
+                ? option.activeClassName || "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            }`}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const AccessRequest: React.FC = () => {
   const router = useRouter();
   const { selectedUsers, removeUser, clearUsers } = useSelectedUsers();
@@ -250,8 +281,8 @@ const AccessRequest: React.FC = () => {
   const { clearItemDetails, getItemDetail, globalSettings, requestType, attachmentEmailByItem, attachmentFileByItem } = useItemDetails();
   const { isVisible: isSidebarVisible, sidebarWidthPx } = useLeftSidebar();
   const [selectedOption, setSelectedOption] = useState<"self" | "others">("self");
+  const [requestAction, setRequestAction] = useState<"request" | "remove">("request");
   const [currentStep, setCurrentStep] = useState(1);
-  const [activeTab, setActiveTab] = useState(0);
   const [catalogData, setCatalogData] = useState<any[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -280,6 +311,17 @@ const AccessRequest: React.FC = () => {
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
+
+  // Switching between "Access Request" and "Remove Access" clears whatever
+  // was selected/searched for under the User Search panel.
+  const isFirstRequestActionRenderRef = useRef(true);
+  useEffect(() => {
+    if (isFirstRequestActionRenderRef.current) {
+      isFirstRequestActionRenderRef.current = false;
+      return;
+    }
+    clearUsers();
+  }, [requestAction, clearUsers]);
 
   // In-app navigation: intercept link clicks and show custom modal
   useEffect(() => {
@@ -356,6 +398,43 @@ const AccessRequest: React.FC = () => {
             description: "",
             type: "role" as const,
             catalogRow: { ...row, type: "role" },
+          };
+        });
+      }
+
+      // Flattened rows from vw_user_with_applications_entitlements (Remove Access flow:
+      // the user's actually-assigned entitlements, same shape produced on the Users page).
+      const isUserEntitlementRows =
+        keys.some((k) => k.toLowerCase() === "entitlementname") &&
+        keys.some((k) => k.toLowerCase() === "accountname") &&
+        !keys.some((k) =>
+          ["catalogid", "entitlementid", "appinstanceid"].includes(k.toLowerCase())
+        );
+      if (isUserEntitlementRows) {
+        return catalogData.map((row, idx) => {
+          const entName = String(row.entitlementname ?? row.entitlementName ?? "").trim();
+          const application = String(row.application ?? row.applicationname ?? "").trim();
+          const accountName = String(row.accountname ?? row.accountName ?? "").trim();
+          const entType = String(row.entitlementType ?? row.entitlementtype ?? "Entitlement").trim();
+          const description = String(
+            row.entitlementDescription ??
+              row.entitlementdescription ??
+              row.entDesc ??
+              row.ent_desc ??
+              row.description ??
+              row.entitlement_description ??
+              row.business_objective ??
+              ""
+          ).trim();
+          const id =
+            [application, entName, accountName].filter(Boolean).join("::") || `remove-${idx}`;
+          return {
+            id,
+            name: entName || "Unnamed access",
+            risk: "Medium" as const,
+            description: description || [entType, accountName].filter(Boolean).join(" • "),
+            type: "entitlement" as const,
+            catalogRow: { ...row, applicationname: application, type: "entitlement" },
           };
         });
       }
@@ -461,7 +540,7 @@ const AccessRequest: React.FC = () => {
     setSelectedGroups([]);
     setCurrentStep(1);
     setSelectedOption("self");
-    setActiveTab(0);
+    setRequestAction("request");
   }, [clearCart, clearUsers, clearItemDetails]);
 
   const buildAccessRequestPayload = (): AccessRequestPayload => {
@@ -656,6 +735,7 @@ const AccessRequest: React.FC = () => {
     setSelectedGroups([]);
     setCurrentStep(1);
     setSelectedOption("self");
+    setRequestAction("request");
   };
 
   // Fetch Application Instances list for dropdown when on step 2
@@ -695,6 +775,103 @@ const AccessRequest: React.FC = () => {
   // Load catalog in Step 2. Keep catalog data when leaving step 2 so step 4 can show full role details in sidebar.
   React.useEffect(() => {
     if (currentStep !== 2) return;
+
+    // Remove Access: Step 2 must show the selected user's actually-assigned
+    // entitlements, fetched with the same query used on the Users page
+    // (vw_user_with_applications_entitlements), instead of the full catalog.
+    if (requestAction === "remove") {
+      const targetUserIds: string[] =
+        selectedOption === "others"
+          ? Array.from(
+              new Set(
+                selectedUsers
+                  .map((u) => (u.id ? String(u.id).trim() : ""))
+                  .filter(Boolean)
+              )
+            )
+          : (() => {
+              const stored = getCurrentUser() as { userid?: string } | null;
+              const selfId = stored?.userid ? String(stored.userid).trim() : "";
+              return selfId ? [selfId] : [];
+            })();
+
+      const fetchKey = `2-remove-${targetUserIds.join(",") || "none"}`;
+      if (catalogFetchKeyRef.current === fetchKey) return;
+      catalogFetchKeyRef.current = fetchKey;
+
+      if (targetUserIds.length === 0) {
+        setCatalogData([]);
+        setCatalogLoading(false);
+        setCatalogError(null);
+        catalogFetchKeyRef.current = null;
+        return;
+      }
+
+      setCatalogLoading(true);
+      setCatalogError(null);
+
+      Promise.all(
+        targetUserIds.map((userId) =>
+          fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query:
+                "select * from vw_user_with_applications_entitlements where userid = ?::uuid",
+              parameters: [userId],
+            }),
+          }).then((res) =>
+            res.ok ? res.json() : Promise.reject(new Error(`Request failed: ${res.status}`))
+          )
+        )
+      )
+        .then((results) => {
+          if (catalogFetchKeyRef.current !== fetchKey) return;
+          const flatRows: any[] = [];
+          results.forEach((data: any) => {
+            const resultSet = Array.isArray(data?.resultSet) ? data.resultSet : [];
+            resultSet.forEach((user: any) => {
+              const apps = Array.isArray(user?.applications) ? user.applications : [];
+              apps.forEach((app: any) => {
+                const ents = Array.isArray(app?.entitlements) ? app.entitlements : [];
+                ents.forEach((ent: any) => {
+                  flatRows.push({
+                    entitlementname: ent?.entitlementname,
+                    entitlementType: ent?.entitlementType,
+                    entitlementdescription:
+                      ent?.entitlementDescription ??
+                      ent?.entitlementdescription ??
+                      ent?.entDesc ??
+                      ent?.ent_desc ??
+                      ent?.description ??
+                      ent?.entitlement_description ??
+                      ent?.business_objective ??
+                      "",
+                    application: app?.application,
+                    accountname: app?.accountname,
+                    lastlogin: app?.lastlogin,
+                  });
+                });
+              });
+            });
+          });
+          setCatalogData(flatRows);
+        })
+        .catch((err) => {
+          if (catalogFetchKeyRef.current !== fetchKey) return;
+          console.error("Entitlements fetch failed:", err);
+          setCatalogError(err instanceof Error ? err.message : "Failed to load entitlements");
+          setCatalogData([]);
+        })
+        .finally(() => {
+          if (catalogFetchKeyRef.current === fetchKey) {
+            setCatalogLoading(false);
+            catalogFetchKeyRef.current = null;
+          }
+        });
+
+      return;
+    }
 
     const fetchKey = `2-${selectedAppInstanceId ?? "all"}-${showApplicationInstancesOnly}-${catalogTypeFilter}-${tagFilter || "all"}`;
     if (catalogFetchKeyRef.current === fetchKey) return;
@@ -765,7 +942,16 @@ const AccessRequest: React.FC = () => {
           catalogFetchKeyRef.current = null;
         }
       });
-  }, [currentStep, selectedAppInstanceId, showApplicationInstancesOnly, catalogTypeFilter, tagFilter]);
+  }, [
+    currentStep,
+    requestAction,
+    selectedOption,
+    selectedUsers,
+    selectedAppInstanceId,
+    showApplicationInstancesOnly,
+    catalogTypeFilter,
+    tagFilter,
+  ]);
 
   // Load selected groups (from Step 1 User Group tab) for display in Step 2
   React.useEffect(() => {
@@ -794,17 +980,6 @@ const AccessRequest: React.FC = () => {
       setSelectedGroups([]);
     }
   }, [currentStep]);
-
-  const userTabs = [
-    {
-      label: "User Search",
-      component: UserSearchTab,
-    },
-    {
-      label: "User Group",
-      component: UserGroupTab,
-    },
-  ];
 
   return (
     <div className="pt-16">
@@ -874,50 +1049,37 @@ const AccessRequest: React.FC = () => {
       {/* Step 1 Content */}
       {currentStep === 1 && (
         <>
-          {/* Toggle Button - Only show in step 1 */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 px-6 py-3 mb-6">
-            <div className="flex justify-center items-center gap-4">
-              <span 
-                className={`text-sm font-medium cursor-pointer ${
-                  selectedOption === "self" ? "text-blue-600 font-semibold" : "text-gray-600"
-                }`}
-                onClick={() => setSelectedOption("self")}
-              >
-                Request for Self
-              </span>
-              
-              <label className="relative inline-block w-14 h-7 cursor-pointer">
-                <input
-                  type="checkbox"
-                  className="sr-only peer"
-                  checked={selectedOption === "others"}
-                  onChange={(e) => setSelectedOption(e.target.checked ? "others" : "self")}
-                />
-                {/* Track */}
-                <div className="absolute w-full h-full bg-gray-300 rounded-full peer-checked:bg-blue-600 transition-all"></div>
-                {/* Thumb */}
-                <div className="absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full shadow-md transition-all peer-checked:translate-x-7"></div>
-              </label>
-              
-              <span 
-                className={`text-sm font-medium cursor-pointer ${
-                  selectedOption === "others" ? "text-blue-600 font-semibold" : "text-gray-600"
-                }`}
-                onClick={() => setSelectedOption("others")}
-              >
-                Request for Others
-              </span>
+          {/* Action + audience selectors - Only show in step 1 */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-6 py-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 sm:divide-x sm:divide-gray-200">
+            <div className="flex items-center justify-between sm:justify-start gap-4 sm:flex-1">
+              <span className="text-sm font-medium text-gray-700">What do you want to do?</span>
+              <SegmentedToggle
+                options={[
+                  { value: "request", label: "Access Request" },
+                  { value: "remove", label: "Remove Access", activeClassName: "bg-red-600 text-white shadow-sm" },
+                ]}
+                value={requestAction}
+                onChange={(v) => setRequestAction(v as "request" | "remove")}
+              />
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-start gap-4 sm:flex-1 sm:pl-8">
+              <span className="text-sm font-medium text-gray-700">Who is this for?</span>
+              <SegmentedToggle
+                options={[
+                  { value: "self", label: "Request for Self" },
+                  { value: "others", label: "Request for Others" },
+                ]}
+                value={selectedOption}
+                onChange={(v) => setSelectedOption(v as "self" | "others")}
+              />
             </div>
           </div>
 
-          {/* User Tabs - Show when "Request for Others" is selected */}
+          {/* User Search - Show when "Request for Others" is selected */}
           {selectedOption === "others" && (
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-              <HorizontalTabs
-                tabs={userTabs}
-                activeIndex={activeTab}
-                onChange={setActiveTab}
-              />
+              <UserSearchTab key={requestAction} singleSelect={requestAction === "remove"} />
             </div>
           )}
         </>
@@ -1148,6 +1310,10 @@ const AccessRequest: React.FC = () => {
             <SelectAccessTab
               onApply={() => setCurrentStep(3)}
               rolesFromApi={apiRoles}
+              hideAddDetailsSidebar={requestAction === "remove"}
+              hideTabs={requestAction === "remove"}
+              hideCatalogTypeDropdown={requestAction === "remove"}
+              tableView={requestAction === "remove"}
               applicationInstances={applicationInstances}
               selectedAppInstanceId={selectedAppInstanceId}
               onAppInstanceChange={(id) => {
@@ -1171,14 +1337,14 @@ const AccessRequest: React.FC = () => {
       {/* Step 3 Content - Details Tab */}
       {currentStep === 3 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <DetailsTab />
+          <DetailsTab requestAction={requestAction} />
         </div>
       )}
 
       {/* Step 4 Content - Review and Submit */}
       {currentStep === 4 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <ReviewTab catalogRoles={apiRoles} />
+          <ReviewTab catalogRoles={apiRoles} requestAction={requestAction} />
         </div>
       )}
 

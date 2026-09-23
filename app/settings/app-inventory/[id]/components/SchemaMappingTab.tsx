@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Edit, Trash2, Info, ChevronDown, X, Search, Key } from "lucide-react";
+import { Edit, Trash2, Info, ChevronDown, X, Search, Key, ArrowLeftRight, Plus } from "lucide-react";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { executeQuery, getApplicationDetails } from "@/lib/api";
 
@@ -391,20 +391,27 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-[1fr_28rem] gap-8">
         <div className="space-y-4">
-          <div className="border border-gray-200 rounded-lg overflow-x-auto bg-white">
+          <div className="border border-gray-200 border-l-4 border-l-blue-400 rounded-lg bg-white overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-200">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                <ArrowLeftRight size={15} />
+              </span>
+              <h2 className="text-base font-semibold text-gray-900">Attribute Mappings</h2>
+            </div>
+            <div className="overflow-x-auto">
             <table className="w-full table-auto min-w-full" style={{ tableLayout: "fixed" }}>
-              <thead className="bg-gray-50">
+              <thead className="bg-blue-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[35%] min-w-[120px]">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider w-[35%] min-w-[120px]">
                     Source Attribute
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[35%] min-w-[120px]">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider w-[35%] min-w-[120px]">
                     Target Attribute
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%] min-w-[80px] whitespace-nowrap">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider w-[15%] min-w-[80px] whitespace-nowrap">
                     Default Value
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%] min-w-[90px]">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider w-[15%] min-w-[90px]">
                     Action
                   </th>
                 </tr>
@@ -447,19 +454,19 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded"
+                            className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
                             onClick={() => startEdit(m)}
                             aria-label="Edit"
                           >
-                            <Edit className="w-4 h-4" />
+                            <Edit size={16} />
                           </button>
                           <button
                             type="button"
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-red-600 hover:bg-red-50 hover:border-red-400 transition-colors"
                             onClick={() => handleDelete(m.id)}
                             aria-label="Delete"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </td>
@@ -468,6 +475,7 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           <div className="w-full">
@@ -535,10 +543,19 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
           </div>
         </div>
 
-        <div className="space-y-4 bg-white border border-gray-200 rounded-lg p-6 self-start max-w-md w-full">
+        <div
+          className={`space-y-4 bg-white border border-gray-200 border-l-4 rounded-lg p-6 self-start max-w-md w-full ${
+            editingId ? "border-l-amber-400" : "border-l-blue-400"
+          }`}
+        >
           {editingId ? (
             <>
-              <h2 className="text-lg font-semibold text-gray-900">Edit Mapping</h2>
+              <div className="flex items-center gap-2 pb-3 border-b border-gray-200">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-amber-100 text-amber-700">
+                  <Edit size={15} />
+                </span>
+                <h2 className="text-base font-semibold text-gray-900">Edit Mapping</h2>
+              </div>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Mapping Type</label>
@@ -643,7 +660,12 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
             </>
           ) : (
             <>
-              <h2 className="text-lg font-semibold text-gray-900">Add Mapping</h2>
+              <div className="flex items-center gap-2 pb-3 border-b border-gray-200">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                  <Plus size={15} />
+                </span>
+                <h2 className="text-base font-semibold text-gray-900">Add Mapping</h2>
+              </div>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Mapping Type</label>

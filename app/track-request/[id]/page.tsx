@@ -1,16 +1,31 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { FileText, ChevronDown, ChevronUp, Printer } from "lucide-react";
+import {
+  FileText,
+  ChevronDown,
+  ChevronUp,
+  Printer,
+  User,
+  AtSign,
+  Mail,
+  Hash,
+  Building2,
+  Briefcase,
+  UserCog,
+  type LucideIcon,
+} from "lucide-react";
 import { getReviewerId } from "@/lib/auth";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
-import InsightsIcon from "@/components/InsightsIcon";
+import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 
 interface InstanceStep {
   action: string;
   date: string;
   userActor: string;
   status: string;
+  /** Free-text decision comment, when the backend provides one on the step/task. */
+  comment?: string;
   sodViolations?: Array<{ message: string; severity: string }>;
   sodClean?: boolean;
   sodStatus?: string;
@@ -20,6 +35,8 @@ interface InstanceStep {
 
 interface RequestDetails {
   dateCreated: string;
+  /** Date + time, for the header card ("Sep 03, 21:53"-style display). */
+  dateCreatedTime: string;
   type: string;
   name: string;
   justification: string;
@@ -32,6 +49,8 @@ interface RequestLineItem {
   name: string;
   displayName: string;
   applicationName: string;
+  /** Target-system account this entitlement is granted on; falls back to the beneficiary's username. */
+  accountName: string;
   type: string;
   startDate: string;
   endDate: string;
@@ -63,7 +82,19 @@ interface Request {
   wfInstanceId: string;
   lookupKeys: string[];
   beneficiaryName: string;
+  beneficiaryUsername: string;
+  beneficiaryEmail: string;
+  beneficiaryDepartment: string;
+  beneficiaryJobTitle: string;
+  beneficiaryEmployeeId: string;
+  beneficiaryManager: string;
   requesterName: string;
+  requesterUsername: string;
+  requesterEmail: string;
+  requesterDepartment: string;
+  requesterJobTitle: string;
+  requesterEmployeeId: string;
+  requesterManager: string;
   displayName: string;
   entityType: string;
   daysOpen: number;
@@ -115,6 +146,77 @@ const toAiRecommendationArray = (value: unknown): Record<string, any>[] => {
 };
 
 const normalizeId = (value: unknown): string => String(value ?? "").trim().toLowerCase();
+
+/** Uppercase label + value pair used in the header summary row. */
+const HeaderField: React.FC<{ label: string; value: React.ReactNode; accent?: boolean }> = ({
+  label,
+  value,
+  accent,
+}) => (
+  <div className="min-w-0">
+    <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</div>
+    <div
+      className={`mt-0.5 truncate text-sm font-semibold ${accent ? "text-blue-700" : "text-gray-900"}`}
+    >
+      {value}
+    </div>
+  </div>
+);
+
+/** Uppercase label + value pair used inside the Request History / User Details cards. */
+const DetailField: React.FC<{ label: string; value: React.ReactNode; mono?: boolean }> = ({
+  label,
+  value,
+  mono,
+}) => (
+  <div className="min-w-0">
+    <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</div>
+    <div
+      className={`mt-0.5 whitespace-pre-wrap break-words text-sm text-gray-900 ${
+        mono ? "font-mono text-[12.5px]" : ""
+      }`}
+    >
+      {value}
+    </div>
+  </div>
+);
+
+/** Label + value pair with a leading icon, used for the User Details card's identity fields. */
+const IconDetailField: React.FC<{ icon: LucideIcon; label: string; value: React.ReactNode }> = ({
+  icon: Icon,
+  label,
+  value,
+}) => (
+  <div className="flex min-w-0 items-start gap-2.5">
+    <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500">
+      <Icon className="h-3.5 w-3.5" />
+    </div>
+    <div className="min-w-0">
+      <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</div>
+      <div className="mt-0.5 truncate text-sm text-gray-900">{value}</div>
+    </div>
+  </div>
+);
+
+/** Compact single-line label + value row used for the SOD/training annotations under an approval step. */
+const StepMessageRow: React.FC<{ label: string; value: React.ReactNode; emphasize?: boolean }> = ({
+  label,
+  value,
+  emphasize,
+}) => (
+  <div className="w-full text-left text-[11px] leading-snug">
+    <span className="font-semibold uppercase tracking-wide text-blue-500">{label}:</span>{" "}
+    <span className={emphasize ? "font-semibold text-gray-800" : "text-gray-700"}>{value}</span>
+  </div>
+);
+
+type DetailTab = "history" | "user";
+
+const DETAIL_TABS: Array<{ key: DetailTab; label: string }> = [
+  { key: "history", label: "Request History" },
+  { key: "user", label: "User Details" },
+];
+
 const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = React.use(params);
   const { openSidebar } = useRightSidebar();
@@ -122,6 +224,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedLineItems, setExpandedLineItems] = useState<Record<string, boolean>>({});
+  const [activeTab, setActiveTab] = useState<DetailTab>("history");
 
   useEffect(() => {
     const reviewerId = getReviewerId();
@@ -456,6 +559,22 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                   step?.currentStatus
               )
             ),
+            comment:
+              (
+                step?.comment ??
+                step?.comments ??
+                step?.decision_comment ??
+                step?.decisionComment ??
+                step?.approver_comment ??
+                step?.approverComment ??
+                step?.tasks?.[0]?.comment ??
+                step?.tasks?.[0]?.comments ??
+                step?.tasks?.[0]?.decision_comment ??
+                step?.notes ??
+                ""
+              )
+                .toString()
+                .trim() || undefined,
             sodViolations,
             sodClean,
             sodStatus: sodClean ? String(sodStatusRaw ?? "") : undefined,
@@ -517,6 +636,38 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
             beneficiary.username ||
             "";
 
+          const beneficiaryUsernameFromObject: string =
+            beneficiary.username || beneficiary.userid || beneficiary.email || "";
+
+          const requesterUsernameFromObject: string =
+            requester.username || requester.userid || requester.email || "";
+
+          const beneficiaryEmailFromObject: string = beneficiary.email || "";
+          const requesterEmailFromObject: string = requester.email || "";
+
+          const beneficiaryDepartmentFromObject: string = beneficiary.department || "";
+          const requesterDepartmentFromObject: string = requester.department || "";
+
+          const beneficiaryJobTitleFromObject: string =
+            beneficiary.title || beneficiary.jobtitle || beneficiary.job_title || "";
+          const requesterJobTitleFromObject: string =
+            requester.title || requester.jobtitle || requester.job_title || "";
+
+          const beneficiaryEmployeeIdFromObject: string = String(
+            beneficiary.employeeid || beneficiary.employee_id || ""
+          );
+          const requesterEmployeeIdFromObject: string = String(
+            requester.employeeid || requester.employee_id || ""
+          );
+
+          const beneficiaryManagerFromObject: string =
+            beneficiary.manager_name ||
+            beneficiary.managername ||
+            beneficiary.manager ||
+            "";
+          const requesterManagerFromObject: string =
+            requester.manager_name || requester.managername || requester.manager || "";
+
           const displayNameFromCatalog =
             catalog.name || catalog.entitlementname || catalog.applicationname || "";
 
@@ -526,6 +677,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
           const requestedOn: string | undefined =
             accessRequest.created_at ?? row.requestedon ?? row.created_at;
           const raisedOn = formatDate(requestedOn);
+          const raisedOnDateTime = formatDateTime(requestedOn) || raisedOn;
 
           let daysOpen = 0;
           if (requestedOn) {
@@ -594,6 +746,12 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
               lineCatalog.name || lineCatalog.entitlementname || lineCatalog.applicationname || "";
             const lineApplicationName =
               lineCatalog.applicationname || lineCatalog.applicationName || lineCatalog.name || "";
+            const lineAccountName =
+              item?.account_name ||
+              item?.accountname ||
+              item?.account?.name ||
+              beneficiaryUsernameFromObject ||
+              "";
             const lineType =
               lineCatalog.type ||
               lineCatalog.entitlementtype ||
@@ -697,6 +855,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
               name: String(lineDisplayName || ""),
               displayName: String(lineDisplayName || ""),
               applicationName: String(lineApplicationName || ""),
+              accountName: String(lineAccountName || ""),
               type: String(lineType),
               startDate: lineStartDate,
               endDate: lineEndDate,
@@ -734,6 +893,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                     name: String(displayNameFromCatalog || ""),
                     displayName: String(displayNameFromCatalog || ""),
                     applicationName: String(catalog.applicationname || catalog.applicationName || catalog.name || ""),
+                    accountName: String(beneficiaryUsernameFromObject || ""),
                     type: String(entityTypeFromCatalog || "Entitlement"),
                     startDate,
                     endDate,
@@ -821,7 +981,19 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
             wfInstanceId: resolvedWfInstanceId,
             lookupKeys,
             beneficiaryName: String(beneficiaryNameFromObject),
+            beneficiaryUsername: String(beneficiaryUsernameFromObject),
+            beneficiaryEmail: String(beneficiaryEmailFromObject),
+            beneficiaryDepartment: String(beneficiaryDepartmentFromObject),
+            beneficiaryJobTitle: String(beneficiaryJobTitleFromObject),
+            beneficiaryEmployeeId: String(beneficiaryEmployeeIdFromObject),
+            beneficiaryManager: String(beneficiaryManagerFromObject),
             requesterName: String(requesterNameFromObject),
+            requesterUsername: String(requesterUsernameFromObject),
+            requesterEmail: String(requesterEmailFromObject),
+            requesterDepartment: String(requesterDepartmentFromObject),
+            requesterJobTitle: String(requesterJobTitleFromObject),
+            requesterEmployeeId: String(requesterEmployeeIdFromObject),
+            requesterManager: String(requesterManagerFromObject),
             displayName: String(displayNameFromCatalog),
             entityType: String(entityTypeFromCatalog || "Entitlement"),
             daysOpen,
@@ -830,6 +1002,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
             canProvideAdditionalDetails: status.toLowerCase().includes("provide information"),
             details: {
               dateCreated: raisedOn,
+              dateCreatedTime: raisedOnDateTime,
               type: String(entityTypeFromCatalog || "Entitlement"),
               name: String(displayNameFromCatalog || ""),
               justification,
@@ -958,6 +1131,37 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
     String(step.status ?? "").toLowerCase().includes("pending")
   );
 
+  const isStepPending = (step: InstanceStep | undefined): boolean => {
+    if (!step) return false;
+    const s = (step.status || "").toLowerCase();
+    return !s || s.includes("pending");
+  };
+
+  const findApprovalStep = (
+    steps: InstanceStep[],
+    actionLabel: string
+  ): InstanceStep | undefined => steps.find((s) => s.action === actionLabel);
+
+  /** Circle / pill / connector colors for one step of the approval stepper, by its status text. */
+  const stepVisualClasses = (
+    status: string | undefined
+  ): { circle: string; pill: string; line: string } => {
+    const s = (status || "").toLowerCase();
+    if (s.includes("reject")) {
+      return { circle: "bg-red-600", pill: "bg-red-100 text-red-700", line: "bg-red-400" };
+    }
+    if (s.includes("complet")) {
+      return { circle: "bg-green-600", pill: "bg-green-100 text-green-700", line: "bg-green-500" };
+    }
+    if (s.includes("pending") || s.includes("progress") || s.includes("running")) {
+      return { circle: "bg-blue-600", pill: "bg-blue-100 text-blue-700", line: "bg-gray-200" };
+    }
+    return { circle: "bg-gray-300", pill: "bg-gray-100 text-gray-600", line: "bg-gray-200" };
+  };
+
+  const primaryHeaderName =
+    request.beneficiaryName || request.requesterName || request.displayName || "Access Request";
+
   return (
     <div className="relative">
       <div className="absolute top-0 right-0 z-10 print:hidden p-0 m-0">
@@ -973,186 +1177,140 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
       </div>
       <div className="p-6 space-y-6">
       {/* Request Header Section */}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-        {/* Row 1: Request ID + Request Type */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-gray-600" />
-            <h2 className="text-sm font-semibold text-gray-900">
-              Request ID: {request.id}
-            </h2>
-          </div>
-          <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-xs font-medium text-blue-700 self-end sm:self-auto">
-            Request Type:{" "}
-            <span className="ml-1 font-semibold">
-              {request.details.type || request.entityType}
-            </span>
-          </div>
+      <div className="rounded-lg border border-dashed border-rose-200 bg-white p-4">
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <FileText className="h-5 w-5 shrink-0 text-gray-500" />
+          <h2 className="text-base font-semibold text-gray-900">{primaryHeaderName}</h2>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${getAccessRequestStatusBadgeClasses(
+              request.status
+            )}`}
+          >
+            {request.status}
+          </span>
         </div>
-
-        {/* Row 2: Date Created | Requester | Beneficiary | Duration (optional) | Justification */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3 text-sm">
-          <div>
-            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-              Date Created
-            </div>
-            <div className="text-gray-900">{request.details.dateCreated}</div>
-          </div>
-          <div>
-            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-              Requester
-            </div>
-            <div className="text-gray-900">{request.requesterName}</div>
-          </div>
-          <div>
-            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-              Beneficiary
-            </div>
-            <div className="text-gray-900">{request.beneficiaryName}</div>
-          </div>
-          <div className="md:col-span-2">
-            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-              Justification
-            </div>
-            <div className="text-gray-900 whitespace-pre-wrap break-words">
-              {request.details.justification}
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <HeaderField label="Request Id" value={request.id} />
+          <HeaderField label="Requester" value={request.requesterName || "-"} accent />
+          <HeaderField label="Beneficiary" value={request.beneficiaryName || "-"} accent />
+          <HeaderField
+            label="Created"
+            value={request.details.dateCreatedTime || request.details.dateCreated || "-"}
+          />
         </div>
       </div>
 
-      {visibleInstanceSteps.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+      {/* Approval History — always visible, not tab-gated */}
+      {visibleInstanceSteps.length > 0 ? (
+        <div className="bg-white border border-gray-200 rounded-lg p-5 sm:p-6">
           <div className="overflow-x-auto">
-            <table className="w-full border border-gray-200 text-xs">
-              <thead className="bg-blue-100">
-                <tr>
-                  <th className="px-3 py-1.5 text-left font-medium text-blue-900 uppercase">
-                    S. No
-                  </th>
-                  <th className="px-3 py-1.5 text-left font-medium text-blue-900 uppercase">
-                    Action
-                  </th>
-                  <th className="px-3 py-1.5 text-left font-medium text-blue-900 uppercase">
-                    Date
-                  </th>
-                  <th className="px-3 py-1.5 text-left font-medium text-blue-900 uppercase">
-                    User
-                  </th>
-                  <th className="px-3 py-1.5 text-left font-medium text-blue-900 uppercase">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {visibleInstanceSteps.map((step, idx) => {
-                  const hideMetaColumns = firstPendingIndex !== -1 && idx >= firstPendingIndex;
-                  return (
-                    <React.Fragment key={`${step.action}-${step.date}-${idx}`}>
-                      <tr>
-                        <td className="px-3 py-1.5 text-gray-900">{idx + 1}</td>
-                        <td className="px-3 py-1.5 text-gray-900">{step.action || "-"}</td>
-                        <td className="px-3 py-1.5 text-gray-500">
-                          {hideMetaColumns ? "" : (step.date || "-")}
-                        </td>
-                        <td className="px-3 py-1.5 text-gray-500">
-                          {hideMetaColumns ? "" : (step.userActor || "-")}
-                        </td>
-                        <td className="px-3 py-1.5 text-gray-500">
-                          {hideMetaColumns ? "" : (step.status || "-")}
-                        </td>
-                      </tr>
+            <div className="flex min-w-[640px] items-start">
+              {visibleInstanceSteps.map((step, idx) => {
+                const hideMetaColumns = firstPendingIndex !== -1 && idx >= firstPendingIndex;
+                const visuals = stepVisualClasses(step.status);
+                const prevVisuals =
+                  idx > 0 ? stepVisualClasses(visibleInstanceSteps[idx - 1].status) : null;
+                return (
+                  <React.Fragment key={`${step.action}-${step.date}-${idx}`}>
+                    {idx > 0 && (
+                      <div
+                        className={`mt-4 h-0.5 flex-1 ${prevVisuals?.line ?? "bg-gray-200"}`}
+                      />
+                    )}
+                    <div className="flex w-40 shrink-0 flex-col items-center text-center sm:w-48">
+                      <div
+                        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white ${visuals.circle}`}
+                      >
+                        {idx + 1}
+                      </div>
+                      <div className="mt-1.5 text-xs font-semibold leading-snug text-gray-900">
+                        {step.action || "-"}
+                      </div>
+                      <span
+                        className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${visuals.pill}`}
+                      >
+                        {step.status || "-"}
+                      </span>
+                      {!hideMetaColumns && (
+                        <div className="mt-1 text-[11px] leading-snug text-gray-500">
+                          {step.userActor || "—"} · {step.date || "-"}
+                        </div>
+                      )}
                       {!hideMetaColumns && step.sodViolations && step.sodViolations.length > 0 && (
-                        <tr>
-                          <td></td>
-                          <td colSpan={4} className="px-3 py-2">
-                            <div className="space-y-1.5">
-                              {step.sodViolations.map((violation, vIdx) => (
-                                <div key={vIdx} className="flex items-center gap-2 text-xs">
-                                  <span className="font-semibold uppercase tracking-wide text-blue-400 text-[10px] shrink-0">
-                                    Message:
-                                  </span>
-                                  <span className="text-gray-700">{violation.message || "-"}</span>
-                                  <span className="text-gray-300">|</span>
-                                  <span className="font-semibold uppercase tracking-wide text-blue-400 text-[10px] shrink-0">
-                                    Severity:
-                                  </span>
-                                  <span className="font-semibold text-gray-800 shrink-0">
-                                    {violation.severity || "-"}
-                                  </span>
-                                </div>
-                              ))}
+                        <div className="mt-1.5 w-full space-y-0.5">
+                          {step.sodViolations.map((violation, vIdx) => (
+                            <div key={vIdx}>
+                              <StepMessageRow label="Message" value={violation.message || "-"} />
+                              <StepMessageRow
+                                label="Severity"
+                                value={violation.severity || "-"}
+                                emphasize
+                              />
                             </div>
-                          </td>
-                        </tr>
+                          ))}
+                        </div>
                       )}
                       {!hideMetaColumns && step.sodClean && (
-                        <tr>
-                          <td></td>
-                          <td colSpan={4} className="px-3 py-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="font-semibold uppercase tracking-wide text-blue-400 text-[10px] shrink-0">
-                                Message:
-                              </span>
-                              <span className="text-gray-700">No SOD violation found</span>
-                              <span className="text-gray-300">|</span>
-                              <span className="font-semibold uppercase tracking-wide text-blue-400 text-[10px] shrink-0">
-                                Status:
-                              </span>
-                              <span className="font-semibold text-gray-800 shrink-0">
-                                {step.sodStatus || "-"}
-                              </span>
-                            </div>
-                          </td>
-                        </tr>
+                        <div className="mt-1.5 w-full space-y-0.5">
+                          <StepMessageRow label="Message" value="No SOD violation found" />
+                          <StepMessageRow label="Status" value={step.sodStatus || "-"} emphasize />
+                        </div>
                       )}
                       {!hideMetaColumns && step.trainingWarnings && step.trainingWarnings.length > 0 && (
-                        <tr>
-                          <td></td>
-                          <td colSpan={4} className="px-3 py-2">
-                            <div className="space-y-1.5">
-                              {step.trainingWarnings.map((warning, wIdx) => (
-                                <div key={wIdx} className="flex items-center gap-2 text-xs">
-                                  <span className="font-semibold uppercase tracking-wide text-blue-400 text-[10px] shrink-0">
-                                    Message:
-                                  </span>
-                                  <span className="text-gray-700">{warning.message || "-"}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </td>
-                        </tr>
+                        <div className="mt-1.5 w-full space-y-0.5">
+                          {step.trainingWarnings.map((warning, wIdx) => (
+                            <StepMessageRow key={wIdx} label="Message" value={warning.message || "-"} />
+                          ))}
+                        </div>
                       )}
                       {!hideMetaColumns && step.trainingNotRequired && (
-                        <tr>
-                          <td></td>
-                          <td colSpan={4} className="px-3 py-2">
-                            <div className="flex items-center gap-2 text-xs">
-                              <span className="font-semibold uppercase tracking-wide text-blue-400 text-[10px] shrink-0">
-                                Message:
-                              </span>
-                              <span className="text-gray-700">Training not required</span>
-                            </div>
-                          </td>
-                        </tr>
+                        <div className="mt-1.5 w-full">
+                          <StepMessageRow label="Message" value="Training not required" />
+                        </div>
                       )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
+            </div>
           </div>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-sm text-gray-500">
+          No approval history yet.
         </div>
       )}
 
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex gap-6" aria-label="Request detail tabs">
+          {DETAIL_TABS.map((tab) => (
+            <button
+              key={tab.key}
+              type="button"
+              onClick={() => setActiveTab(tab.key)}
+              className={`border-b-2 px-1 pb-2 text-sm font-medium transition-colors ${
+                activeTab === tab.key
+                  ? "border-blue-600 text-blue-700"
+                  : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
+              }`}
+              aria-current={activeTab === tab.key ? "page" : undefined}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
+
       {/* Line Item Details */}
+      {activeTab === "history" && (
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
         {request.lineItems.map((lineItem, index) => {
           const lineItemKey = String(index);
           const isItemExpanded = expandedLineItems[lineItemKey] ?? true;
           const toggleTooltip = isItemExpanded ? "Collapse line item" : "Expand line item";
           return (
-            <div key={lineItemKey} className="border border-gray-200 rounded-lg bg-gray-50">
+            <div key={lineItemKey} className="border border-gray-200 rounded-lg bg-white">
               {/* Line item header: requested access item + tags + actions */}
               <div
                 role="button"
@@ -1172,31 +1330,39 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                     }));
                   }
                 }}
-                className="w-full flex flex-wrap items-center gap-3 px-4 py-3 border-b border-gray-200 text-left hover:bg-gray-100 transition-colors cursor-pointer"
+                className="w-full flex flex-wrap items-start gap-3 px-4 py-2.5 border-b border-gray-200 text-left hover:bg-gray-100 transition-colors cursor-pointer"
                 aria-expanded={isItemExpanded}
               >
-                <div className="flex flex-col gap-1 min-w-0">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <h3 className="text-sm font-semibold text-gray-900 truncate">{lineItem.name}</h3>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {lineItem.hasHighRisk && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium border border-red-300 bg-red-50 text-red-600">
-                        High Risk
-                      </span>
-                    )}
-                    <span className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium border border-violet-300 bg-violet-50 text-violet-700">
-                      {lineItem.applicationName || "No Application"}
-                    </span>
-                    {lineItem.hasTrainingCheck && (
-                      <span className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium border border-emerald-300 bg-emerald-50 text-emerald-600">
-                        Training Check
-                      </span>
-                    )}
-                  </div>
+                <div className="flex flex-col gap-1.5 min-w-0 py-0.5">
+                  <h3 className="text-sm font-semibold text-gray-900 truncate">{lineItem.name}</h3>
+                  {(lineItem.hasHighRisk ||
+                    lineItem.hasTrainingCheck ||
+                    (lineItem.applicationName &&
+                      lineItem.applicationName.trim().toLowerCase() !==
+                        lineItem.name.trim().toLowerCase())) && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {lineItem.hasHighRisk && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border border-red-300 bg-red-50 text-red-600">
+                          High Risk
+                        </span>
+                      )}
+                      {lineItem.applicationName &&
+                        lineItem.applicationName.trim().toLowerCase() !==
+                          lineItem.name.trim().toLowerCase() && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border border-violet-300 bg-violet-50 text-violet-700">
+                            {lineItem.applicationName}
+                          </span>
+                        )}
+                      {lineItem.hasTrainingCheck && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium border border-emerald-300 bg-emerald-50 text-emerald-600">
+                          Training Check
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="flex-1 relative">
+                <div className="flex-1 relative self-stretch">
                   {lineItem.hasConflict && request.sodPolicyDetails && (
                     <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                       <button
@@ -1271,75 +1437,9 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                       </button>
                     </div>
                   )}
-                  <div className="flex justify-end pr-10">
-                    <button
-                      type="button"
-                      title="AI Insights"
-                      aria-label="AI Insights"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openSidebar(
-                          <div className="space-y-2">
-                            <div className="rounded border border-gray-200 border-l-4 border-l-sky-500 bg-sky-50/40 p-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-sky-800">
-                                Beneficiary Analysis
-                              </p>
-                              <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                                {lineItem.beneficiaryAnalysis ? (
-                                  lineItem.beneficiaryAnalysis
-                                ) : (
-                                  <span className="italic text-gray-500">No beneficiary analysis available.</span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="rounded border border-gray-200 border-l-4 border-l-rose-600 bg-rose-50/50 p-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-rose-800">
-                                Contextual Risk
-                              </p>
-                              <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                                {lineItem.contextualRisk ? (
-                                  lineItem.contextualRisk
-                                ) : (
-                                  <span className="italic text-gray-500">No contextual risk details available.</span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="rounded border border-gray-200 border-l-4 border-l-amber-500 bg-amber-50/40 p-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-800">
-                                Risk Sensitivity Analysis
-                              </p>
-                              <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                                {lineItem.riskSensitivityAnalysis ? (
-                                  lineItem.riskSensitivityAnalysis
-                                ) : (
-                                  <span className="italic text-gray-500">No risk sensitivity analysis available.</span>
-                                )}
-                              </p>
-                            </div>
-                            <div className="rounded border border-gray-200 border-l-4 border-l-indigo-500 bg-indigo-50/40 p-3">
-                              <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-700">
-                                Peer Analysis
-                              </p>
-                              <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">
-                                {lineItem.peerAnalysis ? (
-                                  lineItem.peerAnalysis
-                                ) : (
-                                  <span className="italic text-gray-500">No peer analysis available.</span>
-                                )}
-                              </p>
-                            </div>
-                          </div>,
-                          { widthPx: 500, title: "Insights" }
-                        );
-                      }}
-                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100 transition-colors"
-                    >
-                      <InsightsIcon size={18} className="shrink-0 text-amber-500" />
-                    </button>
-                  </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <div className="flex items-center gap-2 shrink-0 ml-auto py-0.5">
                   <span className="text-gray-500 ml-1" aria-hidden title={toggleTooltip}>
                     {isItemExpanded ? (
                       <ChevronUp className="w-4 h-4" />
@@ -1350,48 +1450,79 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                 </div>
               </div>
 
-              {isItemExpanded && (
-                <div className="px-4 py-3 space-y-3 text-sm">
-                  {/* Compact row: access duration, comments, attachment */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                        Access Duration
-                      </div>
-                      <div className="text-gray-900">
-                        {lineItem.startDate
-                          ? lineItem.endDate
-                            ? `${lineItem.startDate} - ${lineItem.endDate}`
-                            : `${lineItem.startDate} (ongoing)`
-                          : lineItem.endDate
-                            ? `Until ${lineItem.endDate}`
-                            : "-"}
-                      </div>
+              {isItemExpanded && (() => {
+                const itemSteps =
+                  lineItem.instanceSteps && lineItem.instanceSteps.length > 0
+                    ? lineItem.instanceSteps
+                    : visibleInstanceSteps;
+                const level1Step = findApprovalStep(itemSteps, "Assigned to User Manager");
+                const level2Step = findApprovalStep(itemSteps, "Assigned to App Owner");
+                const level1Text = level1Step
+                  ? level1Step.comment ||
+                    (isStepPending(level1Step)
+                      ? "No comment yet — awaiting manager review."
+                      : "No comment provided.")
+                  : "Not yet reached.";
+                const level2Text = level2Step
+                  ? level2Step.comment ||
+                    (isStepPending(level2Step)
+                      ? "No comment yet — awaiting app owner review."
+                      : "No comment provided.")
+                  : "Not yet reached — pending Level 1 outcome.";
+
+                return (
+                  <div className="px-4 py-3.5 space-y-3.5 text-sm">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-4">
+                      <DetailField label="Request Type" value={lineItem.type || "-"} />
+                      <DetailField label="Username" value={request.beneficiaryUsername || "-"} />
+                      <DetailField label="Account Name" value={lineItem.accountName || "-"} />
+                      <DetailField
+                        label="Security System"
+                        value={lineItem.applicationName || "-"}
+                      />
                     </div>
 
-                    <div className="space-y-1">
-                      <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                        Comments
-                      </div>
-                      <div className="text-gray-900 whitespace-pre-wrap break-words">
-                        {lineItem.comments || "No additional comments provided."}
-                      </div>
-                    </div>
+                    <DetailField label="Entitlement" value={lineItem.name || "-"} mono />
 
-                    <div className="space-y-1">
-                      <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">
-                        Attachment
+                    <DetailField
+                      label="Requester Comment"
+                      value={lineItem.comments || "No additional comments provided."}
+                    />
+
+                    <div className="border-t border-gray-200 pt-3 -mt-0.5">
+                      <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                        Approver Comments
                       </div>
-                      <div className="text-gray-900">No Attachment</div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <DetailField label="Level 1 Comment (User Manager)" value={level1Text} />
+                        <DetailField label="Level 2 Comment (App Owner)" value={level2Text} />
+                      </div>
                     </div>
                   </div>
-
-                </div>
-              )}
+                );
+              })()}
             </div>
           );
         })}
       </div>
+      )}
+
+      {activeTab === "user" && (
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="mb-3 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+            Requester
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <IconDetailField icon={User} label="Name" value={request.requesterName || "-"} />
+            <IconDetailField icon={AtSign} label="Username" value={request.requesterUsername || "-"} />
+            <IconDetailField icon={Hash} label="Employee ID" value={request.requesterEmployeeId || "-"} />
+            <IconDetailField icon={Mail} label="Email" value={request.requesterEmail || "-"} />
+            <IconDetailField icon={Building2} label="Department" value={request.requesterDepartment || "-"} />
+            <IconDetailField icon={Briefcase} label="Job Title" value={request.requesterJobTitle || "-"} />
+            <IconDetailField icon={UserCog} label="Manager" value={request.requesterManager || "-"} />
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );

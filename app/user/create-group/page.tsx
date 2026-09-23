@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Check, Upload } from "lucide-react";
 import { executeQuery } from "@/lib/api";
 import { useForm, Control, FieldValues, UseFormSetValue, UseFormWatch } from "react-hook-form";
@@ -33,6 +33,8 @@ interface FormData {
 
 export default function CreateUserGroupPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isEditMode = searchParams.get("mode") === "edit";
   const { isVisible: isSidebarVisible, sidebarWidthPx } = useLeftSidebar();
   const [currentStep, setCurrentStep] = useState(1);
   const [validationStatus, setValidationStatus] = useState<boolean[]>([
@@ -63,6 +65,30 @@ export default function CreateUserGroupPage() {
     { id: 2, title: "Select Users" },
     { id: 3, title: "Review & Submit" },
   ];
+
+  // Prefill Group Details when arriving in edit mode from the Modify action
+  // on the User Groups table (which stores the selected row before navigating here).
+  useEffect(() => {
+    if (!isEditMode) return;
+    try {
+      const stored = localStorage.getItem("selectedUserGroup");
+      if (!stored) return;
+      const group = JSON.parse(stored);
+      setFormData((prev) => ({
+        ...prev,
+        step1: {
+          ...prev.step1,
+          groupName: group.userGroup ?? group.groupName ?? "",
+          description: group.description ?? "",
+          owner: group.owner ?? "",
+          tags: group.tags ?? "",
+        },
+      }));
+    } catch (err) {
+      console.error("Error loading group for edit:", err);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode]);
 
   // Fetch users data
   useEffect(() => {
@@ -254,11 +280,11 @@ export default function CreateUserGroupPage() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
       
-      alert("User Group created successfully!");
+      alert(isEditMode ? "User Group updated successfully!" : "User Group created successfully!");
       router.push("/user");
     } catch (error) {
       console.error("Error creating user group:", error);
-      alert("An error occurred while creating the user group. Please try again.");
+      alert("An error occurred while saving the user group. Please try again.");
     }
   };
 
@@ -277,7 +303,7 @@ export default function CreateUserGroupPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex justify-center items-center">
+      <div className="min-h-screen bg-gray-100 flex justify-center items-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading users...</p>
@@ -287,7 +313,7 @@ export default function CreateUserGroupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Fixed step bar below header; aligned with content area */}
       <div
         className="fixed top-[60px] z-20 bg-white border-b border-gray-200 shadow-sm px-6 py-4"
@@ -355,7 +381,7 @@ export default function CreateUserGroupPage() {
                   className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
                 >
                   <Check className="w-4 h-4 mr-2" />
-                  Submit
+                  {isEditMode ? "Save Changes" : "Submit"}
                 </button>
               )}
             </div>
@@ -367,32 +393,54 @@ export default function CreateUserGroupPage() {
 
         <div className="w-full py-8 px-4">
         {/* Form Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div className="bg-white rounded-2xl border border-[#EEF0F2] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_6px_14px_rgba(16,24,40,0.035)] p-6 mb-6 sm:p-8">
           {currentStep === 1 && (
           <div className="space-y-6">
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.step1.groupName}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    step1: { ...prev.step1, groupName: e.target.value },
-                  }))
-                }
-                className="w-full px-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
-                placeholder=" "
-              />
-              <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                formData.step1.groupName
-                  ? 'top-0.5 text-xs text-blue-600' 
-                  : 'top-3.5 text-sm text-gray-500'
-              }`}>
-                User Group Name <span className="text-red-500">*</span>
-              </label>
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
+              <div>
+                <label htmlFor="groupName" className="mb-1.5 block text-sm font-medium text-gray-700">
+                  User Group Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="groupName"
+                  type="text"
+                  value={formData.step1.groupName}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      step1: { ...prev.step1, groupName: e.target.value },
+                    }))
+                  }
+                  placeholder="e.g. Operations - Managers"
+                  className="block w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                />
+              </div>
+              <div>
+                <label htmlFor="owner" className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Owner <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="owner"
+                  type="text"
+                  value={formData.step1.owner}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      step1: { ...prev.step1, owner: e.target.value },
+                    }))
+                  }
+                  placeholder="e.g. jane.doe@company.com"
+                  className="block w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                />
+              </div>
             </div>
-            <div className="relative">
+
+            <div>
+              <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-gray-700">
+                Description <span className="text-red-500">*</span>
+              </label>
               <textarea
+                id="description"
                 value={formData.step1.description}
                 onChange={(e) =>
                   setFormData((prev) => ({
@@ -400,75 +448,49 @@ export default function CreateUserGroupPage() {
                     step1: { ...prev.step1, description: e.target.value },
                   }))
                 }
-                className="w-full px-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline resize-none"
-                placeholder=" "
                 rows={4}
+                placeholder="What is this group used for?"
+                className="block w-full min-w-0 resize-none rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
               />
-              <label className={`absolute left-4 top-3.5 transition-all duration-200 pointer-events-none ${
-                formData.step1.description
-                  ? 'top-0.5 text-xs text-blue-600' 
-                  : 'text-sm text-gray-500'
-              }`}>
-                Description <span className="text-red-500">*</span>
-              </label>
             </div>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.step1.owner}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    step1: { ...prev.step1, owner: e.target.value },
-                  }))
-                }
-                className="w-full px-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
-                placeholder=" "
-              />
-              <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                formData.step1.owner
-                  ? 'top-0.5 text-xs text-blue-600' 
-                  : 'top-3.5 text-sm text-gray-500'
-              }`}>
-                Owner <span className="text-red-500">*</span>
-              </label>
-            </div>
-            <div className="relative">
-              <input
-                type="text"
-                value={formData.step1.tags}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    step1: { ...prev.step1, tags: e.target.value },
-                  }))
-                }
-                className="w-full px-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
-                placeholder=" "
-              />
-              <label className={`absolute left-4 transition-all duration-200 pointer-events-none ${
-                formData.step1.tags
-                  ? 'top-0.5 text-xs text-blue-600' 
-                  : 'top-3.5 text-sm text-gray-500'
-              }`}>
-                Tags
-              </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="ownerIsReviewer"
-                checked={formData.step1.ownerIsReviewer}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    step1: { ...prev.step1, ownerIsReviewer: e.target.checked },
-                  }))
-                }
-                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-              />
-              <label htmlFor="ownerIsReviewer" className="text-base font-medium text-gray-700 cursor-pointer">
-                Owner is Reviewer
+
+            <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 sm:items-end">
+              <div>
+                <label htmlFor="tags" className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Tags
+                </label>
+                <input
+                  id="tags"
+                  type="text"
+                  value={formData.step1.tags}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      step1: { ...prev.step1, tags: e.target.value },
+                    }))
+                  }
+                  placeholder="e.g. Operations, Finance"
+                  className="block w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors"
+                />
+              </div>
+
+              <label
+                htmlFor="ownerIsReviewer"
+                className="flex items-center gap-3 rounded-lg border border-gray-200 px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+              >
+                <input
+                  type="checkbox"
+                  id="ownerIsReviewer"
+                  checked={formData.step1.ownerIsReviewer}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      step1: { ...prev.step1, ownerIsReviewer: e.target.checked },
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Owner is Reviewer</span>
               </label>
             </div>
           </div>
@@ -620,46 +642,78 @@ export default function CreateUserGroupPage() {
 
         {currentStep === 3 && (
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              Review Your User Group
-            </h3>
-            
-            <div className="bg-gray-50 p-4 rounded-md space-y-3">
-              <div>
-                <span className="font-medium text-gray-700">Group Name:</span>
-                <span className="ml-2 text-gray-900">
-                  {formData.step1.groupName}
-                </span>
+            {/* Group details summary */}
+            <div className="rounded-2xl border border-[#EEF0F2] bg-white p-6 sm:p-8">
+              <h2 className="mb-5 text-sm font-semibold text-blue-700">Group Details</h2>
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    Group Name
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {formData.step1.groupName || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    Owner
+                  </div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    {formData.step1.owner || "—"}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    Owner is Reviewer
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                      formData.step1.ownerIsReviewer
+                        ? "border border-green-500 bg-green-50 text-green-700"
+                        : "border border-gray-300 bg-gray-50 text-gray-600"
+                    }`}
+                  >
+                    {formData.step1.ownerIsReviewer ? "Yes" : "No"}
+                  </span>
+                </div>
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    Description
+                  </div>
+                  <div className="rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-700">
+                    {formData.step1.description || "No description provided"}
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                    Tags
+                  </div>
+                  {formData.step1.tags ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {formData.step1.tags.split(",").map((tag) => tag.trim()).filter(Boolean).map((tag, i) => (
+                        <span
+                          key={`${tag}-${i}`}
+                          className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-400">N/A</div>
+                  )}
+                </div>
               </div>
-              <div>
-                <span className="font-medium text-gray-700">Description:</span>
-                <span className="ml-2 text-gray-900">
-                  {formData.step1.description}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Owner:</span>
-                <span className="ml-2 text-gray-900">
-                  {formData.step1.owner}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Tags:</span>
-                <span className="ml-2 text-gray-900">
-                  {formData.step1.tags || "N/A"}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">Owner is Reviewer:</span>
-                <span className="ml-2 text-gray-900">
-                  {formData.step1.ownerIsReviewer ? "Yes" : "No"}
-                </span>
-              </div>
-              <div>
-                <span className="font-medium text-gray-700">
-                  Selection Method:
-                </span>
-                <span className="ml-2 text-gray-900">
+            </div>
+
+            {/* User selection summary */}
+            <div className="rounded-2xl border border-[#EEF0F2] bg-white p-6 sm:p-8">
+              <h2 className="mb-5 text-sm font-semibold text-blue-700">User Selection</h2>
+              <div className="mb-5">
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Selection Method
+                </div>
+                <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
                   {formData.step2.selectionMethod === "specific"
                     ? "Specific Users"
                     : formData.step2.selectionMethod === "selectEach"
@@ -667,57 +721,69 @@ export default function CreateUserGroupPage() {
                     : "Upload File"}
                 </span>
               </div>
+
               <div>
-                <span className="font-medium text-gray-700">Selected Users:</span>
-                <div className="ml-2 mt-1">
-                  {formData.step2.selectionMethod === "specific" && (
-                    <div className="text-gray-900">
-                      {formData.step2.specificUserExpression && formData.step2.specificUserExpression.length > 0 ? (
-                        <div>
-                          <p className="text-sm mb-2">
-                            {formData.step2.specificUserExpression.length} condition(s) defined
-                          </p>
-                          <div className="bg-gray-100 p-3 rounded text-sm">
-                            <pre className="whitespace-pre-wrap">
-                              {JSON.stringify(
-                                formData.step2.specificUserExpression.map((expr: any) => ({
-                                  attribute: expr.attribute?.label || expr.attribute?.value || "",
-                                  operator: expr.operator?.label || expr.operator?.value || "",
-                                  value: expr.value || "",
-                                  logicalOp: expr.logicalOp || "",
-                                })),
-                                null,
-                                2
-                              )}
-                            </pre>
-                          </div>
+                <div className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                  Selected Users
+                </div>
+
+                {formData.step2.selectionMethod === "specific" && (
+                  <div>
+                    {formData.step2.specificUserExpression && formData.step2.specificUserExpression.length > 0 ? (
+                      <div>
+                        <p className="mb-2 text-sm text-gray-700">
+                          {formData.step2.specificUserExpression.length} condition(s) defined
+                        </p>
+                        <div className="rounded-xl bg-gray-50 p-4">
+                          <pre className="whitespace-pre-wrap text-xs text-gray-700">
+                            {JSON.stringify(
+                              formData.step2.specificUserExpression.map((expr: any) => ({
+                                attribute: expr.attribute?.label || expr.attribute?.value || "",
+                                operator: expr.operator?.label || expr.operator?.value || "",
+                                value: expr.value || "",
+                                logicalOp: expr.logicalOp || "",
+                              })),
+                              null,
+                              2
+                            )}
+                          </pre>
                         </div>
-                      ) : (
-                        <span className="text-gray-500">No conditions defined</span>
-                      )}
-                    </div>
-                  )}
-                  {formData.step2.selectionMethod === "selectEach" && (
-                    <div className="text-gray-900">
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400">No conditions defined</p>
+                    )}
+                  </div>
+                )}
+
+                {formData.step2.selectionMethod === "selectEach" && (
+                  <div>
+                    <p className="mb-2 text-sm text-gray-700">
                       {formData.step2.selectedUsers.length} user(s) selected
-                      <ul className="list-disc list-inside mt-1 text-sm">
+                    </p>
+                    {formData.step2.selectedUsers.length > 0 && (
+                      <div className="flex flex-col gap-1.5">
                         {formData.step2.selectedUsers.map((email) => {
                           const user = users.find((u) => u.email === email);
                           return (
-                            <li key={email}>
-                              {user?.name || email} ({email})
-                            </li>
+                            <div
+                              key={email}
+                              className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2 text-sm"
+                            >
+                              <span className="font-medium text-gray-900">{user?.name || email}</span>
+                              <span className="text-gray-500">{email}</span>
+                            </div>
                           );
                         })}
-                      </ul>
-                    </div>
-                  )}
-                  {formData.step2.selectionMethod === "upload" && (
-                    <div className="text-gray-900">
-                      {formData.step2.uploadedFile?.name || "No file selected"}
-                    </div>
-                  )}
-                </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {formData.step2.selectionMethod === "upload" && (
+                  <div className="text-sm text-gray-700">
+                    {formData.step2.uploadedFile?.name || "No file selected"}
+                  </div>
+                )}
               </div>
             </div>
           </div>
