@@ -111,14 +111,15 @@ const EditReassignButtons = <T extends { status?: string }>({
   }, [isGlobalSidebarOpen, isEditMode, localNodeData]);
 
   return (
-    <div className="flex space-x-4 h-full items-center">
-      <button type="button" onClick={handleEdit} title="Edit" aria-label="Edit selected rows">
-        <Edit2Icon
-          className="cursor-pointer hover:opacity-80"
-          color="#2f8b57ff"
-          strokeWidth="1"
-          size="24"
-        />
+    <div className="flex gap-2 h-full items-center">
+      <button
+        type="button"
+        onClick={handleEdit}
+        title="Edit"
+        aria-label="Edit selected rows"
+        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
+      >
+        <Edit2Icon size={16} />
       </button>
 
       <button
@@ -126,9 +127,9 @@ const EditReassignButtons = <T extends { status?: string }>({
         onClick={handleReassign}
         title="Reassign"
         aria-label="Reassign"
-        className="p-1 rounded hover:bg-purple-50"
+        className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-purple-600 hover:bg-purple-50 hover:border-purple-400 transition-colors"
       >
-        <UserRoundCheck className="w-5 h-5" color="#b146cc" strokeWidth={1} />
+        <UserRoundCheck size={16} />
       </button>
 
       <ProxyActionModal

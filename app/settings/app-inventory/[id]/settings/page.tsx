@@ -152,55 +152,6 @@ export default function AppInventorySettingsPage() {
 
   return (
     <div className="h-screen flex flex-col w-full min-w-0">
-      <div className="bg-white border-b border-gray-200 px-4 py-4 w-full">
-        <div className="flex items-center justify-between gap-4 w-full min-w-0">
-          <div className="flex items-center gap-4 min-w-0">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="p-2 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-900 transition-colors shrink-0"
-              aria-label="Back"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900 truncate">{appName}</h1>
-          </div>
-          {activeTabIndex === 0 && (
-            <div className="flex items-center gap-2 shrink-0">
-              {isConfigEditing ? (
-                <>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-full px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm font-medium"
-                    onClick={() => configTabRef.current?.cancelEdit()}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
-                    onClick={() => void configTabRef.current?.submit()}
-                  >
-                    Submit
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors text-sm font-medium"
-                  onClick={() => configTabRef.current?.startEdit()}
-                  aria-label="Edit Application"
-                  title="Edit Application"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
       <div className="flex-1 flex flex-col min-h-0 w-full min-w-0 py-3 overflow-y-auto">
         <HorizontalTabs
           tabs={tabsData}
@@ -208,16 +159,51 @@ export default function AppInventorySettingsPage() {
           activeIndex={activeTabIndex}
           onChange={handleTabChange}
           headerActions={
-            isAdDomain ? (
-              <button
-                type="button"
-                onClick={() => setCloneModalOpen(true)}
-                className="flex items-center gap-2 rounded-lg px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors text-sm font-medium"
-              >
-                <Copy className="w-4 h-4" aria-hidden />
-                Clone Connector
-              </button>
-            ) : undefined
+            <div className="flex items-center gap-2">
+              {isAdDomain && (
+                <button
+                  type="button"
+                  onClick={() => setCloneModalOpen(true)}
+                  className="flex items-center gap-2 rounded-lg px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100 transition-colors text-sm font-medium"
+                >
+                  <Copy className="w-4 h-4" aria-hidden />
+                  Clone Connector
+                </button>
+              )}
+              {activeTabIndex === 0 && (
+                <>
+                  {isConfigEditing ? (
+                    <>
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 rounded-full px-4 py-2 bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors text-sm font-medium"
+                        onClick={() => configTabRef.current?.cancelEdit()}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+                        onClick={() => void configTabRef.current?.submit()}
+                      >
+                        Submit
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors text-sm font-medium"
+                      onClick={() => configTabRef.current?.startEdit()}
+                      aria-label="Edit Application"
+                      title="Edit Application"
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           }
         />
       </div>

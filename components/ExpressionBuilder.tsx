@@ -44,10 +44,12 @@ const selectStyles = {
     ...base,
     width: "100%",
     minWidth: 0,
+    minHeight: 38,
     backgroundColor: "#ffffff",
     borderColor: "#d1d5db",
     color: "#111827",
   }),
+  valueContainer: (base: object) => ({ ...base, flexWrap: "nowrap" as const }),
   menuPortal: (base: object) => ({ ...base, zIndex: 10000 }),
   menu: (base: object) => ({
     ...base,
@@ -60,9 +62,21 @@ const selectStyles = {
     color: "#111827",
     backgroundColor: state.isSelected ? "#dbeafe" : state.isFocused ? "#f3f4f6" : "#ffffff",
   }),
-  singleValue: (base: object) => ({ ...base, color: "#111827" }),
+  singleValue: (base: object) => ({
+    ...base,
+    color: "#111827",
+    whiteSpace: "nowrap" as const,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  }),
   input: (base: object) => ({ ...base, color: "#111827" }),
-  placeholder: (base: object) => ({ ...base, color: "#6b7280" }),
+  placeholder: (base: object) => ({
+    ...base,
+    color: "#6b7280",
+    whiteSpace: "nowrap" as const,
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+  }),
 };
 
 interface Condition {
@@ -244,7 +258,7 @@ const ExpressionBuilder: React.FC<ExpressionBuilderProps> = ({
                     {...field}
                     type="text"
                     placeholder="Enter value"
-                    className="form-input w-full border border-gray-300 rounded-md px-2 py-1.5 min-w-0 box-border"
+                    className="form-input w-full min-h-[38px] border border-gray-300 rounded-md px-2 py-1.5 min-w-0 box-border"
                   />
                 )}
               />

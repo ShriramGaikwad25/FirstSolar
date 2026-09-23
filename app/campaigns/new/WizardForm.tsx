@@ -157,7 +157,7 @@ const WizardForm: React.FC<WizardFormProps> = ({ steps, initialFormData, isEditM
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Step bar: fixed below header, full width (respecting sidebar) */}
       <div
         className="fixed top-[60px] right-0 z-20 bg-white shadow-sm border-b border-gray-200 px-3 sm:px-6 py-2.5 sm:py-3.5 border-t border-gray-200"

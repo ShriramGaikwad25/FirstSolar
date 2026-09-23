@@ -3,8 +3,13 @@ import React, { useState, useEffect } from "react";
 import { Search, Check } from "lucide-react";
 import { useSelectedUsers, User } from "@/contexts/SelectedUsersContext";
 
-const UserSearchTab: React.FC = () => {
-  const { selectedUsers: contextSelectedUsers, addUser, removeUser } = useSelectedUsers();
+interface UserSearchTabProps {
+  /** Remove Access flow: only one user may be selected at a time */
+  singleSelect?: boolean;
+}
+
+const UserSearchTab: React.FC<UserSearchTabProps> = ({ singleSelect = false }) => {
+  const { selectedUsers: contextSelectedUsers, addUser, removeUser, setSelectedUsers } = useSelectedUsers();
   const [searchCriteria, setSearchCriteria] = useState("name");
   const [searchValue, setSearchValue] = useState("");
   const [searchResults, setSearchResults] = useState<User[]>([]);
@@ -187,6 +192,8 @@ const UserSearchTab: React.FC = () => {
   const handleUserSelect = (user: User) => {
     if (localSelectedIds.has(user.id)) {
       removeUser(user.id);
+    } else if (singleSelect) {
+      setSelectedUsers([user]);
     } else {
       addUser(user);
     }
@@ -298,12 +305,16 @@ const UserSearchTab: React.FC = () => {
             <h3 className="text-sm font-semibold text-gray-700">
               Search Results ({searchResults.length})
             </h3>
-            <button
-              onClick={handleSelectAll}
-              className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-            >
-              {localSelectedIds.size === searchResults.length ? "Deselect All" : "Select All"}
-            </button>
+            {singleSelect ? (
+              <span className="text-xs text-gray-500 italic">Select one user</span>
+            ) : (
+              <button
+                onClick={handleSelectAll}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                {localSelectedIds.size === searchResults.length ? "Deselect All" : "Select All"}
+              </button>
+            )}
           </div>
           <div className="border border-gray-200 rounded-md overflow-hidden">
             <div className="max-h-96 overflow-y-auto">
@@ -320,13 +331,19 @@ const UserSearchTab: React.FC = () => {
                     }`}
                   >
                     <div
-                      className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                      className={`w-5 h-5 border-2 flex items-center justify-center shrink-0 ${
+                        singleSelect ? "rounded-full" : "rounded"
+                      } ${
                         isSelected
                           ? "bg-blue-600 border-blue-600"
                           : "border-gray-300"
                       }`}
                     >
-                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                      {isSelected && (singleSelect ? (
+                        <div className="w-2 h-2 rounded-full bg-white" />
+                      ) : (
+                        <Check className="w-3 h-3 text-white" />
+                      ))}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">

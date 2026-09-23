@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 
@@ -22,6 +23,9 @@
 /** DataTable custom css**/
 html {
   @apply overflow-auto;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
 }
@@ -30,6 +34,9 @@ html::-webkit-scrollbar {
 }
 body {
   @apply overflow-auto min-h-screen;
+  font-family: inherit;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE and Edge */
 }
@@ -331,31 +338,16 @@ textarea:focus-visible,
   outline-offset: -2px !important;
 }
 
-/* My Approvals: center vertically, align content left (Req ID + Comments + Status) */
+/* My Approvals: center vertically, align content left (Req ID + Action) */
 .ag-theme-quartz .pending-approvals-req-id-cell,
-.ag-theme-quartz .pending-approvals-comments-cell,
-.ag-theme-quartz .pending-approvals-status-cell {
+.ag-theme-quartz .pending-approvals-action-cell {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   text-align: left;
 }
 
-.ag-theme-quartz .pending-approvals-comments-cell .ag-cell-wrapper {
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  text-align: left;
-}
-
-.ag-theme-quartz .pending-approvals-comments-cell .ag-cell-value {
-  width: 100%;
-  text-align: left;
-}
-
-.ag-theme-quartz .pending-approvals-status-cell .ag-cell-wrapper {
+.ag-theme-quartz .pending-approvals-action-cell .ag-cell-wrapper {
   width: 100%;
   min-width: 0;
 }

@@ -31,59 +31,97 @@ export default function ProfilePage() {
     }
     const searchIdentifier = userIdFromCookie || currentUserId;
 
+    const extractRows = (responseData: any): any[] =>
+      responseData && typeof responseData === "object" && "resultSet" in responseData && Array.isArray(responseData.resultSet)
+        ? responseData.resultSet
+        : Array.isArray(responseData)
+          ? responseData
+          : [];
+
     const run = async () => {
       try {
         setIsLoading(true);
         setError(null);
         const endpoint = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
-        const responseData = await apiRequestWithAuth<any>(endpoint, {
-          method: "POST",
-          body: JSON.stringify({ query: "SELECT * FROM usr", parameters: [] }),
-        });
 
-        const sourceArray: any[] =
-          responseData && typeof responseData === "object" && "resultSet" in responseData && Array.isArray((responseData as any).resultSet)
-            ? (responseData as any).resultSet
-            : Array.isArray(responseData)
-              ? responseData
-              : [];
+        const searchTerm = (searchIdentifier || "").trim();
+        const reviewerTerm = (reviewerId || "").trim();
+        const searchIdLower = searchTerm.toLowerCase();
+        const reviewerLower = reviewerTerm.toLowerCase();
 
-        if (sourceArray.length === 0) {
-          setError("No user data found.");
-          return;
-        }
+        let candidates: any[] = [];
 
-        const searchIdLower = (searchIdentifier || "").toLowerCase().trim();
-        let userData: any = sourceArray.find((u: any) => (u.username || "").toLowerCase().trim() === searchIdLower);
-        if (!userData) {
-          userData = sourceArray.find((u: any) => {
-            const e = u.email?.work || (typeof u.email === "string" ? u.email : "") || u.customattributes?.emails?.[0]?.value || "";
-            return e.toLowerCase().trim() === searchIdLower;
+        // Narrow lookup via WHERE instead of pulling the whole usr table
+        if (searchTerm || reviewerTerm) {
+          const conditions: string[] = [];
+          const parameters: string[] = [];
+          if (searchTerm) {
+            const like = `%${searchTerm}%`;
+            conditions.push(
+              "username ILIKE ?",
+              "email::text ILIKE ?",
+              "displayname ILIKE ?",
+              "firstname ILIKE ?",
+              "lastname ILIKE ?"
+            );
+            parameters.push(like, like, like, like, like);
+          }
+          if (reviewerTerm) {
+            conditions.push("userid::text ILIKE ?");
+            parameters.push(reviewerTerm);
+          }
+          const query = `SELECT * FROM usr WHERE ${conditions.join(" OR ")} LIMIT 50`;
+          const responseData = await apiRequestWithAuth<any>(endpoint, {
+            method: "POST",
+            body: JSON.stringify({ query, parameters }),
           });
+          candidates = extractRows(responseData);
         }
-        if (!userData && reviewerId) {
-          const rLower = reviewerId.toLowerCase().trim();
-          userData = sourceArray.find(
-            (u: any) => (u.userid || u.id || u.userUniqueID || "").toLowerCase().trim() === rLower
-          );
+
+        let userData: any = null;
+        if (candidates.length > 0) {
+          userData = candidates.find((u: any) => (u.username || "").toLowerCase().trim() === searchIdLower);
+          if (!userData) {
+            userData = candidates.find((u: any) => {
+              const e = u.email?.work || (typeof u.email === "string" ? u.email : "") || u.customattributes?.emails?.[0]?.value || "";
+              return e.toLowerCase().trim() === searchIdLower;
+            });
+          }
+          if (!userData && reviewerTerm) {
+            userData = candidates.find(
+              (u: any) => (u.userid || u.id || u.userUniqueID || "").toLowerCase().trim() === reviewerLower
+            );
+          }
+          if (!userData) {
+            userData = candidates.find((u: any) => (u.displayname || u.displayName || "").toLowerCase().trim() === searchIdLower);
+          }
+          if (!userData) {
+            userData = candidates.find(
+              (u: any) => `${(u.firstname || "")} ${(u.lastname || "")}`.toLowerCase().trim() === searchIdLower
+            );
+          }
+          if (!userData) {
+            userData = candidates.find((u: any) => (u.firstname || "").toLowerCase().trim() === searchIdLower);
+          }
         }
-        if (!userData) {
-          userData = sourceArray.find((u: any) => (u.displayname || u.displayName || "").toLowerCase().trim() === searchIdLower);
-        }
-        if (!userData) {
-          userData = sourceArray.find(
-            (u: any) => `${(u.firstname || "")} ${(u.lastname || "")}`.toLowerCase().trim() === searchIdLower
-          );
-        }
-        if (!userData) {
-          userData = sourceArray.find((u: any) => (u.firstname || "").toLowerCase().trim() === searchIdLower);
-        }
-        if (!userData && searchIdentifier) {
+
+        if (!userData && searchTerm) {
           setError("Your user record was not found.");
           return;
         }
+
         if (!userData) {
-          userData = sourceArray[0];
+          // No identifier to search by (or reviewer-only match failed) — grab any single row as a last resort
+          const fallbackResponse = await apiRequestWithAuth<any>(endpoint, {
+            method: "POST",
+            body: JSON.stringify({ query: "SELECT * FROM usr LIMIT 1", parameters: [] }),
+          });
+          const fallbackRows = extractRows(fallbackResponse);
+          if (fallbackRows.length === 0) {
+            setError("No user data found.");
+            return;
+          }
+          userData = fallbackRows[0];
         }
 
         const displayName =

@@ -189,13 +189,13 @@ function DefinedTagsTable({ tags }: { tags: PolicyScopeDefinedTag[] }) {
         </colgroup>
         <thead>
           <tr className="bg-blue-50/90">
-            <th className="border-b border-blue-100 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-blue-800">
+            <th className="border-b border-blue-100 px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-blue-800">
               Namespace
             </th>
-            <th className="border-b border-blue-100 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-blue-800">
+            <th className="border-b border-blue-100 px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-blue-800">
               Key
             </th>
-            <th className="border-b border-blue-100 px-2 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-blue-800">
+            <th className="border-b border-blue-100 px-2 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-blue-800">
               Value
             </th>
           </tr>
@@ -222,10 +222,10 @@ function FreeformTagsTable({ tags }: { tags: PolicyScopeFreeformTag[] }) {
       <table className="min-w-full border-collapse text-sm">
         <thead>
           <tr className="bg-blue-50/90">
-            <th className="border-b border-blue-100 px-2.5 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-blue-900">
+            <th className="border-b border-blue-100 px-2.5 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-blue-900">
               Key
             </th>
-            <th className="border-b border-blue-100 px-2.5 py-1.5 text-left text-[10px] font-semibold uppercase tracking-wide text-blue-900">
+            <th className="border-b border-blue-100 px-2.5 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-blue-900">
               Value
             </th>
           </tr>
@@ -269,7 +269,7 @@ const RESOURCE_CARD_ACCENTS = [
 function StateBadge({ state }: { state: string }) {
   return (
     <span
-      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ring-1 ring-inset ${lifecycleStateTone(state)}`}
+      className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide ring-1 ring-inset ${lifecycleStateTone(state)}`}
     >
       {state}
     </span>

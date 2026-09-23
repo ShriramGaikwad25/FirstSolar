@@ -684,7 +684,7 @@ export default function ServiceAccountPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <div className="w-full py-8 px-4">
         <div
           className="ag-theme-alpine"

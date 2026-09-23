@@ -60,13 +60,13 @@ function ResourcesCard({ analytics, className }: { analytics: PolicyListAnalytic
           <span className="text-2xl font-semibold tabular-nums text-gray-900">
             {analytics.distinctResources}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wide text-gray-400">distinct</span>
+          <span className="mt-0.5 text-[11px] uppercase tracking-wide text-gray-400">distinct</span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center rounded-md bg-red-50 px-3 py-2">
           <span className={`text-2xl font-semibold tabular-nums ${analytics.highRiskStatements > 0 ? "text-red-700" : "text-gray-900"}`}>
             {analytics.highRiskStatements}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wide text-red-400">high risk</span>
+          <span className="mt-0.5 text-[11px] uppercase tracking-wide text-red-400">high risk</span>
         </div>
       </div>
     </div>
@@ -82,13 +82,13 @@ function PoliciesCard({ analytics, className }: { analytics: PolicyListAnalytics
           <span className="text-2xl font-semibold tabular-nums text-blue-700">
             {analytics.totalPolicies}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wide text-blue-400">total</span>
+          <span className="mt-0.5 text-[11px] uppercase tracking-wide text-blue-400">total</span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center rounded-md bg-red-50 px-3 py-2">
           <span className={`text-2xl font-semibold tabular-nums ${analytics.highRiskStatements > 0 ? "text-red-700" : "text-gray-900"}`}>
             {analytics.highRiskStatements}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wide text-red-400">high risk</span>
+          <span className="mt-0.5 text-[11px] uppercase tracking-wide text-red-400">high risk</span>
         </div>
       </div>
     </div>
@@ -104,13 +104,13 @@ function StatementsCard({ analytics, className }: { analytics: PolicyListAnalyti
           <span className="text-2xl font-semibold tabular-nums text-blue-700">
             {analytics.totalStatements}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wide text-blue-400">total</span>
+          <span className="mt-0.5 text-[11px] uppercase tracking-wide text-blue-400">total</span>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center rounded-md bg-amber-50 px-3 py-2">
           <span className={`text-2xl font-semibold tabular-nums ${analytics.conditionalStatements > 0 ? "text-amber-700" : "text-gray-900"}`}>
             {analytics.conditionalStatements}
           </span>
-          <span className="mt-0.5 text-[10px] uppercase tracking-wide text-amber-400">conditional</span>
+          <span className="mt-0.5 text-[11px] uppercase tracking-wide text-amber-400">conditional</span>
         </div>
       </div>
     </div>
@@ -125,7 +125,7 @@ function DistinctSubjectsCard({ analytics }: { analytics: PolicyListAnalytics })
         {analytics.distinctSubjects}
       </p>
       <div className="mt-auto space-y-2 border-t border-gray-100 pt-3">
-        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
           By kind
         </p>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">

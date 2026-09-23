@@ -11,7 +11,7 @@ import {
   isAdvancedIntegrationGroupId,
   type ApplicationTypeIntegrationFieldGroup,
 } from "@/lib/api";
-import { Check, ChevronDown, ChevronUp, Edit } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, Edit, Settings2, KeyRound } from "lucide-react";
 import AdvancedIntegrationOperationTabs from "../../components/AdvancedIntegrationOperationTabs";
 import ToggleSwitch from "@/components/ToggleSwitch";
 
@@ -505,7 +505,7 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
         </div>
         {renderFieldRow("Backup Hostname", d.backupHostname, false, "backupHostname", isEditing, (v) => updateAppDetailField("backupHostname", v))}
 
-        <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", overflow: "hidden" }}>
+        <div style={{ border: "1px solid #e5e7eb", borderLeft: "4px solid #c4b5fd", borderRadius: 8, background: "#fff", boxShadow: "0 1px 2px rgba(0,0,0,0.04)", overflow: "hidden" }}>
           <button
             type="button"
             onClick={() => setAdDomainAdvancedExpanded((e) => !e)}
@@ -753,6 +753,7 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
     if (!hasGroupedConfig) {
       return renderSection("Application Details", applicationDetails, {
         sectionKind: "Application Details",
+        hideTitle: true,
       });
     }
 
@@ -1039,14 +1040,28 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 w-full">
-          <div className="bg-white rounded-lg shadow-sm p-5 sm:p-6 space-y-6 min-h-[20rem] min-w-0 w-full">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-blue-400 p-5 sm:p-6 space-y-6 min-h-[20rem] min-w-0 w-full">
+            {appType !== "Active Directory Domain" && (
+              <div className="flex items-center gap-2 pb-3 border-b border-gray-200">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                  <Settings2 size={15} />
+                </span>
+                <h2 className="text-base font-semibold text-gray-900">Application Details</h2>
+              </div>
+            )}
             {renderConfigurationPanel()}
           </div>
-          <div className="bg-white rounded-lg shadow-sm p-5 sm:p-6 min-w-0 w-full">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-purple-400 p-5 sm:p-6 min-w-0 w-full">
+            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-200">
+              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-100 text-purple-700">
+                <KeyRound size={15} />
+              </span>
+              <h2 className="text-base font-semibold text-gray-900">OAuth Details</h2>
+            </div>
             {renderSection(
               "OAuth Details",
               application?.OAuthDetails ?? application?.oauthDetails,
-              { sectionKind: "OAuth Details" }
+              { sectionKind: "OAuth Details", hideTitle: true }
             )}
           </div>
         </div>

@@ -243,7 +243,7 @@ export default function SodMitigatingControlsNewPage() {
   }, [policyOptions, selectedPolicyIds]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       <div className="w-full space-y-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">

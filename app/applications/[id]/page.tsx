@@ -29,8 +29,13 @@ import {
   HelpCircle,
   Search,
   Printer,
+  Building2,
+  Clock,
+  Link2,
+  Tag,
+  Lock,
 } from "lucide-react";
-import { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { formatDateMMDDYY } from "@/utils/utils";
@@ -422,6 +427,92 @@ const dataAccount: Record<string, DataItem[]> = {
     { label: "Dormant for past 30-60 days", value: 0 },
     { label: "Dormant for more than 90 days", value: 0 },
   ],
+};
+
+interface FilterColorSet {
+  dot: string;
+  border: string;
+  selectedBg: string;
+  selectedBorder: string;
+  selectedText: string;
+  badgeBg: string;
+  badgeText: string;
+}
+
+const FILTER_COLORS: Record<string, FilterColorSet> = {
+  "Regular Accounts": {
+    dot: "bg-blue-500",
+    border: "border-l-blue-400",
+    selectedBg: "bg-blue-50",
+    selectedBorder: "border-blue-300",
+    selectedText: "text-blue-900",
+    badgeBg: "bg-blue-100",
+    badgeText: "text-blue-700",
+  },
+  "Elevated Accounts": {
+    dot: "bg-amber-500",
+    border: "border-l-amber-400",
+    selectedBg: "bg-amber-50",
+    selectedBorder: "border-amber-300",
+    selectedText: "text-amber-900",
+    badgeBg: "bg-amber-100",
+    badgeText: "text-amber-700",
+  },
+  "Orphan Accounts": {
+    dot: "bg-purple-500",
+    border: "border-l-purple-400",
+    selectedBg: "bg-purple-50",
+    selectedBorder: "border-purple-300",
+    selectedText: "text-purple-900",
+    badgeBg: "bg-purple-100",
+    badgeText: "text-purple-700",
+  },
+  "Terminated User Accounts": {
+    dot: "bg-red-500",
+    border: "border-l-red-400",
+    selectedBg: "bg-red-50",
+    selectedBorder: "border-red-300",
+    selectedText: "text-red-900",
+    badgeBg: "bg-red-100",
+    badgeText: "text-red-700",
+  },
+  "Active in past 30 days": {
+    dot: "bg-green-500",
+    border: "border-l-green-400",
+    selectedBg: "bg-green-50",
+    selectedBorder: "border-green-300",
+    selectedText: "text-green-900",
+    badgeBg: "bg-green-100",
+    badgeText: "text-green-700",
+  },
+  "Dormant for past 30-60 days": {
+    dot: "bg-yellow-500",
+    border: "border-l-yellow-400",
+    selectedBg: "bg-yellow-50",
+    selectedBorder: "border-yellow-300",
+    selectedText: "text-yellow-900",
+    badgeBg: "bg-yellow-100",
+    badgeText: "text-yellow-700",
+  },
+  "Dormant for more than 90 days": {
+    dot: "bg-orange-500",
+    border: "border-l-orange-400",
+    selectedBg: "bg-orange-50",
+    selectedBorder: "border-orange-300",
+    selectedText: "text-orange-900",
+    badgeBg: "bg-orange-100",
+    badgeText: "text-orange-700",
+  },
+};
+
+const DEFAULT_FILTER_COLOR: FilterColorSet = {
+  dot: "bg-gray-400",
+  border: "border-l-gray-300",
+  selectedBg: "bg-gray-100",
+  selectedBorder: "border-gray-300",
+  selectedText: "text-gray-900",
+  badgeBg: "bg-gray-100",
+  badgeText: "text-gray-700",
 };
 
 export default function ApplicationDetailPage() {
@@ -1190,12 +1281,14 @@ export default function ApplicationDetailPage() {
         }
 
         return (
-          <div className="flex space-x-4 text-sm text-gray-700">
-            <div className="flex-1">
-              <strong>{label1}:</strong> {val1?.toString() || "N/A"}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label1}</span>
+              <div className="text-sm text-gray-900 font-medium mt-1 break-words">{val1?.toString() || "N/A"}</div>
             </div>
-            <div className="flex-1">
-              <strong>{label2}:</strong> {val2?.toString() || "N/A"}
+            <div className="min-w-0">
+              <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label2}</span>
+              <div className="text-sm text-gray-900 font-medium mt-1 break-words">{val2?.toString() || "N/A"}</div>
             </div>
           </div>
         );
@@ -1227,8 +1320,9 @@ export default function ApplicationDetailPage() {
         }
 
         return (
-          <div className="text-sm text-gray-700 break-all min-w-0">
-            <strong>{label}:</strong> {val?.toString() || "N/A"}
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+            <div className="text-sm text-gray-900 font-medium mt-1 break-words">{val?.toString() || "N/A"}</div>
           </div>
         );
       };
@@ -1568,7 +1662,7 @@ export default function ApplicationDetailPage() {
       return (
         <>
         <div className="flex flex-col h-full">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
             {entitlementDetailsError ? (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{entitlementDetailsError}</p>
@@ -1593,9 +1687,9 @@ export default function ApplicationDetailPage() {
                     className="w-full px-2 py-1.5 border border-gray-300 rounded text-md font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 )}
-                <div className={localEditMode ? "mt-2" : ""}>
+                <div className={`bg-gray-50 border border-gray-200 rounded-lg p-3 ${localEditMode ? "mt-2" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs uppercase text-gray-500">Description:</span>
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</span>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1614,14 +1708,14 @@ export default function ApplicationDetailPage() {
                           setLocalEditableData(null);
                         }
                       }}
-                      className={`p-1.5 rounded transition-colors flex-shrink-0 ${
+                      className={`w-7 h-7 flex items-center justify-center rounded-md border transition-colors flex-shrink-0 ${
                         localEditMode
-                          ? "bg-blue-500 hover:bg-blue-600"
-                          : "hover:bg-gray-200"
+                          ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
+                          : "border-gray-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
                       }`}
                       title={localEditMode ? "Save changes" : "Edit entitlement"}
                     >
-                      <Edit className={`w-4 h-4 ${localEditMode ? "text-white" : "text-gray-600 hover:text-blue-600"}`} />
+                      <Edit className="w-3.5 h-3.5" />
                     </button>
                   </div>
                   {localEditMode ? (
@@ -1639,10 +1733,10 @@ export default function ApplicationDetailPage() {
                         }));
                       }}
                       rows={3}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm mt-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm mt-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y bg-white"
                     />
                   ) : (
-                    <p className="text-sm text-gray-700 break-words break-all whitespace-pre-wrap max-w-full mt-1">
+                    <p className="text-sm text-gray-700 break-words whitespace-pre-wrap max-w-full mt-1">
                       {finalData?.["Ent Description"] ||
                         (finalData as any)?.description ||
                         "-"}
@@ -1653,20 +1747,25 @@ export default function ApplicationDetailPage() {
             )}
             <div className="space-y-4">
               {/* General Frame */}
-              <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+              <div className="bg-white border border-gray-200 border-l-4 border-l-blue-400 rounded-lg shadow-sm overflow-hidden">
                 <button
-                  className="flex items-center w-full text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+                  className="flex items-center justify-between w-full text-left p-3 hover:bg-gray-50 transition-colors"
                   onClick={() => toggleLocalFrame("general")}
                 >
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                      <Info size={15} />
+                    </span>
+                    <span className="text-sm font-semibold text-gray-800">General</span>
+                  </span>
                   {localExpandedFrames.general ? (
-                    <ChevronDown size={20} className="mr-2" />
+                    <ChevronUp size={18} className="text-gray-500" />
                   ) : (
-                    <ChevronUp size={20} className="mr-2" />
+                    <ChevronDown size={18} className="text-gray-500" />
                   )}
-                  General
                 </button>
                 {localExpandedFrames.general && (
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-4 border-t border-gray-100">
                     {renderSideBySideFieldLocal(
                       "Type",
                       finalData?.["Ent Type"],
@@ -1687,20 +1786,25 @@ export default function ApplicationDetailPage() {
                 )}
               </div>
               {/* Business Frame */}
-              <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+              <div className="bg-white border border-gray-200 border-l-4 border-l-amber-400 rounded-lg shadow-sm overflow-hidden">
                 <button
-                  className="flex items-center w-full text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+                  className="flex items-center justify-between w-full text-left p-3 hover:bg-gray-50 transition-colors"
                   onClick={() => toggleLocalFrame("business")}
                 >
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-md bg-amber-100 text-amber-700">
+                      <Building2 size={15} />
+                    </span>
+                    <span className="text-sm font-semibold text-gray-800">Business</span>
+                  </span>
                   {localExpandedFrames.business ? (
-                    <ChevronDown size={20} className="mr-2" />
+                    <ChevronUp size={18} className="text-gray-500" />
                   ) : (
-                    <ChevronUp size={20} className="mr-2" />
+                    <ChevronDown size={18} className="text-gray-500" />
                   )}
-                  Business
                 </button>
                 {localExpandedFrames.business && (
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-4 border-t border-gray-100">
                     {renderSingleFieldLocal(
                       "Objective",
                       finalData?.["Business Objective"],
@@ -1731,20 +1835,25 @@ export default function ApplicationDetailPage() {
                 )}
               </div>
               {/* Technical Frame */}
-              <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+              <div className="bg-white border border-gray-200 border-l-4 border-l-purple-400 rounded-lg shadow-sm overflow-hidden">
                 <button
-                  className="flex items-center w-full text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+                  className="flex items-center justify-between w-full text-left p-3 hover:bg-gray-50 transition-colors"
                   onClick={() => toggleLocalFrame("technical")}
                 >
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-100 text-purple-700">
+                      <Link2 size={15} />
+                    </span>
+                    <span className="text-sm font-semibold text-gray-800">Technical</span>
+                  </span>
                   {localExpandedFrames.technical ? (
-                    <ChevronDown size={20} className="mr-2" />
+                    <ChevronUp size={18} className="text-gray-500" />
                   ) : (
-                    <ChevronUp size={20} className="mr-2" />
+                    <ChevronDown size={18} className="text-gray-500" />
                   )}
-                  Technical
                 </button>
                 {localExpandedFrames.technical && (
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-4 border-t border-gray-100">
                     {renderSideBySideFieldLocal(
                       "Created On",
                       finalData?.["Created On"],
@@ -1853,20 +1962,25 @@ export default function ApplicationDetailPage() {
                 )}
               </div>
               {/* Security Frame */}
-              <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+              <div className="bg-white border border-gray-200 border-l-4 border-l-red-400 rounded-lg shadow-sm overflow-hidden">
                 <button
-                  className="flex items-center w-full text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+                  className="flex items-center justify-between w-full text-left p-3 hover:bg-gray-50 transition-colors"
                   onClick={() => toggleLocalFrame("security")}
                 >
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-md bg-red-100 text-red-700">
+                      <Lock size={15} />
+                    </span>
+                    <span className="text-sm font-semibold text-gray-800">Security</span>
+                  </span>
                   {localExpandedFrames.security ? (
-                    <ChevronDown size={20} className="mr-2" />
+                    <ChevronUp size={18} className="text-gray-500" />
                   ) : (
-                    <ChevronUp size={20} className="mr-2" />
+                    <ChevronDown size={18} className="text-gray-500" />
                   )}
-                  Security
                 </button>
                 {localExpandedFrames.security && (
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-4 border-t border-gray-100">
                     {renderSideBySideFieldLocal(
                       "Risk",
                       finalData?.["Risk"],
@@ -1925,20 +2039,25 @@ export default function ApplicationDetailPage() {
                 )}
               </div>
               {/* Lifecycle Frame */}
-              <div className="bg-white border border-gray-200 rounded-md shadow-sm">
+              <div className="bg-white border border-gray-200 border-l-4 border-l-teal-400 rounded-lg shadow-sm overflow-hidden">
                 <button
-                  className="flex items-center w-full text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
+                  className="flex items-center justify-between w-full text-left p-3 hover:bg-gray-50 transition-colors"
                   onClick={() => toggleLocalFrame("lifecycle")}
                 >
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center justify-center w-7 h-7 rounded-md bg-teal-100 text-teal-700">
+                      <Clock size={15} />
+                    </span>
+                    <span className="text-sm font-semibold text-gray-800">Lifecycle</span>
+                  </span>
                   {localExpandedFrames.lifecycle ? (
-                    <ChevronDown size={20} className="mr-2" />
+                    <ChevronUp size={18} className="text-gray-500" />
                   ) : (
-                    <ChevronUp size={20} className="mr-2" />
+                    <ChevronDown size={18} className="text-gray-500" />
                   )}
-                  Lifecycle
                 </button>
                 {localExpandedFrames.lifecycle && (
-                  <div className="p-4 space-y-2">
+                  <div className="p-4 space-y-4 border-t border-gray-100">
                     {renderSideBySideFieldLocal(
                       "Requestable",
                       finalData?.["Requestable"],
@@ -3150,11 +3269,31 @@ export default function ApplicationDetailPage() {
           <div className="flex items-center h-full" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              className="p-1.5 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
               title="Edit"
               aria-label="Edit account"
               onClick={() => {
                 const row = params?.data || {};
+                const displayName = row.userDisplayName || row.accountName || "-";
+                const initials = displayName
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((w: string) => w[0]?.toUpperCase())
+                  .join("") || "?";
+                const identityCard = (
+                  <div className="flex items-center gap-3 p-2.5">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-600 text-white text-sm font-semibold shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+                      {row.userDisplayName && row.accountName && (
+                        <p className="text-xs text-gray-500 truncate">{row.accountName}</p>
+                      )}
+                    </div>
+                  </div>
+                );
                 const EditAccountSidebar = () => {
                   const [accountType, setAccountType] = useState("");
                   const [changeOwner, setChangeOwner] = useState(false);
@@ -3190,120 +3329,124 @@ export default function ApplicationDetailPage() {
                           const value = item[selectedAttribute];
                           return value?.toLowerCase().includes(searchValue.toLowerCase());
                         });
-                  
+
                   return (
                     <div className="flex flex-col h-full">
-                      <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                        <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
-                          <div className="text-sm text-gray-700 break-words">
-                            {row.userDisplayName || "-"} → {row.accountName || "-"}
+                      <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-800 mb-2">Account Type</label>
+                          <div className="relative">
+                            <select
+                              value={accountType}
+                              onChange={(e) => setAccountType(e.target.value)}
+                              className="w-full appearance-none px-3 py-2.5 pr-9 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value=""></option>
+                              <option value="Regular">Regular</option>
+                              <option value="Orphan">Orphan</option>
+                              <option value="Service">Service</option>
+                            </select>
+                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Select Account Type</label>
-                          <select 
-                            value={accountType}
-                            onChange={(e) => setAccountType(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value=""></option>
-                            <option value="Regular">Regular</option>
-                            <option value="Orphan">Orphan</option>
-                            <option value="Service">Service</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-gray-700">Change Account Owner</span>
-                          <span className="text-sm text-gray-900">No</span>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={changeOwner}
-                              onChange={(e) => setChangeOwner(e.target.checked)}
-                              className="sr-only peer" 
-                            />
-                            <div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-600"></div>
-                          </label>
-                          <span className="text-sm text-gray-900">Yes</span>
-                        </div>
-                        {changeOwner && (
-                          <div className="mt-2">
-                            <div className="flex mt-3 bg-gray-100 p-1 rounded-md">
-                              {(["User", "Group"] as const).map((type) => (
-                                <button
-                                  key={type}
-                                  className={`flex-1 py-2.5 px-3 text-sm font-medium transition-colors ${
-                                    ownerType === type
-                                      ? "bg-white text-[#15274E] border border-gray-300 shadow-sm relative z-10 rounded-md"
-                                      : "bg-transparent text-gray-500 hover:text-gray-700 rounded-md"
-                                  }`}
-                                  onClick={() => {
-                                    setOwnerType(type);
-                                    const initialAttr = type === "User" ? userAttributes[0] : groupAttributes[0];
-                                    setSelectedAttribute(initialAttr?.value || "");
-                                    setSearchValue("");
-                                    setSelectedItem(null);
-                                  }}
-                                >
-                                  {type}
-                                </button>
-                              ))}
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">Change Account Owner</p>
+                              <p className="text-xs text-gray-500 mt-0.5">Reassign this account to a different user or group</p>
                             </div>
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Select Attribute</label>
-                              <div className="relative">
-                                <select
-                                  value={selectedAttribute}
-                                  onChange={(e) => setSelectedAttribute(e.target.value)}
-                                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-8 appearance-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                  {currentAttributes.map((attr) => (
-                                    <option key={attr.value} value={attr.value}>
-                                      {attr.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                                </div>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={changeOwner}
+                              onClick={() => setChangeOwner(!changeOwner)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full shrink-0 transition-colors ${changeOwner ? "bg-blue-600" : "bg-gray-300"}`}
+                            >
+                              <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${changeOwner ? "translate-x-5" : "translate-x-0.5"}`} />
+                            </button>
+                          </div>
+                          {changeOwner && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <div className="flex bg-gray-100 p-1 rounded-md">
+                                {(["User", "Group"] as const).map((type) => (
+                                  <button
+                                    key={type}
+                                    className={`flex-1 py-2.5 px-3 text-sm font-medium transition-colors ${
+                                      ownerType === type
+                                        ? "bg-white text-[#15274E] border border-gray-300 shadow-sm relative z-10 rounded-md"
+                                        : "bg-transparent text-gray-500 hover:text-gray-700 rounded-md"
+                                    }`}
+                                    onClick={() => {
+                                      setOwnerType(type);
+                                      const initialAttr = type === "User" ? userAttributes[0] : groupAttributes[0];
+                                      setSelectedAttribute(initialAttr?.value || "");
+                                      setSearchValue("");
+                                      setSelectedItem(null);
+                                    }}
+                                  >
+                                    {type}
+                                  </button>
+                                ))}
                               </div>
-                            </div>
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Search Value</label>
-                              <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                </div>
-                                <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search" />
-                              </div>
-                            </div>
-                            {searchValue.trim() !== "" && (
-                              <div className="max-h-36 overflow-auto border rounded p-2 mt-3 text-sm bg-gray-50">
-                                {filteredData.length === 0 ? (
-                                  <p className="text-gray-500 italic">No results found.</p>
-                                ) : (
-                                  <ul className="space-y-1">
-                                    {filteredData.map((item, index) => (
-                                      <li key={index} className={`p-2 border rounded cursor-pointer transition-colors ${selectedItem === item ? "bg-blue-100 border-blue-300" : "hover:bg-gray-100"}`} onClick={() => {
-                                        setSelectedItem(item);
-                                        setSearchValue(item[selectedAttribute]);
-                                      }}>
-                                        {Object.values(item).join(" | ")}
-                                      </li>
+                              <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Attribute</label>
+                                <div className="relative">
+                                  <select
+                                    value={selectedAttribute}
+                                    onChange={(e) => setSelectedAttribute(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 pr-8 appearance-none bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  >
+                                    {currentAttributes.map((attr) => (
+                                      <option key={attr.value} value={attr.value}>
+                                        {attr.label}
+                                      </option>
                                     ))}
-                                  </ul>
-                                )}
+                                  </select>
+                                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        )}
+                              <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Search Value</label>
+                                <div className="relative">
+                                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                  <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search" />
+                                </div>
+                              </div>
+                              {searchValue.trim() !== "" && (
+                                <div className="max-h-36 overflow-auto border border-gray-200 rounded-md p-2 mt-3 text-sm bg-gray-50">
+                                  {filteredData.length === 0 ? (
+                                    <p className="text-gray-500 italic">No results found.</p>
+                                  ) : (
+                                    <ul className="space-y-1">
+                                      {filteredData.map((item, index) => (
+                                        <li key={index} className={`p-2 border rounded cursor-pointer transition-colors ${selectedItem === item ? "bg-blue-100 border-blue-300" : "border-transparent hover:bg-gray-100"}`} onClick={() => {
+                                          setSelectedItem(item);
+                                          setSearchValue(item[selectedAttribute]);
+                                        }}>
+                                          {Object.values(item).join(" | ")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-shrink-0 flex justify-center items-center p-3 border-t border-gray-200 bg-gray-50 min-h-[60px]">
-                        <button 
-                          onClick={() => { 
+                      <div className="flex-shrink-0 flex justify-end gap-2 p-3 border-t border-gray-200 bg-gray-50">
+                        <button
+                          onClick={closeSidebar}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
                             // Handle save logic here
                             console.log("Save clicked", { accountType, changeOwner, selectedItem });
-                          }} 
+                          }}
                           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                         >
                           Save
@@ -3312,8 +3455,8 @@ export default function ApplicationDetailPage() {
                     </div>
                   );
                 };
-                
-                openSidebar(<EditAccountSidebar />, { widthPx: 450 });
+
+                openSidebar(<EditAccountSidebar />, { widthPx: 450, title: identityCard });
               }}
             >
               <Edit className="w-4 h-4" />
@@ -3382,11 +3525,28 @@ export default function ApplicationDetailPage() {
           <div className="flex items-center gap-2 h-full" onClick={(e) => e.stopPropagation()}>
             <button
               type="button"
-              className="p-1.5 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-blue-600 hover:bg-blue-50 hover:border-blue-400 transition-colors"
               title="Edit"
               aria-label="Edit account"
               onClick={() => {
                 const row = params?.data || {};
+                const displayName = row.accountName || "-";
+                const initials = displayName
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((w: string) => w[0]?.toUpperCase())
+                  .join("") || "?";
+                const identityCard = (
+                  <div className="flex items-center gap-3 p-2.5">
+                    <div className="flex items-center justify-center w-9 h-9 rounded-full bg-blue-600 text-white text-sm font-semibold shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{displayName}</p>
+                    </div>
+                  </div>
+                );
                 const EditAccountSidebar = () => {
                   const [accountType, setAccountType] = useState("");
                   const [changeOwner, setChangeOwner] = useState(false);
@@ -3420,119 +3580,123 @@ export default function ApplicationDetailPage() {
                           const value = item[selectedAttribute];
                           return value?.toLowerCase().includes(searchValue.toLowerCase());
                         });
-                  
+
                   return (
                     <div className="flex flex-col h-full">
-                      <div className="flex-1 overflow-y-auto p-3 space-y-4">
-                        <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
-                          <div className="text-sm text-gray-700 break-words">
-                            {row.accountName || "-"}
+                      <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <label className="block text-sm font-semibold text-gray-800 mb-2">Account Type</label>
+                          <div className="relative">
+                            <select
+                              value={accountType}
+                              onChange={(e) => setAccountType(e.target.value)}
+                              className="w-full appearance-none px-3 py-2.5 pr-9 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value=""></option>
+                              <option value="Regular">Regular</option>
+                              <option value="Orphan">Orphan</option>
+                              <option value="Service">Service</option>
+                            </select>
+                            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Select Account Type</label>
-                          <select 
-                            value={accountType}
-                            onChange={(e) => setAccountType(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          >
-                            <option value=""></option>
-                            <option value="Regular">Regular</option>
-                            <option value="Orphan">Orphan</option>
-                            <option value="Service">Service</option>
-                          </select>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                          <span className="text-sm font-medium text-gray-700">Change Account Owner</span>
-                          <span className="text-sm text-gray-900">No</span>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input 
-                              type="checkbox" 
-                              checked={changeOwner}
-                              onChange={(e) => setChangeOwner(e.target.checked)}
-                              className="sr-only peer" 
-                            />
-                            <div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-gray-600"></div>
-                          </label>
-                          <span className="text-sm text-gray-900">Yes</span>
-                        </div>
-                        {changeOwner && (
-                          <div className="mt-2">
-                            <div className="flex mt-3 bg-gray-100 p-1 rounded-md">
-                              {(["User", "Group"] as const).map((type) => (
-                                <button
-                                  key={type}
-                                  className={`flex-1 py-2.5 px-3 text-sm font-medium transition-colors ${
-                                    ownerType === type
-                                      ? "bg-white text-[#15274E] border border-gray-300 shadow-sm relative z-10 rounded-md"
-                                      : "bg-transparent text-gray-500 hover:text-gray-700 rounded-md"
-                                  }`}
-                                  onClick={() => {
-                                    setOwnerType(type);
-                                    const initialAttr = type === "User" ? userAttributes[0] : groupAttributes[0];
-                                    setSelectedAttribute(initialAttr?.value || "");
-                                    setSearchValue("");
-                                    setSelectedItem(null);
-                                  }}
-                                >
-                                  {type}
-                                </button>
-                              ))}
+
+                        <div className="bg-white border border-gray-200 rounded-lg p-4">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">Change Account Owner</p>
+                              <p className="text-xs text-gray-500 mt-0.5">Reassign this account to a different user or group</p>
                             </div>
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Select Attribute</label>
-                              <div className="relative">
-                                <select
-                                  value={selectedAttribute}
-                                  onChange={(e) => setSelectedAttribute(e.target.value)}
-                                  className="w-full border border-gray-300 rounded-md px-3 py-2 pr-8 appearance-none bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                >
-                                  {currentAttributes.map((attr) => (
-                                    <option key={attr.value} value={attr.value}>
-                                      {attr.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
-                                </div>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={changeOwner}
+                              onClick={() => setChangeOwner(!changeOwner)}
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full shrink-0 transition-colors ${changeOwner ? "bg-blue-600" : "bg-gray-300"}`}
+                            >
+                              <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${changeOwner ? "translate-x-5" : "translate-x-0.5"}`} />
+                            </button>
+                          </div>
+                          {changeOwner && (
+                            <div className="mt-4 pt-4 border-t border-gray-100">
+                              <div className="flex bg-gray-100 p-1 rounded-md">
+                                {(["User", "Group"] as const).map((type) => (
+                                  <button
+                                    key={type}
+                                    className={`flex-1 py-2.5 px-3 text-sm font-medium transition-colors ${
+                                      ownerType === type
+                                        ? "bg-white text-[#15274E] border border-gray-300 shadow-sm relative z-10 rounded-md"
+                                        : "bg-transparent text-gray-500 hover:text-gray-700 rounded-md"
+                                    }`}
+                                    onClick={() => {
+                                      setOwnerType(type);
+                                      const initialAttr = type === "User" ? userAttributes[0] : groupAttributes[0];
+                                      setSelectedAttribute(initialAttr?.value || "");
+                                      setSearchValue("");
+                                      setSelectedItem(null);
+                                    }}
+                                  >
+                                    {type}
+                                  </button>
+                                ))}
                               </div>
-                            </div>
-                            <div className="mt-4">
-                              <label className="block text-sm font-medium text-gray-700 mb-2">Search Value</label>
-                              <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                  <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                </div>
-                                <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search" />
-                              </div>
-                            </div>
-                            {searchValue.trim() !== "" && (
-                              <div className="max-h-36 overflow-auto border rounded p-2 mt-3 text-sm bg-gray-50">
-                                {filteredData.length === 0 ? (
-                                  <p className="text-gray-500 italic">No results found.</p>
-                                ) : (
-                                  <ul className="space-y-1">
-                                    {filteredData.map((item, index) => (
-                                      <li key={index} className={`p-2 border rounded cursor-pointer transition-colors ${selectedItem === item ? "bg-blue-100 border-blue-300" : "hover:bg-gray-100"}`} onClick={() => {
-                                        setSelectedItem(item);
-                                        setSearchValue(item[selectedAttribute]);
-                                      }}>
-                                        {Object.values(item).join(" | ")}
-                                      </li>
+                              <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Select Attribute</label>
+                                <div className="relative">
+                                  <select
+                                    value={selectedAttribute}
+                                    onChange={(e) => setSelectedAttribute(e.target.value)}
+                                    className="w-full border border-gray-300 rounded-md px-3 py-2 pr-8 appearance-none bg-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  >
+                                    {currentAttributes.map((attr) => (
+                                      <option key={attr.value} value={attr.value}>
+                                        {attr.label}
+                                      </option>
                                     ))}
-                                  </ul>
-                                )}
+                                  </select>
+                                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                                </div>
                               </div>
-                            )}
-                          </div>
-                        )}
+                              <div className="mt-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Search Value</label>
+                                <div className="relative">
+                                  <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                  <input type="text" value={searchValue} onChange={(e) => setSearchValue(e.target.value)} className="w-full border border-gray-300 rounded-md pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="Search" />
+                                </div>
+                              </div>
+                              {searchValue.trim() !== "" && (
+                                <div className="max-h-36 overflow-auto border border-gray-200 rounded-md p-2 mt-3 text-sm bg-gray-50">
+                                  {filteredData.length === 0 ? (
+                                    <p className="text-gray-500 italic">No results found.</p>
+                                  ) : (
+                                    <ul className="space-y-1">
+                                      {filteredData.map((item, index) => (
+                                        <li key={index} className={`p-2 border rounded cursor-pointer transition-colors ${selectedItem === item ? "bg-blue-100 border-blue-300" : "border-transparent hover:bg-gray-100"}`} onClick={() => {
+                                          setSelectedItem(item);
+                                          setSearchValue(item[selectedAttribute]);
+                                        }}>
+                                          {Object.values(item).join(" | ")}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex-shrink-0 flex justify-center items-center p-3 border-t border-gray-200 bg-gray-50 min-h-[60px]">
-                        <button 
-                          onClick={() => { 
+                      <div className="flex-shrink-0 flex justify-end gap-2 p-3 border-t border-gray-200 bg-gray-50">
+                        <button
+                          onClick={closeSidebar}
+                          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => {
                             console.log("Save clicked", { accountType, changeOwner, selectedItem });
-                          }} 
+                          }}
                           className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
                         >
                           Save
@@ -3541,8 +3705,8 @@ export default function ApplicationDetailPage() {
                     </div>
                   );
                 };
-                
-                openSidebar(<EditAccountSidebar />, { widthPx: 450 });
+
+                openSidebar(<EditAccountSidebar />, { widthPx: 450, title: identityCard });
               }}
             >
               <Edit className="w-4 h-4" />
@@ -3572,136 +3736,97 @@ export default function ApplicationDetailPage() {
                     }
                   }, []);
 
+                  const Field = ({ label, value }: { label: string; value?: React.ReactNode }) => (
+                    <div className="min-w-0">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+                      <div className="text-sm text-gray-900 font-medium mt-1 break-words">{value ?? "N/A"}</div>
+                    </div>
+                  );
+
+                  const continuousCompliance =
+                    row.continuousCompliance === true ||
+                    row.continuousCompliance === "true" ||
+                    row.continuousCompliance === "Y" ||
+                    row.continuous_compliance === true;
+
                   return (
                     <div className="flex flex-col h-full">
-                      <div 
+                      <div
                         ref={scrollContainerRef}
-                        className="flex-1 overflow-y-auto sidebar-scroll-container"
+                        className="flex-1 overflow-y-auto sidebar-scroll-container space-y-4"
                         style={{
                           scrollbarWidth: 'none',
                           msOverflowStyle: 'none',
                         }}
                       >
-                        <div className="p-4 border-b bg-gray-50">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="mt-0">
-                                <span className="text-xs uppercase text-gray-500">
-                                  Account:
-                                </span>
-                                <div className="text-md font-medium break-words break-all whitespace-normal max-w-full">
-                                  {row.accountName || "-"}
-                                </div>
+                        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 space-y-3">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="min-w-0">
+                              <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Account</span>
+                              <div className="text-sm font-semibold text-gray-900 mt-1 break-words">
+                                {row.accountName || "-"}
                               </div>
-                              <div className="mt-2">
-                                <span className="text-xs uppercase text-gray-500">
-                                  Entitlement:
-                                </span>
-                                <div className="text-md font-medium break-words break-all whitespace-normal max-w-full">
-                                  {row.entitlementName || "-"}
-                                </div>
-                              </div>
-                              <div className="mt-2">
-                                <span className="text-xs uppercase text-gray-500">
-                                  Description:
-                                </span>
-                                <p className="text-sm text-gray-700 break-words break-all whitespace-pre-wrap max-w-full">
-                                  {row.entitlementDescription || row.entitlement_description || row.description || "-"}
-                                </p>
+                            </div>
+                            <div className="min-w-0">
+                              <span className="text-xs font-medium text-blue-700 uppercase tracking-wide">Entitlement</span>
+                              <div className="text-sm font-semibold text-gray-900 mt-1 break-words">
+                                {row.entitlementName || "-"}
                               </div>
                             </div>
                           </div>
                         </div>
-                        <div className="p-4 space-y-4">
-                          <div className="bg-white border border-gray-200 rounded-md shadow-sm">
-                            <button
-                              className="flex items-center justify-between w-full text-left text-md font-semibold text-gray-800 p-3 bg-gray-50 rounded-t-md"
-                              onClick={() =>
-                                setSectionsOpen((s: any) => ({ ...s, general: !s.general }))
-                              }
-                            >
-                              <span>General</span>
-                              {sectionsOpen.general ? (
-                                <ChevronDown size={20} />
-                              ) : (
-                                <ChevronRight size={20} />
-                              )}
-                            </button>
-                            {sectionsOpen.general && (
-                              <div className="p-4 space-y-4">
-                                <div className="flex space-x-4">
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Custodian</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.userManager || row.custodian || "N/A"}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Last Login</label>
-                                    <div className="text-sm text-gray-900 mt-1">
-                                      {row.lastlogindate ? formatDateMMDDYY(row.lastlogindate) : "N/A"}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex space-x-4">
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Business Service</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.businessService || row.applicationName || row.businessUnit || "N/A"}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Environment</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.environment || "N/A"}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex space-x-4">
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Backup Owner</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.backupOwner || "N/A"}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">SME User</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.smeUser || row.sme_user || "N/A"}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex space-x-4">
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">PAM Policy</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.pamPolicy || "N/A"}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Rotation Policy</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.rotationPolicy || row.rotation_policy || "N/A"}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex space-x-4">
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Continuous Compliance</label>
-                                    <div className="text-sm text-gray-900 mt-1">
-                                      {row.continuousCompliance === true || row.continuousCompliance === "true" || row.continuousCompliance === "Y" || row.continuous_compliance === true ? "Yes" : "No"}
-                                    </div>
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="text-xs uppercase text-gray-500 font-medium">Review Cycle</label>
-                                    <div className="text-sm text-gray-900 mt-1 break-words">
-                                      {row.reviewCycle || row.review_cycle || "N/A"}
-                                    </div>
-                                  </div>
+
+                        <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</span>
+                          <p className="text-sm text-gray-700 mt-1 leading-relaxed break-words">
+                            {row.entitlementDescription || row.entitlement_description || row.description || "-"}
+                          </p>
+                        </div>
+
+                        <div className="bg-white border border-gray-200 border-l-4 border-l-purple-400 rounded-lg shadow-sm overflow-hidden">
+                          <button
+                            className="flex items-center justify-between w-full text-left p-4 hover:bg-gray-50 transition-colors"
+                            onClick={() =>
+                              setSectionsOpen((s: any) => ({ ...s, general: !s.general }))
+                            }
+                          >
+                            <span className="flex items-center gap-2">
+                              <span className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-100 text-purple-700">
+                                <Info size={15} />
+                              </span>
+                              <span className="text-sm font-semibold text-gray-800">General</span>
+                            </span>
+                            {sectionsOpen.general ? (
+                              <ChevronUp size={18} className="text-gray-500" />
+                            ) : (
+                              <ChevronDown size={18} className="text-gray-500" />
+                            )}
+                          </button>
+                          {sectionsOpen.general && (
+                            <div className="p-4 grid grid-cols-2 gap-x-4 gap-y-4 border-t border-gray-100">
+                              <Field label="Custodian" value={row.userManager || row.custodian} />
+                              <Field label="Last Login" value={row.lastlogindate ? formatDateMMDDYY(row.lastlogindate) : undefined} />
+                              <Field label="Business Service" value={row.businessService || row.applicationName || row.businessUnit} />
+                              <Field label="Environment" value={row.environment} />
+                              <Field label="Backup Owner" value={row.backupOwner} />
+                              <Field label="SME User" value={row.smeUser || row.sme_user} />
+                              <Field label="PAM Policy" value={row.pamPolicy} />
+                              <Field label="Rotation Policy" value={row.rotationPolicy || row.rotation_policy} />
+                              <div className="min-w-0">
+                                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Continuous Compliance</span>
+                                <div className="mt-1">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${
+                                      continuousCompliance ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-600"
+                                    }`}
+                                  >
+                                    {continuousCompliance ? "Yes" : "No"}
+                                  </span>
                                 </div>
                               </div>
-                            )}
-                          </div>
+                              <Field label="Review Cycle" value={row.reviewCycle || row.review_cycle} />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -3713,12 +3838,11 @@ export default function ApplicationDetailPage() {
                   title: "Service Account Details",
                 });
               }}
-              className="p-1.5 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-900"
+              className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 transition-colors"
               title="Info"
               aria-label="View account details"
             >
               <ArrowRight
-                color="#55544dff"
                 size={20}
                 className="transform scale-[0.9]"
               />
@@ -4103,12 +4227,14 @@ export default function ApplicationDetailPage() {
                   e.stopPropagation();
                   toggleSidePanel(params.data);
                 }}
-                className="cursor-pointer hover:opacity-80 transition-opacity p-1"
+                className="cursor-pointer rounded-sm hover:opacity-80 transition-opacity"
                 title="View details"
                 aria-label="View entitlement details"
               >
-                <ChevronRight
-                  className="w-5 h-5 text-gray-600"
+                <ArrowRightCircle
+                  color="#2563eb"
+                  size="36"
+                  className="transform scale-[0.8]"
                 />
               </button>
             </div>
@@ -4118,8 +4244,6 @@ export default function ApplicationDetailPage() {
         sortable: false,
         filter: false,
         resizable: false,
-        pinned: "right",
-        lockPinned: true,
       },
     ],
     [reviewerId, toggleSidePanel]
@@ -4471,7 +4595,7 @@ export default function ApplicationDetailPage() {
             </div>
             {mounted && (
               <AgGridReact
-                key={`entitlements-grid-all-${entitlementsSearchQuery}-${entCurrentPage}-${entPageSize}-${filteredEntRowData.length}`}
+                key={`entitlements-grid-all-${entCurrentPage}-${entPageSize}`}
                 rowData={entPaginatedData}
                 columnDefs={colDefs}
                 defaultColDef={defaultColDef}
@@ -4618,7 +4742,7 @@ export default function ApplicationDetailPage() {
           </div>
           {mounted && (
             <AgGridReact
-              key={`entitlements-grid-review-${entitlementsSearchQuery}-${entCurrentPage}-${entPageSize}-${filteredEntRowData.length}`}
+              key={`entitlements-grid-review-${entCurrentPage}-${entPageSize}`}
               rowData={entPaginatedData}
               columnDefs={underReviewColDefs}
               defaultColDef={defaultColDef}
@@ -4678,7 +4802,10 @@ export default function ApplicationDetailPage() {
   ]);
 
   // Memoize the Entitlements tab component to prevent flickering
-  const EntitlementsTabComponent = useCallback(() => {
+  // Kept at a stable identity (see AccountsTabComponent below) so typing/focusing the
+  // search box updates in place instead of remounting the whole pane and losing focus.
+  const entitlementsTabRenderRef = useRef<(() => React.ReactNode) | null>(null);
+  entitlementsTabRenderRef.current = () => {
     return (
       <div
         className="ag-theme-alpine"
@@ -4686,9 +4813,6 @@ export default function ApplicationDetailPage() {
       >
         <div className="relative mb-2 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <h1 className="text-2xl font-bold text-blue-950 shrink-0">
-              Entitlements
-            </h1>
             <div className="flex items-center gap-4 flex-1 justify-end min-w-0">
               <div className="relative max-w-md w-full">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -4721,19 +4845,16 @@ export default function ApplicationDetailPage() {
         )}
       </div>
     );
-  }, [
-    tabsDataEnt,
-    entTabIndex,
-    setEntTabIndex,
-    entitlementsSearchQuery,
-    filteredEntRowData.length,
-    entRowData.length,
-  ]);
+  };
+  const [EntitlementsTabComponent] = useState(() => () => entitlementsTabRenderRef.current?.() ?? null);
 
-  // Accounts Tab Component - Proper React component that reacts to state changes
-  const AccountsTabComponent = useMemo(() => {
-    // Create a proper React component
-    const Component = () => {
+  // Accounts Tab Component - kept at a stable identity so typing/focusing the search box
+  // updates the grid in place instead of remounting it (remounting caused the flicker).
+  // The render logic is stored in a ref and re-assigned every render so it always sees
+  // fresh state, while the component identity handed to HorizontalTabs never changes.
+  const accountsTabRenderRef = useRef<(() => React.ReactNode) | null>(null);
+  accountsTabRenderRef.current = () => {
+      const [filtersOpen, setFiltersOpen] = useState(true);
       // Recalculate pagination values inside the component so they update when filteredAccountsRowData changes
       const totalItems = filteredAccountsRowData.length;
       const totalPages = Math.ceil(totalItems / pageSize);
@@ -4752,132 +4873,127 @@ export default function ApplicationDetailPage() {
         }}
       >
         <div className="relative mb-2">
-          <div className="flex items-center justify-between border-b border-gray-300 pb-2">
-            <h1 className="text-2xl font-bold text-blue-950">
-              Accounts
-            </h1>
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
             <button
-              onClick={() => openSidebar(null)}
-              className="flex items-center space-x-2 px-3 py-2 bg-[#27B973] text-white rounded-md hover:bg-[#22a667] transition-all duration-200 text-sm font-medium"
-              title="AI Assist Analysis"
+              type="button"
+              onClick={() => setFiltersOpen((prev) => !prev)}
+              className="w-full flex justify-between items-center px-4 py-3 cursor-pointer"
             >
-              <svg
-                className="w-4 h-4"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-              </svg>
-              <span>AI Assist</span>
+              <h3 className="text-base font-medium text-gray-800">
+                Filters
+              </h3>
+              {filtersOpen ? (
+                <ChevronUp size={18} className="text-gray-500" />
+              ) : (
+                <ChevronDown size={18} className="text-gray-500" />
+              )}
             </button>
-          </div>
-          <Accordion
-            iconClass="top-1 right-0 rounded-full text-white bg-purple-800"
-            open={true}
-          >
-            <div className="p-2">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="text-base font-medium text-gray-800">
-                  Filters
-                </h3>
-              </div>
-              <div className="space-y-3">
-                {/* First row - Account Summary (4 items) */}
-                <div className="flex">
-                  {dataAccount.accountSummary.map((item, index) => (
-                    <div
-                      key={`accountSummary-${index}`}
-                      className={`flex items-center justify-between py-2 px-3 rounded cursor-pointer transition-colors bg-white border border-gray-200 w-1/4 ${
-                        selected.accountSummary === index
-                          ? "bg-blue-100 border-blue-300"
-                          : "bg-gray-100"
-                      } ${item.color || ""}`}
-                      onClick={() => handleSelect("accountSummary", index)}
-                    >
-                      <div className="flex items-center gap-2">
+            {filtersOpen && (
+              <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+              <div className="space-y-4">
+                {/* Account Summary */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Account Summary
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {dataAccount.accountSummary.map((item, index) => {
+                      const colors =
+                        FILTER_COLORS[item.label] || DEFAULT_FILTER_COLOR;
+                      const isSelected = selected.accountSummary === index;
+                      return (
                         <div
-                          className="w-3 h-3 rounded-full border-2"
-                          style={{
-                            borderColor: "#6EC6FF",
-                            backgroundColor:
-                              selected.accountSummary === index
-                                ? "#6EC6FF"
-                                : "transparent",
-                          }}
-                        ></div>
-                        <span
-                          className={`text-sm ${
-                            selected.accountSummary === index
-                              ? "text-blue-900"
-                              : "text-gray-700"
+                          key={`accountSummary-${index}`}
+                          className={`flex items-center justify-between gap-2 py-2 px-3 rounded-lg border border-l-4 cursor-pointer transition-all ${
+                            colors.border
+                          } ${
+                            isSelected
+                              ? `${colors.selectedBg} ${colors.selectedBorder} shadow-sm`
+                              : "bg-white border-gray-200 hover:shadow-sm"
                           }`}
+                          onClick={() => handleSelect("accountSummary", index)}
                         >
-                          {item.label}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${
-                          selected.accountSummary === index
-                            ? "text-blue-700 border-blue-300"
-                            : "text-gray-900 border-gray-300"
-                        } bg-white border px-2 py-1 rounded text-xs min-w-[20px] text-center`}
-                      >
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors.dot}`}
+                            ></span>
+                            <span
+                              className={`text-sm truncate ${
+                                isSelected ? colors.selectedText : "text-gray-700"
+                              }`}
+                            >
+                              {item.label}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
+                              isSelected
+                                ? `${colors.badgeBg} ${colors.badgeText}`
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {item.value}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {/* Second row - Account Activity (3 items) */}
-                <div className="flex">
-                  {dataAccount.accountActivity.map((item, index) => (
-                    <div
-                      key={`accountActivity-${index}`}
-                      className={`flex items-center justify-between py-2 px-3 rounded cursor-pointer transition-colors bg-white border border-gray-200 w-1/4 ${
-                        selected.accountActivity === index
-                          ? "bg-blue-100 border-blue-300"
-                          : "bg-gray-100"
-                      } ${item.color || ""}`}
-                      onClick={() => handleSelect("accountActivity", index)}
-                    >
-                      <div className="flex items-center gap-2">
+                {/* Account Activity */}
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    Account Activity
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {dataAccount.accountActivity.map((item, index) => {
+                      const colors =
+                        FILTER_COLORS[item.label] || DEFAULT_FILTER_COLOR;
+                      const isSelected = selected.accountActivity === index;
+                      return (
                         <div
-                          className="w-3 h-3 rounded-full border-2"
-                          style={{
-                            borderColor: "#6EC6FF",
-                            backgroundColor:
-                              selected.accountActivity === index
-                                ? "#6EC6FF"
-                                : "transparent",
-                          }}
-                        ></div>
-                        <span
-                          className={`text-sm ${
-                            selected.accountActivity === index
-                              ? "text-blue-900"
-                              : "text-gray-700"
+                          key={`accountActivity-${index}`}
+                          className={`flex items-center justify-between gap-2 py-2 px-3 rounded-lg border border-l-4 cursor-pointer transition-all ${
+                            colors.border
+                          } ${
+                            isSelected
+                              ? `${colors.selectedBg} ${colors.selectedBorder} shadow-sm`
+                              : "bg-white border-gray-200 hover:shadow-sm"
                           }`}
+                          onClick={() => handleSelect("accountActivity", index)}
                         >
-                          {item.label}
-                        </span>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${
-                          selected.accountActivity === index
-                            ? "text-blue-700 border-blue-300"
-                            : "text-gray-900 border-gray-300"
-                        } bg-white border px-2 py-1 rounded text-xs min-w-[20px] text-center`}
-                      >
-                        {item.value}
-                      </span>
-                    </div>
-                  ))}
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span
+                              className={`w-2.5 h-2.5 rounded-full shrink-0 ${colors.dot}`}
+                            ></span>
+                            <span
+                              className={`text-sm truncate ${
+                                isSelected ? colors.selectedText : "text-gray-700"
+                              }`}
+                            >
+                              {item.label}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-xs font-semibold px-2 py-1 rounded-full shrink-0 ${
+                              isSelected
+                                ? `${colors.badgeBg} ${colors.badgeText}`
+                                : "bg-gray-100 text-gray-700"
+                            }`}
+                          >
+                            {item.value}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
-          </Accordion>
+              </div>
+            )}
+          </div>
         </div>
-        
+
         <div className="mb-2 relative z-10 pt-4">
           <div className="flex items-center justify-between mb-2">
             {/* Tabs */}
@@ -4955,7 +5071,7 @@ export default function ApplicationDetailPage() {
         </div>
         {mounted && accountsTabIndex === 0 && (
           <AgGridReact
-            key={`accounts-grid-${filteredAccountsRowData.length}-${currentPage}-${pageSize}`}
+            key={`accounts-grid-${currentPage}-${pageSize}`}
             rowData={paginatedData}
             columnDefs={columnDefs}
             defaultColDef={defaultColDef}
@@ -4969,7 +5085,7 @@ export default function ApplicationDetailPage() {
         {mounted && accountsTabIndex === 1 && (
           <div style={{ width: "100%" }}>
             <AgGridReact
-              key={`service-accounts-grid-${filteredServiceAccountsRowData.length}-${currentPage}-${pageSize}`}
+              key={`service-accounts-grid-${currentPage}-${pageSize}`}
               rowData={filteredServiceAccountsRowData.slice((currentPage - 1) * pageSize, currentPage * pageSize)}
               columnDefs={serviceAccountsColumnDefs}
               defaultColDef={defaultColDef}
@@ -5000,151 +5116,123 @@ export default function ApplicationDetailPage() {
         </div>
       </div>
     );
-    };
-    return Component;
-  }, [
-    filteredAccountsRowData,
-    accountsRowData,
-    filteredServiceAccountsRowData,
-    serviceAccountsRowData,
-    accountsTabIndex,
-    currentPage,
-    pageSize,
-    columnDefs,
-    serviceAccountsColumnDefs,
-    serviceAccountsDetailCellRendererParams,
-    mounted,
-    selected,
-    handlePageChange,
-    handleSelect,
-    gridApiRef,
-    serviceAccountsGridApiRef,
-    openSidebar,
-    closeSidebar,
-    accountsSearchQuery,
-    serviceAccountsSearchQuery,
-    accountsSearchInputRef,
-    serviceAccountsSearchInputRef,
-    isSearchInputFocused,
-    setAccountsTabIndex,
-    setAccountsSearchQuery,
-    setServiceAccountsSearchQuery,
-  ]);
+  };
+  const [AccountsTabComponent] = useState(() => () => accountsTabRenderRef.current?.() ?? null);
 
   const tabsData = useMemo(() => [
     {
       label: "About",
       icon: ChevronDown,
       iconOff: ChevronUp,
-      component: () => (
-        <div className="p-6 bg-white">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 pb-3 border-b border-gray-300">
-            Application Metadata
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Application ID</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Application Name</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Application Instance Name</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Application Type</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Status</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Description</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Version</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Vendor</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Category</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Created Date</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Last Modified Date</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Created By</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
+      component: () => {
+        const Field = ({
+          label,
+          value,
+          secret,
+        }: {
+          label: string;
+          value?: string;
+          secret?: boolean;
+        }) => (
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1 flex items-center gap-1">
+              {secret && <Lock size={11} className="text-gray-400" />}
+              {label}
+            </span>
+            <span className="text-sm text-gray-900 font-medium truncate" title={value || "-"}>
+              {secret && value && value !== "-" ? "••••••••" : value || "-"}
+            </span>
+          </div>
+        );
+
+        const Section = ({
+          icon: SectionIcon,
+          iconColor,
+          title,
+          children,
+        }: {
+          icon: React.ElementType;
+          iconColor: string;
+          title: string;
+          children: React.ReactNode;
+        }) => (
+          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+            <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
+              <span className={`flex items-center justify-center w-7 h-7 rounded-md ${iconColor}`}>
+                <SectionIcon size={15} />
+              </span>
+              <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
             </div>
-            <div className="space-y-4">
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Modified By</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">SCIM URL</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">OAuth Client ID</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">OAuth Client Secret</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">OAuth Token URL</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">OAuth Authorization URL</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">OAuth Scope</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">API Endpoint</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Authentication Type</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Tenant ID</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Environment</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
-              <div className="flex flex-col">
-                <label className="text-sm font-medium text-gray-600 mb-1">Tags</label>
-                <div className="text-sm text-gray-900">-</div>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {children}
             </div>
           </div>
-        </div>
-      ),
+        );
+
+        const status: string = "-";
+        const statusStyles =
+          status === "Active"
+            ? "bg-green-100 text-green-700"
+            : status === "Inactive"
+              ? "bg-red-100 text-red-700"
+              : "bg-gray-100 text-gray-600";
+
+        return (
+          <div className="p-6 bg-white">
+            <div className="flex items-center gap-2 mb-6">
+              <Info size={20} className="text-blue-600" />
+              <h2 className="text-2xl font-bold text-gray-800">
+                Application Metadata
+              </h2>
+            </div>
+
+            <div className="space-y-5">
+              <Section icon={Building2} iconColor="bg-blue-100 text-blue-700" title="General Information">
+                <Field label="Application ID" />
+                <Field label="Application Name" />
+                <Field label="Application Instance Name" />
+                <Field label="Application Type" />
+                <div className="flex flex-col min-w-0">
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</span>
+                  <span className={`inline-flex w-fit items-center px-2 py-0.5 rounded-full text-xs font-semibold ${statusStyles}`}>
+                    {status}
+                  </span>
+                </div>
+                <Field label="Version" />
+                <Field label="Vendor" />
+                <Field label="Category" />
+                <Field label="Description" />
+              </Section>
+
+              <Section icon={Clock} iconColor="bg-purple-100 text-purple-700" title="Ownership & Lifecycle">
+                <Field label="Created Date" />
+                <Field label="Last Modified Date" />
+                <Field label="Created By" />
+                <Field label="Modified By" />
+              </Section>
+
+              <Section icon={Link2} iconColor="bg-amber-100 text-amber-700" title="Connection & Integration">
+                <Field label="SCIM URL" />
+                <Field label="API Endpoint" />
+                <Field label="OAuth Client ID" />
+                <Field label="OAuth Client Secret" secret />
+                <Field label="OAuth Token URL" />
+                <Field label="OAuth Authorization URL" />
+                <Field label="OAuth Scope" />
+                <Field label="Authentication Type" />
+                <Field label="Tenant ID" />
+                <Field label="Environment" />
+              </Section>
+
+              <Section icon={Tag} iconColor="bg-teal-100 text-teal-700" title="Tags">
+                <div className="col-span-full text-sm text-gray-500">
+                  No tags assigned
+                </div>
+              </Section>
+            </div>
+          </div>
+        );
+      },
     },
     {
       label: "Accounts",
@@ -5345,6 +5433,13 @@ export default function ApplicationDetailPage() {
           }
         };
 
+        const SamplingField = ({ label, value }: { label: string; value?: React.ReactNode }) => (
+          <div className="min-w-0">
+            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</span>
+            <div className="text-sm text-gray-900 font-medium mt-1 break-words">{value ?? "N/A"}</div>
+          </div>
+        );
+
         return (
           <div className="sampling-tab-content relative">
             <div className="absolute top-0 right-0 z-10 print:hidden p-0 m-0">
@@ -5358,57 +5453,35 @@ export default function ApplicationDetailPage() {
                 <Printer className="h-5 w-5" />
               </button>
             </div>
-            <div
-              className="search-container"
-              style={{
-                display: "flex",
-                gap: "15px",
-                margin: "40px auto",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
+            <div className="flex items-center justify-center gap-3 mt-10 mb-6">
               {/* User Name Input */}
-              <input
-                type="text"
-                placeholder="Enter User Name"
-                value={userName}
-                onChange={(e) => {
-                  setUserName(e.target.value);
-                  // Clear response data when user name changes
-                  setSearchResults([]);
-                  setResponseBody(null);
-                  setSearchError(null);
-                  setSelectedUser(null);
-                }}
-                style={{
-                  padding: "8px 12px",
-                  width: "260px",
-                  border: "1px solid #ccc",
-                  borderRadius: "4px",
-                  fontSize: "14px",
-                  backgroundColor: "white",
-                  color: "#000",
-                }}
-              />
+              <div className="relative w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Enter User Name"
+                  value={userName}
+                  onChange={(e) => {
+                    setUserName(e.target.value);
+                    // Clear response data when user name changes
+                    setSearchResults([]);
+                    setResponseBody(null);
+                    setSearchError(null);
+                    setSelectedUser(null);
+                  }}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+              </div>
 
               {/* Get Result Button */}
               <button
                 onClick={handleGetResult}
                 disabled={!userName || searchLoading}
-                style={{
-                  padding: "8px 20px",
-                  backgroundColor:
-                    userName && !searchLoading ? "#007bff" : "#ccc",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "4px",
-                  cursor:
-                    userName && !searchLoading ? "pointer" : "not-allowed",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  minWidth: "110px",
-                }}
+                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors min-w-[110px] ${
+                  userName && !searchLoading
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "bg-gray-200 text-gray-500 cursor-not-allowed"
+                }`}
               >
                 {searchLoading ? "Searching..." : "Get Result"}
               </button>
@@ -5416,80 +5489,30 @@ export default function ApplicationDetailPage() {
 
             {/* Search Results */}
             {(searchResults.length > 0 || searchError) && (
-              <div style={{ margin: "20px", width: "100%" }}>
-                <h3
-                  style={{
-                    fontSize: "16px",
-                    fontWeight: "600",
-                    marginBottom: "10px",
-                    color: "#333",
-                  }}
-                >
-                  Search Results
-                </h3>
+              <div className="mx-5 mb-4">
+                <h3 className="text-sm font-semibold text-gray-800 mb-2">Search Results</h3>
 
                 {searchError && (
-                  <div
-                    style={{
-                      padding: "10px",
-                      backgroundColor: "#fee",
-                      border: "1px solid #fcc",
-                      borderRadius: "4px",
-                      color: "#c33",
-                      marginBottom: "10px",
-                    }}
-                  >
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 mb-2">
                     {searchError}
                   </div>
                 )}
 
                 {searchResults.length > 0 && (
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "4px",
-                      maxHeight: "400px",
-                      overflowY: "auto",
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: "10px",
-                        backgroundColor: "#f8f9fa",
-                        borderBottom: "1px solid #ddd",
-                        fontWeight: "600",
-                        fontSize: "14px",
-                      }}
-                    >
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">
                       Found {searchResults.length} result(s)
                     </div>
-                    {searchResults.map((result, index) => (
-                      <div
-                        key={index}
-                        style={{
-                          padding: "10px",
-                          borderBottom:
-                            index < searchResults.length - 1
-                              ? "1px solid #eee"
-                              : "none",
-                          fontSize: "14px",
-                        }}
-                      >
+                    <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
+                      {searchResults.map((result, index) => (
                         <pre
-                          style={{
-                            margin: 0,
-                            whiteSpace: "pre-wrap",
-                            fontFamily: "monospace",
-                            fontSize: "12px",
-                            backgroundColor: "#f8f9fa",
-                            padding: "8px",
-                            borderRadius: "4px",
-                          }}
+                          key={index}
+                          className="text-xs font-mono bg-gray-50 p-3 whitespace-pre-wrap m-0"
                         >
                           {JSON.stringify(result, null, 2)}
                         </pre>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -5497,290 +5520,133 @@ export default function ApplicationDetailPage() {
 
             {/* Response Body Display with Sidebar */}
             {responseBody && responseBody.Resources && (
-              <div style={{ margin: "20px", width: "100%", padding: "0 20px" }}>
-                <div style={{ display: "flex", gap: "20px", height: "500px" }}>
+              <div className="mx-5 mb-5">
+                <div className="flex gap-4" style={{ height: 500 }}>
                   {/* Part 1: Left Sidebar - User List */}
-                  <div
-                    style={{
-                      width: "200px",
-                      border: "1px solid #ddd",
-                      borderRadius: "4px",
-                      backgroundColor: "#f8f9fa",
-                      overflowY: "auto",
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: "10px",
-                        backgroundColor: "#e9ecef",
-                        borderBottom: "1px solid #ddd",
-                        fontWeight: "600",
-                        fontSize: "14px",
-                      }}
-                    >
+                  <div className="w-64 shrink-0 border border-gray-200 rounded-lg bg-gray-50 overflow-y-auto">
+                    <div className="px-3 py-2.5 bg-gray-100 border-b border-gray-200 text-sm font-semibold text-gray-700 sticky top-0">
                       Users ({responseBody.Resources.length})
                     </div>
-                    {responseBody.Resources.map((user: any, index: number) => (
-                      <div
-                        key={user.id}
-                        onClick={() => setSelectedUser(user)}
-                        style={{
-                          padding: "12px",
-                          cursor: "pointer",
-                          borderBottom:
-                            index < responseBody.Resources.length - 1
-                              ? "1px solid #eee"
-                              : "none",
-                          backgroundColor:
-                            selectedUser?.id === user.id
-                              ? "#007bff"
-                              : "transparent",
-                          color:
-                            selectedUser?.id === user.id ? "white" : "#333",
-                          fontSize: "14px",
-                          transition: "background-color 0.2s",
-                        }}
-                        onMouseEnter={(e) => {
-                          if (selectedUser?.id !== user.id) {
-                            e.currentTarget.style.backgroundColor = "#f5f5f5";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (selectedUser?.id !== user.id) {
-                            e.currentTarget.style.backgroundColor =
-                              "transparent";
-                          }
-                        }}
-                      >
-                        <div style={{ fontWeight: "500" }}>{user.userName}</div>
-                      </div>
-                    ))}
+                    {responseBody.Resources.map((user: any) => {
+                      const active = selectedUser?.id === user.id;
+                      return (
+                        <button
+                          key={user.id}
+                          type="button"
+                          onClick={() => setSelectedUser(user)}
+                          className={`w-full text-left px-3 py-2.5 text-sm truncate border-b border-gray-100 last:border-0 transition-colors ${
+                            active ? "bg-blue-600 text-white" : "text-gray-700 hover:bg-blue-50"
+                          }`}
+                        >
+                          {user.userName}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   {/* Part 2: Middle Panel - User Profile Card */}
-                  <div
-                    style={{
-                      width: "500px",
-                      border: "1px solid #ddd",
-                      borderRadius: "4px",
-                      backgroundColor: "#f8f9fa",
-                      overflowY: "auto",
-                    }}
-                  >
+                  <div className="w-[420px] shrink-0 border border-gray-200 rounded-lg bg-white overflow-y-auto">
                     {selectedUser ? (
-                      <div>
-                        {/* User Profile Card */}
-                        <div
-                          style={{
-                            padding: "20px",
-                            backgroundColor: "white",
-                            height: "100%",
-                          }}
-                        >
-                          {/* Header with Avatar and Name */}
-                          <div
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              marginBottom: "20px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                width: "50px",
-                                height: "50px",
-                                borderRadius: "50%",
-                                backgroundColor: "#007bff",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                color: "white",
-                                fontWeight: "bold",
-                                fontSize: "18px",
-                                marginRight: "15px",
-                              }}
-                            >
-                              {selectedUser.displayName
-                                ? selectedUser.displayName
-                                    .split(" ")
-                                    .map((n: string) => n[0])
-                                    .join("")
-                                    .toUpperCase()
-                                : selectedUser.userName
-                                ? selectedUser.userName
-                                    .substring(0, 2)
-                                    .toUpperCase()
-                                : "U"}
+                      <div className="flex flex-col">
+                        {/* Header band with Avatar, Name and Status */}
+                        <div className="flex items-center gap-3 p-5 bg-blue-50 border-b border-blue-100">
+                          <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-semibold text-lg shrink-0 ring-4 ring-white shadow-sm">
+                            {selectedUser.displayName
+                              ? selectedUser.displayName
+                                  .split(" ")
+                                  .map((n: string) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                              : selectedUser.userName
+                              ? selectedUser.userName.substring(0, 2).toUpperCase()
+                              : "U"}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-lg font-semibold text-gray-900 truncate">
+                              <UserDisplayName
+                                displayName={selectedUser.displayName || selectedUser.userName}
+                                userType={selectedUser.userType}
+                                employeetype={selectedUser.employeetype}
+                                tags={selectedUser.tags}
+                              />
                             </div>
-                            <div>
-                              <div
-                                style={{
-                                  fontSize: "20px",
-                                  fontWeight: "bold",
-                                  color: "#333",
-                                }}
-                              >
-                                <UserDisplayName
-                                  displayName={selectedUser.displayName || selectedUser.userName}
-                                  userType={selectedUser.userType}
-                                  employeetype={selectedUser.employeetype}
-                                  tags={selectedUser.tags}
-                                />
-                              </div>
-                              {selectedUser.title && (
-                                <div
-                                  style={{
-                                    fontSize: "14px",
-                                    color: "#666",
-                                    marginTop: "2px",
-                                  }}
-                                >
-                                  {selectedUser.title}
+                            {selectedUser.title && (
+                              <div className="text-sm text-gray-500 truncate">{selectedUser.title}</div>
+                            )}
+                            <span className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700">
+                              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                              Active
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                          {/* Identity */}
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                            <SamplingField label="Username (for login)" value={selectedUser.userName} />
+                            <div className="grid grid-cols-2 gap-4">
+                              <SamplingField label="First Name" value={selectedUser.name?.givenName} />
+                              <SamplingField label="Last Name" value={selectedUser.name?.familyName} />
+                            </div>
+                          </div>
+
+                          {/* Contact */}
+                          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <SamplingField
+                              label="Work Email"
+                              value={
+                                selectedUser.emails && selectedUser.emails.length > 0
+                                  ? selectedUser.emails[0].value
+                                  : undefined
+                              }
+                            />
+                          </div>
+
+                          {/* Permissions */}
+                          <div className="bg-white border border-gray-200 rounded-lg p-4">
+                            <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Permissions</span>
+                            <div className="mt-2">
+                              {selectedUser.groups && selectedUser.groups.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5">
+                                  {selectedUser.groups.map((group: any, index: number) => (
+                                    <span
+                                      key={index}
+                                      className="px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700"
+                                    >
+                                      {group.display || group.value}
+                                    </span>
+                                  ))}
                                 </div>
+                              ) : (
+                                <p className="text-sm text-gray-500">No group permissions assigned</p>
                               )}
                             </div>
                           </div>
 
-                          {/* User Attributes Table */}
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 2fr",
-                              gap: "12px",
-                              fontSize: "14px",
-                            }}
-                          >
-                            <div style={{ fontWeight: "600", color: "#333" }}>
-                              Username (for login):
+                          {selectedUser.preferredLanguage && (
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                              <SamplingField label="Preferred Language" value={selectedUser.preferredLanguage} />
                             </div>
-                            <div style={{ color: "#666" }}>
-                              {selectedUser.userName || "N/A"}
-                            </div>
-
-                            <div style={{ fontWeight: "600", color: "#333" }}>
-                              Work Email:
-                            </div>
-                            <div style={{ color: "#666" }}>
-                              {selectedUser.emails &&
-                              selectedUser.emails.length > 0
-                                ? selectedUser.emails[0].value
-                                : "N/A"}
-                            </div>
-
-                            <div style={{ fontWeight: "600", color: "#333" }}>
-                              First Name:
-                            </div>
-                            <div style={{ color: "#666" }}>
-                              {selectedUser.name?.givenName || "N/A"}
-                            </div>
-
-                            <div style={{ fontWeight: "600", color: "#333" }}>
-                              Last Name:
-                            </div>
-                            <div style={{ color: "#666" }}>
-                              {selectedUser.name?.familyName || "N/A"}
-                            </div>
-
-                            <div style={{ fontWeight: "600", color: "#333" }}>
-                              Account Status:
-                            </div>
-                            <div
-                              style={{ color: "#28a745", fontWeight: "500" }}
-                            >
-                              Active
-                            </div>
-
-                            <div style={{ fontWeight: "600", color: "#333" }}>
-                              Permissions:
-                            </div>
-                            <div style={{ color: "#6c757d" }}>
-                              {selectedUser.groups &&
-                              selectedUser.groups.length > 0
-                                ? selectedUser.groups.map(
-                                    (group: any, index: number) => (
-                                      <div
-                                        key={index}
-                                        style={{ marginBottom: "4px" }}
-                                      >
-                                        {group.display || group.value}
-                                      </div>
-                                    )
-                                  )
-                                : "No group permissions assigned"}
-                            </div>
-
-                            {selectedUser.preferredLanguage && (
-                              <>
-                                <div
-                                  style={{ fontWeight: "600", color: "#333" }}
-                                >
-                                  Preferred Language:
-                                </div>
-                                <div style={{ color: "#666" }}>
-                                  {selectedUser.preferredLanguage}
-                                </div>
-                              </>
-                            )}
-                          </div>
+                          )}
                         </div>
                       </div>
                     ) : (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "100%",
-                          color: "#666",
-                          fontSize: "14px",
-                        }}
-                      >
+                      <div className="h-full flex items-center justify-center text-sm text-gray-500 p-5 text-center">
                         Select a user from the list to view details
                       </div>
                     )}
                   </div>
 
                   {/* Part 3: Right Panel - JSON Data */}
-                  <div
-                    style={{
-                      flex: 1,
-                      border: "1px solid #ddd",
-                      borderRadius: "4px",
-                      backgroundColor: "#000000",
-                      overflowY: "auto",
-                    }}
-                  >
+                  <div className="flex-1 border border-gray-200 rounded-lg bg-gray-900 overflow-y-auto">
                     {selectedUser ? (
-                      <div style={{ padding: "15px" }}>
-                        <pre
-                          style={{
-                            margin: 0,
-                            whiteSpace: "pre-wrap",
-                            fontFamily: "monospace",
-                            fontSize: "12px",
-                            backgroundColor: "#1a1a1a",
-                            padding: "10px",
-                            borderRadius: "4px",
-                            border: "1px solid #333",
-                            color: "#ffffff",
-                            height: "calc(100% - 30px)",
-                            overflowY: "auto",
-                          }}
-                        >
+                      <div className="p-4">
+                        <pre className="text-xs font-mono text-gray-100 whitespace-pre-wrap m-0">
                           {JSON.stringify(selectedUser, null, 2)}
                         </pre>
                       </div>
                     ) : (
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          height: "100%",
-                          color: "#ffffff",
-                          fontSize: "14px",
-                        }}
-                      >
+                      <div className="h-full flex items-center justify-center text-sm text-gray-400 p-5 text-center">
                         Select a user from the list to view JSON data
                       </div>
                     )}
@@ -5806,6 +5672,24 @@ export default function ApplicationDetailPage() {
         className="ml-0.5 border border-gray-300 w-80 h-8 rounded-md"
         activeIndex={tabIndex}
         onChange={setTabIndex}
+        headerActions={
+          tabsData[tabIndex]?.label === "Accounts" ? (
+            <button
+              onClick={() => openSidebar(null)}
+              className="flex items-center space-x-2 px-3 py-2 bg-[#27B973] text-white rounded-md hover:bg-[#22a667] transition-all duration-200 text-sm font-medium"
+              title="AI Assist Analysis"
+            >
+              <svg
+                className="w-4 h-4"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+              </svg>
+              <span>AI Assist</span>
+            </button>
+          ) : null
+        }
       />
 
       {/* Global Right Sidebar used via openSidebar */}

@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit, Trash2, X, Plus, PlusCircle, Ban, Calendar, Loader2, Plug, Workflow, Webhook, Gauge, LogIn, LogOut, ListChecks, type LucideIcon } from "lucide-react";
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Edit, Trash2, X, Plus, PlusCircle, Ban, Calendar, Loader2, Plug, Workflow, Webhook, Gauge, LogIn, LogOut, ListChecks, Settings2, type LucideIcon } from "lucide-react";
 import ToggleSwitch from "@/components/ToggleSwitch";
 import {
   updateAppConfig,
@@ -1105,33 +1105,27 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
   );
 
   const renderActiveDirectoryDomainAdvanced = () => (
-    <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden mb-6">
+    <div className="mb-6 border border-slate-200 rounded-xl overflow-hidden bg-slate-50/60 shadow-sm">
       <button
         type="button"
         onClick={() => setAdDomainAdvancedExpanded((e) => !e)}
         aria-expanded={adDomainAdvancedExpanded}
-        style={{
-          display: "flex",
-          width: "100%",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px",
-          minHeight: 56,
-          textAlign: "left",
-          background: "#f9fafb",
-          border: "none",
-          cursor: "pointer",
-        }}
+        className="flex w-full items-center justify-between gap-2 border-l-4 border-slate-400 bg-white px-5 py-3.5 text-left hover:bg-slate-50 transition-colors"
       >
-        <span style={{ fontSize: 16, fontWeight: 600, color: "#111827" }}>Advanced</span>
+        <h3 className="text-md font-semibold text-slate-800 flex items-center gap-2">
+          <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-200 text-slate-700">
+            <Settings2 className="w-4 h-4" aria-hidden />
+          </span>
+          Advanced
+        </h3>
         {adDomainAdvancedExpanded ? (
-          <ChevronUp style={{ width: 20, height: 20, color: "#2563eb", flexShrink: 0 }} aria-hidden />
+          <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" aria-hidden />
         ) : (
-          <ChevronDown style={{ width: 20, height: 20, color: "#2563eb", flexShrink: 0 }} aria-hidden />
+          <ChevronUp className="w-5 h-5 text-slate-500 shrink-0" aria-hidden />
         )}
       </button>
       {adDomainAdvancedExpanded && (
-        <div className="px-4 pb-4 pt-3 border-t border-gray-100 space-y-4">
+        <div className="p-5 border-t border-slate-200 bg-white space-y-4">
           <div className="flex items-center gap-3">
             {renderAdTextField("primaryDomainController", "Domain Controller")}
             <div className="flex-1 relative">

@@ -293,20 +293,9 @@ export default function Application() {
     !mounted ? null :
     <div className="ag-theme-alpine" style={{ width: "100%" }}>
       <div className="relative mb-2">
-        <h1 className="text-2xl font-bold border-b border-gray-300 pb-2 text-blue-950">
-          Applications
-        </h1>
-        <div className="mb-1">
-          <div className="bg-gray-100 p-2 rounded-lg shadow-sm">
-            <p className="text-sm font-semibold text-gray-700">
-              Integrated Applications: <span className="text-blue-600">{totalItems}</span>
-            </p>
-          </div>
-        </div>
-        
-        {/* Search Bar */}
-        <div className="mb-4 pt-4">
-          <div className="relative max-w-sm">
+        {/* Search Bar + Integrated Applications count */}
+        <div className="mb-4 pt-4 flex items-center justify-between gap-4">
+          <div className="relative max-w-md w-full">
             <input
               type="text"
               placeholder="Search by Application Name..."
@@ -330,12 +319,17 @@ export default function Application() {
               </svg>
             </div>
           </div>
-          {searchQuery && (
-            <p className="text-sm text-gray-600 mt-1">
-              Showing {filteredData.length} of {totalItems} applications
+          <div className="bg-blue-50 border border-blue-200 p-2 rounded-lg shadow-sm whitespace-nowrap">
+            <p className="text-sm font-semibold text-blue-700">
+              Integrated Applications: <span className="text-blue-900">{totalItems}</span>
             </p>
-          )}
+          </div>
         </div>
+        {searchQuery && (
+          <p className="text-sm text-gray-600 -mt-3 mb-2">
+            Showing {filteredData.length} of {totalItems} applications
+          </p>
+        )}
         {}
       </div>
 

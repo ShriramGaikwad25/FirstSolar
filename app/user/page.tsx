@@ -8,7 +8,7 @@ import React, { useMemo, useRef, useState, useEffect } from "react";
 import { executeQuery } from "@/lib/api";
 import "@/lib/ag-grid-setup";
 import CustomPagination from "@/components/agTable/CustomPagination";
-import { Plus, Search, Pencil } from "lucide-react";
+import { Plus, Search, Pencil, X } from "lucide-react";
 import HorizontalTabs from "@/components/HorizontalTabs";
 import UserDisplayName from "@/components/UserDisplayName";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,8 +34,9 @@ function UsersTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState<string>("");
   const { isAuthenticated } = useAuth();
-  
+
   // Pagination state
   const pageSizeSelector = [20, 50, 100];
   const [pageSize, setPageSize] = useState(pageSizeSelector[0]);
@@ -66,7 +67,25 @@ function UsersTab() {
   ];
 
 
-  // Fetch users data from API
+  // Run the search only when the user explicitly triggers it (button click or Enter)
+  const handleSearch = () => {
+    setAppliedSearchTerm(searchTerm.trim());
+    setPageNumber(1);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
+
+  const handleClearSearch = () => {
+    setSearchTerm("");
+    setAppliedSearchTerm("");
+    setPageNumber(1);
+  };
+
+  // Fetch a single page of users from the API (server-side pagination + search)
   useEffect(() => {
     const fetchUsers = async () => {
       // Check if user is authenticated before making API call
@@ -82,16 +101,33 @@ function UsersTab() {
       try {
         setLoading(true);
         setError(null);
-        
-        // Execute query to get all users
-        const query = "SELECT * FROM usr";
-        const parameters: string[] = [];
-        
-        const response = await executeQuery(query, parameters);
-        
-        // Transform API response to match our UserData interface
-        if (response && typeof response === 'object' && 'resultSet' in response && Array.isArray((response as any).resultSet)) {
-          const sourceArray: any[] = (response as any).resultSet;
+
+        const offset = (pageNumber - 1) * pageSize;
+
+        let whereClause = "";
+        let searchParams: string[] = [];
+        if (appliedSearchTerm) {
+          const term = `%${appliedSearchTerm}%`;
+          whereClause =
+            " WHERE username ILIKE ? OR email::text ILIKE ? OR displayname ILIKE ? OR firstname ILIKE ? OR lastname ILIKE ? OR title ILIKE ? OR department ILIKE ?";
+          searchParams = [term, term, term, term, term, term, term];
+        }
+
+        const dataQuery = `SELECT * FROM usr${whereClause} ORDER BY username LIMIT ? OFFSET ?`;
+        const countQuery = `SELECT COUNT(*) as count FROM usr${whereClause}`;
+
+        const [dataResponse, countResponse] = await Promise.all([
+          executeQuery<any>(dataQuery, [...searchParams, pageSize, offset]),
+          executeQuery<any>(countQuery, searchParams),
+        ]);
+
+        const sourceArray: any[] = Array.isArray((dataResponse as any)?.resultSet)
+          ? (dataResponse as any).resultSet
+          : Array.isArray(dataResponse)
+          ? (dataResponse as any[])
+          : [];
+
+        if (sourceArray.length > 0) {
           const transformedData: UserData[] = sourceArray.map((user: any) => ({
             name:
               user.displayname ||
@@ -108,8 +144,16 @@ function UsersTab() {
             managerStatus: "Active" // Default status for manager
           }));
           setRowData(transformedData);
-          setTotalItems(transformedData.length);
-          setTotalPages(Math.ceil(transformedData.length / pageSize));
+
+          const countRow = Array.isArray((countResponse as any)?.resultSet)
+            ? (countResponse as any).resultSet[0]
+            : Array.isArray(countResponse)
+            ? (countResponse as any[])[0]
+            : null;
+          const total = Number(countRow?.count ?? countRow?.COUNT ?? transformedData.length) || 0;
+          setTotalItems(total);
+          setTotalPages(Math.max(1, Math.ceil(total / pageSize)));
+
           // Persist a lookup map of raw users by email/username for detail page consumption
           try {
             const rawByKey: Record<string, any> = {};
@@ -119,47 +163,23 @@ function UsersTab() {
             }
             localStorage.setItem("usersRawByKey", JSON.stringify(rawByKey));
           } catch {}
-        } else if (response && Array.isArray(response)) {
-          // Handle case where response is directly an array
-          const transformedData: UserData[] = response.map((user: any) => ({
-            name:
-              user.displayname ||
-              user.displayName ||
-              [user.firstname, user.lastname].filter(Boolean).join(" ").trim() ||
-              "Unknown",
-            email: user.email?.work || user.customattributes?.emails?.[0]?.value || user.username || "Unknown",
-            title: user.title || user.customattributes?.title || "Unknown",
-            department: user.department || user.customattributes?.enterpriseUser?.department || "Unknown",
-            managerEmail: user.managername || user.customattributes?.enterpriseUser?.manager?.value || "",
-            status: user.status || (user.customattributes?.active ? "Active" : "Inactive"),
-            tags: user.employeetype || user.customattributes?.userType || "",
-            managerName: user.managername || user.customattributes?.enterpriseUser?.manager?.value || "",
-            managerStatus: "Active" // Default status for manager
-          }));
-          setRowData(transformedData);
-          setTotalItems(transformedData.length);
-          setTotalPages(Math.ceil(transformedData.length / pageSize));
-          try {
-            const rawByKey: Record<string, any> = {};
-            for (const u of response as any[]) {
-              const key = (u.email?.work || u.customattributes?.emails?.[0]?.value || u.username || u.displayname || u.displayName || "").toString();
-              if (key) rawByKey[key] = u;
-            }
-            localStorage.setItem("usersRawByKey", JSON.stringify(rawByKey));
-          } catch {}
-        } else {
-          // Fallback to default data if API response is empty
+        } else if (!appliedSearchTerm && pageNumber === 1) {
+          // Fallback to default data if the API returned nothing and there's no active search
           setRowData(defaultRowData);
           setTotalItems(defaultRowData.length);
           setTotalPages(Math.ceil(defaultRowData.length / pageSize));
+        } else {
+          setRowData([]);
+          setTotalItems(0);
+          setTotalPages(1);
         }
       } catch (err) {
         console.error("Error fetching users:", err);
-        
+
         // Handle authentication errors gracefully
         if (err instanceof Error && (
-          err.message.includes("No JWT token") || 
-          err.message.includes("401") || 
+          err.message.includes("No JWT token") ||
+          err.message.includes("401") ||
           err.message.includes("403") ||
           err.message.includes("400")
         )) {
@@ -181,39 +201,7 @@ function UsersTab() {
     };
 
     fetchUsers();
-  }, [isAuthenticated]);
-
-  // Filter data based on search term
-  const filteredData = useMemo(() => {
-    if (!searchTerm.trim()) {
-      return rowData;
-    }
-    const searchLower = searchTerm.toLowerCase();
-    return rowData.filter((user) => {
-      return (
-        user.name?.toLowerCase().includes(searchLower) ||
-        user.email?.toLowerCase().includes(searchLower) ||
-        user.title?.toLowerCase().includes(searchLower) ||
-        user.department?.toLowerCase().includes(searchLower) ||
-        user.tags?.toLowerCase().includes(searchLower)
-      );
-    });
-  }, [rowData, searchTerm]);
-
-  // Calculate paginated data
-  const paginatedData = useMemo(() => {
-    const startIndex = (pageNumber - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return filteredData.slice(startIndex, endIndex);
-  }, [filteredData, pageNumber, pageSize]);
-
-  // Update total pages when page size changes or search term changes
-  useEffect(() => {
-    const newTotalItems = filteredData.length;
-    setTotalItems(newTotalItems);
-    setTotalPages(Math.ceil(newTotalItems / pageSize));
-    setPageNumber(1); // Reset to first page when page size or search changes
-  }, [pageSize, filteredData.length]);
+  }, [isAuthenticated, pageNumber, pageSize, appliedSearchTerm]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -360,21 +348,41 @@ const columnDefs = useMemo<ColDef[]>(
       {/* Header with Create new User */}
       <div className="mb-4 flex justify-between items-start gap-4">
         <div className="flex-1 max-w-md">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-              <Search className="text-gray-400 w-5 h-5" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="text-gray-400 w-5 h-5" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search users by name, email, title, department, tags..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={handleClearSearch}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  aria-label="Clear search"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
-            <input
-              type="text"
-              placeholder="Search users by name, email, title, department, tags..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-            />
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors"
+            >
+              Search
+            </button>
           </div>
-          {searchTerm && (
+          {appliedSearchTerm && (
             <p className="text-sm text-gray-600 mt-1">
-              Showing {filteredData.length} result(s) for "{searchTerm}"
+              Showing {totalItems} result(s) for "{appliedSearchTerm}"
             </p>
           )}
         </div>
@@ -396,7 +404,7 @@ const columnDefs = useMemo<ColDef[]>(
       {/* Top pagination */}
       <div className="mb-2">
         <CustomPagination
-          totalItems={filteredData.length}
+          totalItems={totalItems}
           currentPage={pageNumber}
           totalPages={totalPages}
           pageSize={pageSize}
@@ -410,21 +418,21 @@ const columnDefs = useMemo<ColDef[]>(
           pageSizeOptions={pageSizeSelector}
         />
       </div>
-      
+
       <div style={{ minHeight: '400px' }}>
         <AgGridReact
           theme={themeQuartz}
           columnDefs={columnDefs}
-          rowData={paginatedData}
+          rowData={rowData}
           domLayout="autoHeight"
           onRowClicked={handleRowClick}
         />
       </div>
-      
+
       {/* Bottom pagination */}
       <div className="mt-4 mb-4">
         <CustomPagination
-          totalItems={filteredData.length}
+          totalItems={totalItems}
           currentPage={pageNumber}
           totalPages={totalPages}
           pageSize={pageSize}
@@ -617,7 +625,6 @@ function UserGroupsTab() {
         headerName: "User Group",
         field: "userGroup",
         flex: 2,
-        autoHeight: true,
         wrapText: true,
         colSpan: (params: any) => {
           // Make the description row span all columns
@@ -635,12 +642,14 @@ function UserGroupsTab() {
             const isEmpty =
               !description || (typeof description === "string" && description.trim().length === 0);
             return (
-              <div
-                className={`text-sm w-full break-words whitespace-pre-wrap ${
-                  isEmpty ? "text-gray-400 italic" : "text-gray-600"
-                }`}
-              >
-                {isEmpty ? "No description available" : description}
+              <div className="h-full w-full flex items-center">
+                <div
+                  className={`text-sm w-full break-words line-clamp-2 leading-5 ${
+                    isEmpty ? "text-gray-400 italic" : "text-gray-600"
+                  }`}
+                >
+                  {isEmpty ? "No description available" : description}
+                </div>
               </div>
             );
           }
@@ -818,7 +827,6 @@ function UserGroupsTab() {
             columnDefs={columnDefs}
             rowData={paginatedData}
             domLayout="autoHeight"
-            rowHeight={60}
           />
         </div>
         

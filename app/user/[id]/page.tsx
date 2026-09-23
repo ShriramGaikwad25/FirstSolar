@@ -14,6 +14,14 @@ import {
   Printer,
   Eye,
   EyeOff,
+  User,
+  Mail,
+  Building2,
+  Settings,
+  Tags as TagsIcon,
+  IdCard,
+  Tag,
+  Lock,
 } from "lucide-react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { executeQuery } from "@/lib/api";
@@ -722,6 +730,117 @@ export default function UserDetailPage() {
     setUserData(buildUserFromStorage());
   }, []);
 
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<ProfileUser>(() => ({ ...userData }));
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordFeedback, setPasswordFeedback] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [showPasswordResetFields, setShowPasswordResetFields] = useState(false);
+  const [showOldPasswordPlain, setShowOldPasswordPlain] = useState(false);
+  const [showNewPasswordPlain, setShowNewPasswordPlain] = useState(false);
+  const [showConfirmPasswordPlain, setShowConfirmPasswordPlain] = useState(false);
+
+  useEffect(() => {
+    if (!isEditingProfile) {
+      setProfileDraft({ ...userData });
+    }
+  }, [userData, isEditingProfile]);
+
+  const enterProfileEdit = () => {
+    setProfileDraft({
+      ...userData,
+      tags: [...(userData.tags || [])],
+      dob: userData.dob || "",
+    });
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordFeedback(null);
+    setShowPasswordResetFields(false);
+    setShowOldPasswordPlain(false);
+    setShowNewPasswordPlain(false);
+    setShowConfirmPasswordPlain(false);
+    setIsEditingProfile(true);
+  };
+
+  const cancelProfileEdit = () => {
+    setIsEditingProfile(false);
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordFeedback(null);
+    setShowPasswordResetFields(false);
+    setShowOldPasswordPlain(false);
+    setShowNewPasswordPlain(false);
+    setShowConfirmPasswordPlain(false);
+  };
+
+  const saveProfile = () => {
+    const next: ProfileUser = {
+      ...profileDraft,
+      firstName: profileDraft.firstName?.trim() ?? "",
+      lastName: profileDraft.lastName?.trim() ?? "",
+      email: profileDraft.email?.trim() || "no-email@example.com",
+      displayName: (profileDraft.displayName || "").trim() || "Unknown",
+      alias: profileDraft.alias?.trim() ?? "",
+      title: profileDraft.title?.trim() ?? "",
+      department: profileDraft.department?.trim() ?? "",
+      startDate: profileDraft.startDate?.trim() ?? "",
+      userType: profileDraft.userType?.trim() ?? "",
+      managerEmail: profileDraft.managerEmail?.trim() ?? "",
+      status: profileDraft.status || "Active",
+      tags: (profileDraft.tags || []).map((t) => String(t).trim()).filter(Boolean),
+      dob: profileDraft.dob?.trim() || "",
+    };
+    if (!next.tags.length) {
+      next.tags = ["User"];
+    }
+    setUserData(next);
+    persistProfileUserToStorage(next);
+    setIsEditingProfile(false);
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordFeedback(null);
+    setShowPasswordResetFields(false);
+    setShowOldPasswordPlain(false);
+    setShowNewPasswordPlain(false);
+    setShowConfirmPasswordPlain(false);
+  };
+
+  const handleResetPassword = () => {
+    setPasswordFeedback(null);
+    if (!oldPassword.trim()) {
+      setPasswordFeedback({ type: "err", text: "Enter your current password." });
+      return;
+    }
+    if (!newPassword && !confirmPassword) {
+      setPasswordFeedback({ type: "err", text: "Enter a new password and confirmation." });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordFeedback({ type: "err", text: "Password must be at least 8 characters." });
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordFeedback({ type: "err", text: "Passwords do not match." });
+      return;
+    }
+    if (oldPassword === newPassword) {
+      setPasswordFeedback({ type: "err", text: "New password must be different from the current password." });
+      return;
+    }
+    setPasswordFeedback({ type: "ok", text: "Password reset completed successfully." });
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowPasswordResetFields(false);
+    setShowOldPasswordPlain(false);
+    setShowNewPasswordPlain(false);
+    setShowConfirmPasswordPlain(false);
+  };
+
   const ProfileTab = () => {
     const initials = `${(userData.firstName || "")[0] || "U"}${(userData.lastName || "")[0] || ""}`.toUpperCase();
     const colors = ["#7f3ff0", "#0099cc", "#777", "#d7263d", "#ffae00"];
@@ -731,194 +850,142 @@ export default function UserDetailPage() {
       : colors[0];
     const displayedInitials = isMounted ? initials : "";
 
-    const [isEditingProfile, setIsEditingProfile] = useState(false);
-    const [profileDraft, setProfileDraft] = useState<ProfileUser>(() => ({ ...userData }));
-    const [oldPassword, setOldPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [passwordFeedback, setPasswordFeedback] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-    const [showPasswordResetFields, setShowPasswordResetFields] = useState(false);
-    const [showOldPasswordPlain, setShowOldPasswordPlain] = useState(false);
-    const [showNewPasswordPlain, setShowNewPasswordPlain] = useState(false);
-    const [showConfirmPasswordPlain, setShowConfirmPasswordPlain] = useState(false);
-
-    useEffect(() => {
-      if (!isEditingProfile) {
-        setProfileDraft({ ...userData });
-      }
-    }, [userData, isEditingProfile]);
-
-    const enterProfileEdit = () => {
-      setProfileDraft({
-        ...userData,
-        tags: [...(userData.tags || [])],
-        dob: userData.dob || "",
-      });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordFeedback(null);
-      setShowPasswordResetFields(false);
-      setShowOldPasswordPlain(false);
-      setShowNewPasswordPlain(false);
-      setShowConfirmPasswordPlain(false);
-      setIsEditingProfile(true);
-    };
-
-    const cancelProfileEdit = () => {
-      setIsEditingProfile(false);
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordFeedback(null);
-      setShowPasswordResetFields(false);
-      setShowOldPasswordPlain(false);
-      setShowNewPasswordPlain(false);
-      setShowConfirmPasswordPlain(false);
-    };
-
-    const saveProfile = () => {
-      const next: ProfileUser = {
-        ...profileDraft,
-        firstName: profileDraft.firstName?.trim() ?? "",
-        lastName: profileDraft.lastName?.trim() ?? "",
-        email: profileDraft.email?.trim() || "no-email@example.com",
-        displayName: (profileDraft.displayName || "").trim() || "Unknown",
-        alias: profileDraft.alias?.trim() ?? "",
-        title: profileDraft.title?.trim() ?? "",
-        department: profileDraft.department?.trim() ?? "",
-        startDate: profileDraft.startDate?.trim() ?? "",
-        userType: profileDraft.userType?.trim() ?? "",
-        managerEmail: profileDraft.managerEmail?.trim() ?? "",
-        status: profileDraft.status || "Active",
-        tags: (profileDraft.tags || []).map((t) => String(t).trim()).filter(Boolean),
-        dob: profileDraft.dob?.trim() || "",
-      };
-      if (!next.tags.length) {
-        next.tags = ["User"];
-      }
-      setUserData(next);
-      persistProfileUserToStorage(next);
-      setIsEditingProfile(false);
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setPasswordFeedback(null);
-      setShowPasswordResetFields(false);
-      setShowOldPasswordPlain(false);
-      setShowNewPasswordPlain(false);
-      setShowConfirmPasswordPlain(false);
-    };
-
-    const handleResetPassword = () => {
-      setPasswordFeedback(null);
-      if (!oldPassword.trim()) {
-        setPasswordFeedback({ type: "err", text: "Enter your current password." });
-        return;
-      }
-      if (!newPassword && !confirmPassword) {
-        setPasswordFeedback({ type: "err", text: "Enter a new password and confirmation." });
-        return;
-      }
-      if (newPassword.length < 8) {
-        setPasswordFeedback({ type: "err", text: "Password must be at least 8 characters." });
-        return;
-      }
-      if (newPassword !== confirmPassword) {
-        setPasswordFeedback({ type: "err", text: "Passwords do not match." });
-        return;
-      }
-      if (oldPassword === newPassword) {
-        setPasswordFeedback({ type: "err", text: "New password must be different from the current password." });
-        return;
-      }
-      setPasswordFeedback({ type: "ok", text: "Password reset completed successfully." });
-      setOldPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      setShowPasswordResetFields(false);
-      setShowOldPasswordPlain(false);
-      setShowNewPasswordPlain(false);
-      setShowConfirmPasswordPlain(false);
-    };
-
     const inputClass =
-      "mt-0.5 w-full text-xs border border-gray-300 rounded px-2 py-1 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none";
+      "mt-1 text-sm font-medium border border-gray-300 rounded-lg px-2.5 py-1.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none";
+    const inputClassNarrow = `${inputClass} w-full max-w-[200px]`;
+    const inputClassSplit = `${inputClass} flex-1 min-w-0`;
+
+    const headerFirstName = isEditingProfile ? profileDraft.firstName : userData.firstName;
+    const headerLastName = isEditingProfile ? profileDraft.lastName : userData.lastName;
+    const headerStatus = isEditingProfile ? profileDraft.status || "Active" : userData.status || "Active";
+
+    const IconBox = ({
+      icon: Icon,
+      bg,
+      color,
+    }: {
+      icon: typeof User;
+      bg: string;
+      color: string;
+    }) => (
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0 ${bg} ${color}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+    );
+
+    const Field = ({
+      icon,
+      bg,
+      color,
+      label,
+      children,
+    }: {
+      icon: typeof User;
+      bg: string;
+      color: string;
+      label: string;
+      children: React.ReactNode;
+    }) => (
+      <div className="flex items-start gap-2.5 min-w-0">
+        <IconBox icon={icon} bg={bg} color={color} />
+        <div className="min-w-0 flex-1">
+          <label className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider">{label}</label>
+          {children}
+        </div>
+      </div>
+    );
 
     return (
-      <div className="relative bg-white rounded-lg shadow-md p-3">
-        {!isEditingProfile && (
-          <div className="no-print absolute top-3 right-3 z-10 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={enterProfileEdit}
-              className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-md text-xs font-medium text-gray-700 bg-gray-100 hover:bg-gray-200"
-              title="Edit profile"
-              aria-label="Edit profile"
-            >
-              <Edit className="w-4 h-4" />
-              Edit
-            </button>
-          </div>
-        )}
-        <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-          {/* Profile Picture - Centered */}
-          <div className="flex-shrink-0 flex justify-center">
+      <div className="relative bg-white rounded-2xl border border-[#EEF0F2] shadow-[0_1px_2px_rgba(16,24,40,0.04),0_6px_14px_rgba(16,24,40,0.035)] overflow-hidden">
+        <div className="flex items-stretch">
+          {/* Identity panel */}
+          <div className="relative w-72 flex-shrink-0 bg-[#F9FAFC] border-r border-[#EEF0F2] px-7 py-10 flex flex-col items-center text-center gap-3 overflow-hidden">
             <div
-              className="w-24 h-24 rounded-full flex items-center justify-center text-white text-2xl font-semibold"
-              style={{ backgroundColor: bgColor }}
+              className="pointer-events-none absolute -top-16 -left-16 w-48 h-48 rounded-full bg-gradient-to-br from-blue-100/70 to-transparent blur-2xl"
+              aria-hidden="true"
+            />
+
+            <div
+              className="relative w-20 h-20 rounded-full flex items-center justify-center text-white text-2xl font-semibold shadow-[0_0_0_4px_#ffffff,0_10px_22px_rgba(79,70,229,0.28)] flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${bgColor}, #4338CA)` }}
             >
               {displayedInitials}
             </div>
+
+            <div className="relative flex flex-col items-center gap-1.5">
+              <h2 className="text-lg font-bold text-gray-900">
+                {headerFirstName} {headerLastName}
+              </h2>
+              {!!userData.title && <p className="text-xs text-gray-500">{userData.title}</p>}
+              {isEditingProfile ? (
+                <select
+                  className="mt-1 text-xs font-semibold bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  value={profileDraft.status || "Active"}
+                  onChange={(e) => setProfileDraft((d) => ({ ...d, status: e.target.value }))}
+                  aria-label="Status"
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Disable">Disable</option>
+                </select>
+              ) : (
+                <span
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                    headerStatus === "Active"
+                      ? "border border-green-500 text-green-700 bg-green-50"
+                      : "border border-gray-300 text-gray-800 bg-gray-50"
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${
+                      headerStatus === "Active" ? "bg-green-500" : "bg-gray-400"
+                    }`}
+                  />
+                  {headerStatus}
+                </span>
+              )}
+            </div>
           </div>
 
-          {/* User Details - Right Side */}
-          <div className={`flex-1 w-full min-w-0 space-y-4 ${!isEditingProfile ? "sm:pr-9" : ""}`}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">First Name</label>
+          {/* User Details */}
+          <div className="flex-1 min-w-0 p-8">
+            <div className="grid grid-cols-4 gap-x-8 gap-y-6 pb-6 mb-6 border-b border-gray-100">
+              <Field icon={User} bg="bg-blue-50" color="text-blue-500" label="First Name">
                 {isEditingProfile ? (
                   <input
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.firstName}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, firstName: e.target.value }))}
                     aria-label="First name"
                   />
                 ) : (
-                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.firstName}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.firstName}</p>
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Last Name</label>
+              <Field icon={User} bg="bg-indigo-50" color="text-indigo-500" label="Last Name">
                 {isEditingProfile ? (
                   <input
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.lastName}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, lastName: e.target.value }))}
                     aria-label="Last name"
                   />
                 ) : (
-                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.lastName}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.lastName}</p>
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Email</label>
-                <p className="text-xs font-semibold text-blue-600 mt-0.5">{userData.email}</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Display Name</label>
+              <Field icon={IdCard} bg="bg-green-50" color="text-green-600" label="Display Name">
                 {isEditingProfile ? (
                   <input
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.displayName}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, displayName: e.target.value }))}
                     aria-label="Display name"
                   />
                 ) : (
-                  <div className="text-xs font-semibold text-gray-900 mt-0.5">
+                  <div className="text-sm font-semibold text-gray-900 mt-1">
                     <UserDisplayName
                       displayName={userData.displayName}
                       userType={userData.userType}
@@ -926,72 +993,75 @@ export default function UserDetailPage() {
                     />
                   </div>
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Date Of Birth</label>
-                <p
-                  className="text-xs font-semibold text-gray-900 mt-0.5 tracking-widest"
-                  aria-label="Date of birth hidden"
-                >
-                  xx-xx-xxxx
-                </p>
-              </div>
+              <Field icon={Mail} bg="bg-blue-50" color="text-blue-500" label="Email">
+                <p className="text-sm font-semibold text-blue-600 mt-1">{userData.email}</p>
+              </Field>
+            </div>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Username</label>
-                <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.alias}</p>
-              </div>
+            <div className="grid grid-cols-4 gap-x-8 gap-y-6 pb-6 mb-6 border-b border-gray-100">
+              <Field icon={User} bg="bg-purple-50" color="text-purple-500" label="Username">
+                <p className="text-sm font-semibold text-gray-900 mt-1">{userData.alias}</p>
+              </Field>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Title</label>
+              <Field icon={Tag} bg="bg-teal-50" color="text-teal-600" label="Title">
                 {isEditingProfile ? (
                   <input
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.title ?? ""}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, title: e.target.value }))}
                     aria-label="Title"
                   />
                 ) : (
-                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.title}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.title}</p>
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Department</label>
+              <Field icon={Building2} bg="bg-green-50" color="text-green-600" label="Department">
                 {isEditingProfile ? (
                   <input
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.department ?? ""}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, department: e.target.value }))}
                     aria-label="Department"
                   />
                 ) : (
-                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.department}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.department}</p>
                 )}
-              </div>
+              </Field>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Start Date</label>
+              <Field icon={Calendar} bg="bg-orange-50" color="text-orange-500" label="Date Of Birth">
+                <p className="text-sm font-semibold text-gray-900 mt-1 tracking-widest" aria-label="Date of birth hidden">
+                  xx-xx-xxxx
+                </p>
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-4 gap-x-8 gap-y-6">
+              <Field icon={Settings} bg="bg-amber-50" color="text-amber-500" label="User Type">
+                <p className="text-sm font-semibold text-gray-900 mt-1">{userData.userType}</p>
+              </Field>
+
+              <Field icon={Calendar} bg="bg-blue-50" color="text-blue-500" label="Start Date">
                 {isEditingProfile ? (
                   <input
                     type="date"
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.startDate || ""}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, startDate: e.target.value }))}
                     aria-label="Start date"
                   />
                 ) : (
-                  <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.startDate || "N/A"}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.startDate || "N/A"}</p>
                 )}
-              </div>
+              </Field>
 
               {(!!userData.tags?.length || isEditingProfile) && (
-                <div>
-                  <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tags</label>
+                <Field icon={TagsIcon} bg="bg-teal-50" color="text-teal-600" label="Tags">
                   {isEditingProfile ? (
                     <input
-                      className={inputClass}
+                      className={inputClassNarrow}
                       value={(profileDraft.tags || []).join(", ")}
                       onChange={(e) =>
                         setProfileDraft((d) => ({
@@ -1010,67 +1080,33 @@ export default function UserDetailPage() {
                       {userData.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="inline-block bg-blue-100 border border-blue-300 text-blue-800 text-xs px-2 py-0.5 rounded-full"
+                          className="inline-block bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full"
                         >
                           {tag}
                         </span>
                       ))}
                     </div>
                   )}
-                </div>
+                </Field>
               )}
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">User Type</label>
-                <p className="text-xs font-semibold text-gray-900 mt-0.5">{userData.userType}</p>
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manager Email</label>
+              <Field icon={User} bg="bg-purple-50" color="text-purple-500" label="Manager Email">
                 {isEditingProfile ? (
                   <input
                     type="email"
-                    className={inputClass}
+                    className={inputClassNarrow}
                     value={profileDraft.managerEmail ?? ""}
                     onChange={(e) => setProfileDraft((d) => ({ ...d, managerEmail: e.target.value }))}
                     aria-label="Manager email"
                   />
                 ) : (
-                  <p className="text-xs font-semibold text-blue-600 mt-0.5">{userData.managerEmail}</p>
+                  <p className="text-sm font-semibold text-blue-600 mt-1">{userData.managerEmail}</p>
                 )}
-              </div>
-
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status</label>
-                {isEditingProfile ? (
-                  <select
-                    className={inputClass}
-                    value={profileDraft.status || "Active"}
-                    onChange={(e) => setProfileDraft((d) => ({ ...d, status: e.target.value }))}
-                    aria-label="Status"
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Disable">Disable</option>
-                  </select>
-                ) : (
-                  <div className="mt-0.5">
-                    <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                        (userData.status || "Active") === "Active"
-                          ? "border border-green-500 text-green-700 bg-green-50"
-                          : "border border-gray-300 text-gray-800 bg-gray-50"
-                      }`}
-                    >
-                      {userData.status || "Active"}
-                    </span>
-                  </div>
-                )}
-              </div>
+              </Field>
             </div>
 
             {isEditingProfile && (
-              <div className="border border-gray-200 rounded-md px-2.5 py-2 bg-gray-50/90 no-print">
+              <div className="mt-2 pt-6 border-t border-gray-100 no-print">
                 {!showPasswordResetFields ? (
                   <button
                     type="button"
@@ -1078,15 +1114,17 @@ export default function UserDetailPage() {
                       setShowPasswordResetFields(true);
                       setPasswordFeedback(null);
                     }}
-                    className="inline-flex items-center px-3 py-1.5 rounded-md text-[11px] font-medium text-white bg-gray-800 hover:bg-gray-900"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50"
                   >
+                    <Lock className="h-3.5 w-3.5" />
                     Reset password
                   </button>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <span className="text-[11px] font-semibold text-gray-600 uppercase tracking-wide">
-                        Reset password
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <span className="flex items-center gap-2 text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider">
+                        <Lock className="h-3.5 w-3.5" />
+                        Reset Password
                       </span>
                       <button
                         type="button"
@@ -1100,102 +1138,109 @@ export default function UserDetailPage() {
                           setShowNewPasswordPlain(false);
                           setShowConfirmPasswordPlain(false);
                         }}
-                        className="text-[11px] font-medium text-gray-500 hover:text-gray-800"
+                        className="inline-flex items-center px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                       >
                         Cancel
                       </button>
                     </div>
-                    <div className="flex flex-col gap-1.5 sm:flex-row sm:flex-wrap sm:items-end sm:gap-x-3 sm:gap-y-1.5">
-                      <div className="flex flex-1 flex-wrap items-end gap-2 min-w-0 sm:max-w-4xl">
-                        <div className="flex-1 min-w-[8rem]">
-                          <label className="text-[10px] font-medium text-gray-500">Old password</label>
-                          <div className="relative mt-0.5">
-                            <input
-                              type={showOldPasswordPlain ? "text" : "password"}
-                              autoComplete="current-password"
-                              className="w-full bg-white text-xs border border-gray-300 rounded pl-2 pr-9 py-1 text-gray-900 focus:ring-1 focus:ring-blue-500 focus:border-transparent outline-none"
-                              value={oldPassword}
-                              onChange={(e) => setOldPassword(e.target.value)}
-                              aria-label="Old password"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowOldPasswordPlain((v) => !v)}
-                              className="absolute inset-y-0 right-0 flex items-center justify-center px-1.5 text-gray-500 hover:text-gray-800"
-                              aria-label={showOldPasswordPlain ? "Hide old password" : "Show old password"}
-                            >
-                              {showOldPasswordPlain ? (
-                                <EyeOff className="w-4 h-4" strokeWidth={1.75} />
-                              ) : (
-                                <Eye className="w-4 h-4" strokeWidth={1.75} />
-                              )}
-                            </button>
-                          </div>
+                    <div className="grid grid-cols-4 gap-x-8 gap-y-4 items-end">
+                      <div>
+                        <label className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider">
+                          Old Password
+                        </label>
+                        <div className="relative mt-1">
+                          <input
+                            type={showOldPasswordPlain ? "text" : "password"}
+                            autoComplete="current-password"
+                            className={`${inputClassNarrow} pr-9`}
+                            value={oldPassword}
+                            onChange={(e) => setOldPassword(e.target.value)}
+                            aria-label="Old password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowOldPasswordPlain((v) => !v)}
+                            className="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-gray-400 hover:text-gray-700"
+                            aria-label={showOldPasswordPlain ? "Hide old password" : "Show old password"}
+                          >
+                            {showOldPasswordPlain ? (
+                              <EyeOff className="w-4 h-4" strokeWidth={1.75} />
+                            ) : (
+                              <Eye className="w-4 h-4" strokeWidth={1.75} />
+                            )}
+                          </button>
                         </div>
-                        <div className="flex-1 min-w-[8rem]">
-                          <label className="text-[10px] font-medium text-gray-500">New</label>
-                          <div className="relative mt-0.5">
-                            <input
-                              type={showNewPasswordPlain ? "text" : "password"}
-                              autoComplete="new-password"
-                              className="w-full bg-white text-xs border border-gray-300 rounded pl-2 pr-9 py-1 text-gray-900 focus:ring-1 focus:ring-blue-500 focus:border-transparent outline-none"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              aria-label="New password"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowNewPasswordPlain((v) => !v)}
-                              className="absolute inset-y-0 right-0 flex items-center justify-center px-1.5 text-gray-500 hover:text-gray-800"
-                              aria-label={showNewPasswordPlain ? "Hide new password" : "Show new password"}
-                            >
-                              {showNewPasswordPlain ? (
-                                <EyeOff className="w-4 h-4" strokeWidth={1.75} />
-                              ) : (
-                                <Eye className="w-4 h-4" strokeWidth={1.75} />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <div className="flex-1 min-w-[8rem]">
-                          <label className="text-[10px] font-medium text-gray-500">Confirm</label>
-                          <div className="relative mt-0.5">
-                            <input
-                              type={showConfirmPasswordPlain ? "text" : "password"}
-                              autoComplete="new-password"
-                              className="w-full bg-white text-xs border border-gray-300 rounded pl-2 pr-9 py-1 text-gray-900 focus:ring-1 focus:ring-blue-500 focus:border-transparent outline-none"
-                              value={confirmPassword}
-                              onChange={(e) => setConfirmPassword(e.target.value)}
-                              aria-label="Confirm password"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowConfirmPasswordPlain((v) => !v)}
-                              className="absolute inset-y-0 right-0 flex items-center justify-center px-1.5 text-gray-500 hover:text-gray-800"
-                              aria-label={showConfirmPasswordPlain ? "Hide confirm password" : "Show confirm password"}
-                            >
-                              {showConfirmPasswordPlain ? (
-                                <EyeOff className="w-4 h-4" strokeWidth={1.75} />
-                              ) : (
-                                <Eye className="w-4 h-4" strokeWidth={1.75} />
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleResetPassword}
-                          className="inline-flex items-center px-3 py-1 rounded-md text-[11px] font-medium text-white bg-gray-800 hover:bg-gray-900 sm:mb-0.5"
-                        >
-                          Apply
-                        </button>
                       </div>
+
+                      <div>
+                        <label className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider">
+                          New Password
+                        </label>
+                        <div className="relative mt-1">
+                          <input
+                            type={showNewPasswordPlain ? "text" : "password"}
+                            autoComplete="new-password"
+                            className={`${inputClassNarrow} pr-9`}
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            aria-label="New password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPasswordPlain((v) => !v)}
+                            className="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-gray-400 hover:text-gray-700"
+                            aria-label={showNewPasswordPlain ? "Hide new password" : "Show new password"}
+                          >
+                            {showNewPasswordPlain ? (
+                              <EyeOff className="w-4 h-4" strokeWidth={1.75} />
+                            ) : (
+                              <Eye className="w-4 h-4" strokeWidth={1.75} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10.5px] font-semibold text-gray-400 uppercase tracking-wider">
+                          Confirm Password
+                        </label>
+                        <div className="relative mt-1">
+                          <input
+                            type={showConfirmPasswordPlain ? "text" : "password"}
+                            autoComplete="new-password"
+                            className={`${inputClassNarrow} pr-9`}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            aria-label="Confirm password"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPasswordPlain((v) => !v)}
+                            className="absolute inset-y-0 right-0 flex items-center justify-center px-2.5 text-gray-400 hover:text-gray-700"
+                            aria-label={showConfirmPasswordPlain ? "Hide confirm password" : "Show confirm password"}
+                          >
+                            {showConfirmPasswordPlain ? (
+                              <EyeOff className="w-4 h-4" strokeWidth={1.75} />
+                            ) : (
+                              <Eye className="w-4 h-4" strokeWidth={1.75} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleResetPassword}
+                        className="h-[34px] inline-flex items-center justify-center rounded-lg text-xs font-semibold text-white bg-gray-900 hover:bg-black"
+                      >
+                        Apply
+                      </button>
                     </div>
                   </>
                 )}
                 {passwordFeedback && (
                   <p
-                    className={`text-[11px] mt-1.5 ${
+                    className={`text-xs mt-2.5 ${
                       passwordFeedback.type === "ok" ? "text-green-700" : "text-red-600"
                     }`}
                   >
@@ -1541,7 +1586,7 @@ export default function UserDetailPage() {
     }, [rowData, searchTerm, dynamicCols]);
 
       return (
-        <div className="bg-white rounded-lg shadow-md p-3">
+        <div className="bg-white rounded-2xl border border-[#EEF0F2] shadow-sm p-6">
           {/* Search Box */}
           <div className="mb-4">
             <div className="relative max-w-md">
@@ -1553,7 +1598,7 @@ export default function UserDetailPage() {
                 placeholder="Search by entitlement, application, account..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
             </div>
             {searchTerm && (
@@ -1564,7 +1609,7 @@ export default function UserDetailPage() {
           </div>
 
           {/* Simple AG Grid table */}
-          <div className="ag-theme-alpine" style={{ width: "100%", minHeight: 400 }}>
+          <div className="ag-theme-alpine" style={{ width: "100%" }}>
             {isMounted && (
               <AgGridReact
                 ref={gridRef}
@@ -1574,6 +1619,9 @@ export default function UserDetailPage() {
                 suppressRowVirtualisation={false}
                 domLayout="autoHeight"
                 theme={themeQuartz}
+                pagination={true}
+                paginationPageSize={10}
+                paginationPageSizeSelector={[10, 20, 50]}
               />
             )}
           </div>
@@ -1720,180 +1768,166 @@ export default function UserDetailPage() {
     };
 
     return (
-      <div className="p-6 bg-gray-50">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ gridTemplateColumns: isDrawerOpen ? "280px 1fr 0" : undefined }}>
-          {/* Left: Transient Access list */}
-          <div className="lg:col-span-1">
-            <div className="triggers-panel" style={{ width: "100%", height: "100%" }}>
-              <div className="triggers-header">
-                <h3>JIT Access</h3>
-                <button
-                  className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700"
-                  onClick={() => { /* TODO: open create transient access modal */ }}
-                >
-                  New
-                </button>
-              </div>
-              <div className="trigger-list">
-                {transientItems.map((item, idx) => (
-                  <div
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ gridTemplateColumns: isDrawerOpen ? "280px 1fr 0" : undefined }}>
+        {/* Left: Transient Access list */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-2xl border border-[#EEF0F2] shadow-sm p-5 h-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-blue-700">JIT Access</h3>
+              <button
+                className="px-3 py-1.5 rounded-lg bg-blue-600 text-white text-xs font-semibold hover:bg-blue-700 transition-colors"
+                onClick={() => { /* TODO: open create transient access modal */ }}
+              >
+                New
+              </button>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {transientItems.map((item, idx) => {
+                const isSelected = selectedIdx === idx;
+                return (
+                  <button
                     key={idx}
-                    className={`trigger-item ${selectedIdx === idx ? "selected" : ""}`}
+                    type="button"
                     onClick={() => setSelectedIdx(idx)}
+                    className={`text-left break-words rounded-xl px-3 py-2.5 text-xs font-medium border transition-colors ${
+                      isSelected
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : "bg-transparent border-transparent text-gray-600 hover:bg-gray-50"
+                    }`}
                   >
-                    <div className="trigger-name">{item.title}</div>
-                  </div>
-                ))}
-              </div>
+                    {item.title}
+                  </button>
+                );
+              })}
             </div>
           </div>
+        </div>
 
           {/* Right: Access History */}
-          <div className="lg:col-span-2" style={{ marginRight: isDrawerOpen ? 420 : 0, transition: "margin-right 200ms ease" }}>
-            {/* Top card styled like scheduler trigger card */}
-            <div className="jobs-section" style={{ padding: 0, marginBottom: 20, height: "auto", gap: 0, display: "block" }}>
-              <div className="trigger-card-section" style={{ height: "auto", marginBottom: 4 }}>
-                <div className="trigger-card" style={{ marginBottom: 0 }}>
-                  <div className="trigger-card-header" style={{ paddingTop: 6, paddingBottom: 6 }}>
-                    <h4>{selectedItem?.title || "ORA_HRC_HUMAN_CAPITAL_MANAGEMENT_INTEGRATION_SPECIALIST_JOB"}</h4>
-                  </div>
-                  <div className="trigger-card-content" style={{ padding: 8 }}>
-                    <div className="trigger-info-rows" style={{ gap: 8 }}>
-                      <div className="trigger-info-row">
-                        <div
-                          className="info-item bg-gray-100 rounded"
-                          style={{ gridColumn: "1 / -1", display: "flex", flexDirection: "row", alignItems: "center", gap: 8, padding: "8px 12px" }}
-                        >
-                          <span className="info-label" style={{ marginRight: 4 }}>Description:</span>
-                          <span className="info-value whitespace-normal break-words">{selectedItem?.description || "N/A"}</span>
-                        </div>
-                      </div>
-                      <div className="trigger-info-row" style={{ gridTemplateColumns: "1fr 1fr auto", columnGap: 16 }}>
-                        <div className="info-item">
-                          <span className="info-label">Application</span>
-                          <span className="info-value">{selectedItem?.application || "N/A"}</span>
-                        </div>
-                        <div className="info-item">
-                          <span className="info-label"></span>
-                          <span className="info-value"></span>
-                        </div>
-                        <div className="info-item">
-                          <span className="info-label">Action</span>
-                          <button
-                            className="px-3 py-2 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
-                            onClick={openDrawer}
-                          >
-                            Request Access
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+          <div className="lg:col-span-2 flex flex-col gap-6" style={{ marginRight: isDrawerOpen ? 420 : 0, transition: "margin-right 200ms ease" }}>
+            {/* Selected item detail card */}
+            <div className="bg-white rounded-2xl border border-[#EEF0F2] shadow-sm p-6">
+              <h4 className="text-sm font-semibold text-blue-700 mb-4">
+                {selectedItem?.title || "ORA_HRC_HUMAN_CAPITAL_MANAGEMENT_INTEGRATION_SPECIALIST_JOB"}
+              </h4>
+              <div className="bg-gray-50 rounded-xl px-4 py-3 mb-5">
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mr-2">Description</span>
+                <span className="text-sm text-gray-700">{selectedItem?.description || "N/A"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-6">
+                <div>
+                  <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Application</div>
+                  <div className="text-sm font-semibold text-gray-900">{selectedItem?.application || "N/A"}</div>
                 </div>
+                <button
+                  className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm"
+                  onClick={openDrawer}
+                >
+                  Request Access
+                </button>
               </div>
             </div>
 
-            <div className="trigger-card-section" style={{ height: "auto" }}>
-              <div className="trigger-card">
-                <div className="trigger-card-header" style={{ paddingTop: 8, paddingBottom: 8 }}>
-                  <h4>Access History</h4>
-                </div>
-                <div className="trigger-card-content" style={{ padding: 0 }}>
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gray-100 border-b">
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Requested Duration</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Start Time</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">End Time</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Status</th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {historyRows.map((h) => (
-                        <tr key={h.id} className="border-b hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-700">{h.date}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{h.requestedDuration} hours</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{h.startTime}</td>
-                          <td className="px-4 py-3 text-sm text-gray-700">{h.endTime || "-"}</td>
-                          <td className="px-4 py-3 text-sm">
-                            <span
-                              className={`inline-block px-2 py-0.5 rounded text-xs ${
-                                h.status === "Completed"
-                                  ? "bg-gray-100 text-gray-700"
-                                  : h.status === "Active"
-                                  ? "bg-green-100 text-green-700"
-                                  : h.status === "In progress"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : h.status === "Submitted"
-                                  ? "bg-amber-100 text-amber-800"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
-                              {h.status}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex items-center gap-2">
-                              {h.status !== "In progress" && (
+            {/* Access History */}
+            <div className="bg-white rounded-2xl border border-[#EEF0F2] shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-[#EEF0F2]">
+                <h4 className="text-sm font-semibold text-blue-700">Access History</h4>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-[#FAFAFB] border-b border-[#EEF0F2]">
+                      <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#1759E4]">Date</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#1759E4]">Requested Duration</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#1759E4]">Start Time</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#1759E4]">End Time</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#1759E4]">Status</th>
+                      <th className="px-6 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-[#1759E4]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {historyRows.map((h) => (
+                      <tr key={h.id} className="border-b border-gray-100 last:border-b-0 hover:bg-[#E5EEFC] transition-colors">
+                        <td className="px-6 py-3.5 text-sm text-gray-700">{h.date}</td>
+                        <td className="px-6 py-3.5 text-sm text-gray-700">{h.requestedDuration} hours</td>
+                        <td className="px-6 py-3.5 text-sm text-gray-700">{h.startTime}</td>
+                        <td className="px-6 py-3.5 text-sm text-gray-700">{h.endTime || "-"}</td>
+                        <td className="px-6 py-3.5 text-sm">
+                          <span
+                            className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${
+                              h.status === "Completed"
+                                ? "bg-gray-100 text-gray-600"
+                                : h.status === "Active"
+                                ? "bg-green-50 text-green-700 border border-green-200"
+                                : h.status === "In progress"
+                                ? "bg-blue-50 text-blue-700 border border-blue-200"
+                                : h.status === "Submitted"
+                                ? "bg-amber-50 text-amber-700 border border-amber-200"
+                                : "bg-yellow-50 text-yellow-700 border border-yellow-200"
+                            }`}
+                          >
+                            {h.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3.5 text-sm">
+                          <div className="flex items-center gap-2">
+                            {h.status !== "In progress" && (
+                              <button
+                                className="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-300 transition-colors"
+                                onClick={() => console.log('Activity', h)}
+                                title="Activity"
+                              >
+                                <History className="w-4 h-4" />
+                              </button>
+                            )}
+                            {h.status === "In progress" && (
+                              <>
                                 <button
-                                  className="text-blue-600 hover:text-blue-800 flex items-center justify-center"
-                                  onClick={() => console.log('Activity', h)}
-                                  title="Activity"
-                                >
-                                  <History size={24} />
-                                </button>
-                              )}
-                              {h.status === "In progress" && (
-                                <>
-                                  <button
-                                    type="button"
-                                    className="px-2.5 py-1 text-xs font-medium rounded border border-red-200 text-red-700 bg-red-50 hover:bg-red-100"
-                                    onClick={() =>
-                                      setHistoryRows((prev) =>
-                                        prev.map((r) =>
-                                          r.id === h.id ? { ...r, status: "Completed" } : r
-                                        )
+                                  type="button"
+                                  className="px-2.5 py-1 text-xs font-medium rounded-md border border-red-200 text-red-700 bg-red-50 hover:bg-red-100 transition-colors"
+                                  onClick={() =>
+                                    setHistoryRows((prev) =>
+                                      prev.map((r) =>
+                                        r.id === h.id ? { ...r, status: "Completed" } : r
                                       )
-                                    }
-                                  >
-                                    Stop
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="px-2.5 py-1 text-xs font-medium rounded border border-green-200 text-green-700 bg-green-50 hover:bg-green-100"
-                                    onClick={() => console.log("Extend", h)}
-                                  >
-                                    Extend
-                                  </button>
-                                </>
-                              )}
-                              {h.status === "Active" && (
-                                <>
-                                  <button
-                                    className="text-red-600 hover:text-red-800 flex items-center justify-center ml-2"
-                                    onClick={() => console.log('End Session')}
-                                    title="End Session"
-                                  >
-                                    <CircleX size={24} />
-                                  </button>
-                                  <button
-                                    className="text-green-600 hover:text-green-800 flex items-center justify-center ml-2"
-                                    onClick={() => console.log('Extend')}
-                                    title="Extend"
-                                  >
-                                    <CirclePlus size={24} />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                                    )
+                                  }
+                                >
+                                  Stop
+                                </button>
+                                <button
+                                  type="button"
+                                  className="px-2.5 py-1 text-xs font-medium rounded-md border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                                  onClick={() => console.log("Extend", h)}
+                                >
+                                  Extend
+                                </button>
+                              </>
+                            )}
+                            {h.status === "Active" && (
+                              <>
+                                <button
+                                  className="p-1.5 rounded-md bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-900 border border-red-200 hover:border-red-300 transition-colors"
+                                  onClick={() => console.log('End Session')}
+                                  title="End Session"
+                                >
+                                  <CircleX className="w-4 h-4" />
+                                </button>
+                                <button
+                                  className="p-1.5 rounded-md bg-green-50 hover:bg-green-100 text-green-700 hover:text-green-900 border border-green-200 hover:border-green-300 transition-colors"
+                                  onClick={() => console.log('Extend')}
+                                  title="Extend"
+                                >
+                                  <CirclePlus className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
             {/* Right Drawer for Start Access */}
@@ -2022,7 +2056,6 @@ export default function UserDetailPage() {
             )}
           </div>
         </div>
-      </div>
     );
   };
 
@@ -2144,7 +2177,9 @@ export default function UserDetailPage() {
       {
         headerName: "Actions",
         field: "actions",
-        flex: 2,
+        flex: 1,
+        sortable: false,
+        filter: false,
         cellRenderer: (params: any) => {
           const rowData = params.data;
           return (
@@ -2154,33 +2189,33 @@ export default function UserDetailPage() {
                   e.stopPropagation();
                   handleDisable(rowData);
                 }}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 rounded border border-red-200 transition-colors"
+                className="p-1.5 rounded-md bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-900 border border-red-200 hover:border-red-300 transition-colors"
                 title="Disable"
+                aria-label="Disable proxy user"
               >
-                <Ban className="w-3 h-3" />
-                Disable
+                <Ban className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleExtendEndDate(rowData);
                 }}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded border border-blue-200 transition-colors"
+                className="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-300 transition-colors"
                 title="Extend End Date"
+                aria-label="Extend end date"
               >
-                <Calendar className="w-3 h-3" />
-                Extend
+                <Calendar className="w-4 h-4" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleEditStartDate(rowData);
                 }}
-                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-600 hover:text-gray-700 hover:bg-gray-50 rounded border border-gray-200 transition-colors"
+                className="p-1.5 rounded-md bg-gray-50 hover:bg-gray-100 text-gray-600 hover:text-gray-900 border border-gray-200 hover:border-gray-300 transition-colors"
                 title="Edit Start Date"
+                aria-label="Edit start date"
               >
-                <Edit className="w-3 h-3" />
-                Edit
+                <Edit className="w-4 h-4" />
               </button>
             </div>
           );
@@ -2200,7 +2235,7 @@ export default function UserDetailPage() {
     }
 
     return (
-      <div className="bg-white rounded-lg shadow-md p-3">
+      <div className="bg-white rounded-2xl border border-[#EEF0F2] shadow-sm p-6">
         {/* Search Box */}
         <div className="mb-4">
           <div className="relative max-w-md">
@@ -2212,7 +2247,7 @@ export default function UserDetailPage() {
               placeholder="Search proxy users..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
           {searchTerm && (
@@ -2225,13 +2260,17 @@ export default function UserDetailPage() {
         {/* AG Grid */}
         <div className="screen-only">
           {isMounted && (
-            <div className="ag-theme-alpine" style={{ height: 400, width: "100%" }}>
+            <div className="ag-theme-alpine" style={{ width: "100%" }}>
               <AgGridReact
                 rowData={filteredData}
                 columnDefs={columnDefs}
                 defaultColDef={{ sortable: true, filter: true, resizable: true }}
                 suppressRowVirtualisation={false}
+                domLayout="autoHeight"
                 theme={themeQuartz}
+                pagination={true}
+                paginationPageSize={10}
+                paginationPageSizeSelector={[10, 20, 50]}
               />
             </div>
           )}
@@ -2390,17 +2429,7 @@ export default function UserDetailPage() {
 
   return (
     <>
-      <div className="relative mb-4 p-0 m-0">
-        <div className="absolute top-0 right-0 z-10 print:hidden p-0 m-0">
-          <button
-            onClick={handlePrint}
-            className="inline-flex items-center justify-center p-0 m-0 border-0 bg-transparent text-gray-600 shadow-none hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 rounded"
-            title="Print page"
-            aria-label="Print page"
-          >
-            <Printer size={20} />
-          </button>
-        </div>
+      <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3 no-print">
           <button
             onClick={() => {
@@ -2409,13 +2438,25 @@ export default function UserDetailPage() {
                 { widthPx: 480, title: "Add Proxy User", closeOnOutsideClick: false }
               );
             }}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 text-sm rounded-md font-medium transition-colors"
+            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 text-sm rounded-xl font-semibold shadow-sm transition-colors"
             title="Add Proxy User"
           >
             <Plus className="w-4 h-4" />
             Add Proxy User
           </button>
         </div>
+        {!isEditingProfile && (
+          <button
+            type="button"
+            onClick={enterProfileEdit}
+            className="no-print inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium text-gray-700 bg-white border border-gray-200 hover:bg-gray-50"
+            title="Edit profile"
+            aria-label="Edit profile"
+          >
+            <Edit className="w-4 h-4" />
+            Edit
+          </button>
+        )}
       </div>
       <CombinedView printRef={printRef} />
       <ActionCompletedToast

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, ChevronDown, Bold, Italic, Underline, Strikethrough, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link, Image, Table, Code, Quote, Minus, Maximize2, HelpCircle } from "lucide-react";
+import { Mail, Info, FileCode2, FileText, Tag, Code, Check, Hash } from "lucide-react";
 
 interface EmailTemplateFormData {
   templateCode: string;
@@ -596,31 +596,50 @@ export default function NewEmailTemplatePage() {
   };
 
   return (
-    <div className="h-full p-6" style={{ overflow: 'visible', paddingRight: '360px' }}>
+    <div className="h-full bg-gray-50 p-6" style={{ overflow: 'visible', paddingRight: '360px' }}>
       <div className="flex gap-6 items-start" style={{ position: 'relative' }}>
         {/* Main Section */}
-        <div className="flex-1 bg-white rounded-md shadow overflow-hidden">
-            {/* Green Header Bar */}
-            <div className="flex items-center justify-between px-5 py-3 text-white" style={{ backgroundColor: '#27B973' }}>
+        <div className="flex-1 space-y-4">
+            {/* Header */}
+            <div className="rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(39, 185, 115, 0.6)' }}>
-                  <Mail className="w-4 h-4" />
+                <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-700">
+                  <Mail className="w-5 h-5" />
+                </span>
+                <div>
+                  <h1 className="text-lg font-semibold text-gray-900">New Email Template</h1>
+                  <p className="text-xs text-gray-500">Create a reusable email template for notifications</p>
                 </div>
-                <h2 className="font-semibold">Email Templates</h2>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors text-sm font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
+                >
+                  <Check className="w-4 h-4" />
+                  Save Template
+                </button>
               </div>
             </div>
 
-            {/* Main Content Area */}
-            <div className="p-8">
-            {/* Form Fields */}
-            <div className="space-y-8">
-              {/* Basic Information Section */}
-              <div className="space-y-6">
-                <div className="border-b border-gray-200 pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
-                  <p className="text-sm text-gray-500 mt-1">Provide the essential details for your email template</p>
+            {/* Basic Information Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-blue-400 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-blue-100 text-blue-700">
+                  <Info className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Basic Information</h3>
+                  <p className="text-xs text-gray-500">Provide the essential details for your email template</p>
                 </div>
-                
+              </div>
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Template Code */}
                   <div className="relative">
@@ -678,22 +697,40 @@ export default function NewEmailTemplatePage() {
                 {/* Template Type and Active Status Row */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Template Type */}
-                  <div className="relative">
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Template Type <span className="text-red-500">*</span>
                     </label>
-                    <div className="relative">
-                      <select
-                        value={formData.templateType}
-                        onChange={(e) => handleFieldChange("templateType", e.target.value as "HTML" | "PLAIN_TEXT")}
-                        onFocus={() => handleFieldFocus("templateType")}
-                        onBlur={() => handleFieldBlur("templateType")}
-                        className="w-full px-4 py-2.5 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm appearance-none bg-white transition-all"
-                      >
-                        <option value="HTML">HTML</option>
-                        <option value="PLAIN_TEXT">Plain Text</option>
-                      </select>
-                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                    <div className="grid grid-cols-2 gap-3">
+                      {(
+                        [
+                          { value: "HTML" as const, label: "HTML", icon: FileCode2 },
+                          { value: "PLAIN_TEXT" as const, label: "Plain Text", icon: FileText },
+                        ]
+                      ).map(({ value, label, icon: Icon }) => {
+                        const isSelected = formData.templateType === value;
+                        return (
+                          <div
+                            key={value}
+                            onClick={() => handleFieldChange("templateType", value)}
+                            className={`relative flex items-center gap-2 px-3.5 py-2.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                              isSelected
+                                ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                                : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
+                          >
+                            <Icon className={`w-4 h-4 shrink-0 ${isSelected ? "text-blue-600" : "text-gray-400"}`} />
+                            <span className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
+                              {label}
+                            </span>
+                            {isSelected && (
+                              <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
+                                <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -706,8 +743,8 @@ export default function NewEmailTemplatePage() {
                       <button
                         type="button"
                         onClick={() => handleFieldChange("active", !formData.active)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                          formData.active ? 'bg-blue-600' : 'bg-gray-300'
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${
+                          formData.active ? 'bg-emerald-500' : 'bg-gray-300'
                         }`}
                       >
                         <span
@@ -716,21 +753,31 @@ export default function NewEmailTemplatePage() {
                           }`}
                         />
                       </button>
-                      <span className="ml-3 text-sm text-gray-600">
+                      <span
+                        className={`ml-3 inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          formData.active ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
                         {formData.active ? 'Active' : 'Inactive'}
                       </span>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {/* Email Content Section */}
-              <div className="space-y-6">
-                <div className="border-b border-gray-200 pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Email Content</h3>
-                  <p className="text-sm text-gray-500 mt-1">Define the subject and body of your email template</p>
+            {/* Email Content Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-indigo-400 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-indigo-100 text-indigo-700">
+                  <Mail className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Email Content</h3>
+                  <p className="text-xs text-gray-500">Define the subject and body of your email template</p>
                 </div>
-
+              </div>
+              <div className="space-y-6">
                 {/* Subject */}
                 <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -788,15 +835,20 @@ export default function NewEmailTemplatePage() {
                   />
                 </div>
               </div>
+            </div>
 
-              {/* Metadata Section */}
-              <div className="space-y-6">
-                <div className="border-b border-gray-200 pb-3">
-                  <h3 className="text-lg font-semibold text-gray-900">Metadata</h3>
-                  <p className="text-sm text-gray-500 mt-1">Optional tracking information</p>
+            {/* Metadata Section */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-purple-400 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-purple-100 text-purple-700">
+                  <Tag className="w-4 h-4" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900">Metadata</h3>
+                  <p className="text-xs text-gray-500">Optional tracking information</p>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Created By */}
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -829,15 +881,19 @@ export default function NewEmailTemplatePage() {
                     />
                   </div>
                 </div>
-              </div>
+            </div>
 
-              {/* Body Editor */}
-              <div className="space-y-6">
+            {/* Body Editor */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-amber-400 p-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-amber-100 text-amber-700">
+                  <Code className="w-4 h-4" />
+                </span>
+                <h3 className="text-sm font-semibold text-gray-900">
+                  Body <span className="text-red-500">*</span>
+                </h3>
+              </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Body <span className="text-red-500">*</span>
-                  </label>
-                
                   {formData.templateType === "HTML" ? (
                     <div className="border border-gray-300 rounded-lg overflow-hidden shadow-sm">
                       {/* Toolbar - Only show for HTML */}
@@ -989,36 +1045,23 @@ export default function NewEmailTemplatePage() {
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="mt-10 pt-6 border-t border-gray-200 flex justify-end gap-3">
-                  <button
-                    onClick={handleCancel}
-                    className="px-6 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium shadow-sm"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleSave}
-                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
-                    Save Template
-                  </button>
-            </div>
-          </div>
         </div>
 
         {/* Right Section - Parameters List */}
-        <div className="w-80 flex-shrink-0 bg-white rounded-md shadow overflow-hidden flex flex-col" style={{ position: 'fixed', top: '84px', right: '24px', maxHeight: 'calc(100vh - 108px)', zIndex: 1000, width: '320px' }}>
-            <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-              <h3 className="text-sm font-semibold text-gray-900">Available Attributes</h3>
+        <div className="w-80 flex-shrink-0 bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 border-l-teal-400 overflow-hidden flex flex-col" style={{ position: 'fixed', top: '84px', right: '24px', maxHeight: 'calc(100vh - 108px)', zIndex: 1000, width: '320px' }}>
+            <div className="px-5 py-3 border-b border-gray-100 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="flex items-center justify-center w-7 h-7 rounded-md bg-teal-100 text-teal-700">
+                  <Hash className="w-3.5 h-3.5" />
+                </span>
+                <h3 className="text-sm font-semibold text-gray-900">Available Attributes</h3>
+              </div>
             </div>
-            
-            <div className="p-4 pt-6 overflow-y-auto flex-1" style={{ minHeight: 0 }}>
+
+            <div className="p-4 overflow-y-auto flex-1" style={{ minHeight: 0 }}>
               {attributesLoading ? (
                 <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
                   <span className="ml-2 text-sm text-gray-600">Loading attributes...</span>
                 </div>
               ) : attributesError ? (
@@ -1026,16 +1069,16 @@ export default function NewEmailTemplatePage() {
               ) : attributes.length === 0 ? (
                 <div className="text-sm text-gray-500 py-4">No attributes available</div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {attributes.map((attribute, index) => (
                     <button
                       key={index}
                       type="button"
                       onClick={() => insertAttribute(attribute)}
-                      className="w-full text-left px-3 py-2 text-xs font-mono bg-gray-50 hover:bg-blue-50 hover:border-blue-200 border border-gray-200 rounded-md transition-colors group"
+                      className="w-full text-left px-3 py-2 text-xs font-mono bg-gray-50 hover:bg-teal-50 hover:border-teal-200 border border-gray-200 rounded-md transition-colors group"
                       title={`Click to insert ${attribute}`}
                     >
-                      <span className="text-gray-700 group-hover:text-blue-700">{attribute}</span>
+                      <span className="text-gray-700 group-hover:text-teal-700">{attribute}</span>
                     </button>
                   ))}
                 </div>

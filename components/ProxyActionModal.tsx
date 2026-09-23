@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { createPortal } from "react-dom";
+import { CircleCheck } from "lucide-react";
 import { executeQuery } from "@/lib/api";
 
 type Attribute = {
@@ -9,6 +10,24 @@ type Attribute = {
 
 type User = Record<string, string>;
 type Group = Record<string, string>;
+
+// Maps a selectable "Select Attribute" value to the real usr/kf_groups column to query.
+// email is stored as jsonb, so it needs a ::text cast for ILIKE. Attributes with no
+// known column (e.g. the placeholder "role" option on groups) fall back to a safe default.
+const USER_QUERY_COLUMNS: Record<string, string> = {
+  username: "username",
+  email: "email::text",
+  displayname: "displayname",
+  firstname: "firstname",
+  lastname: "lastname",
+  department: "department",
+  title: "title",
+};
+
+const GROUP_QUERY_COLUMNS: Record<string, string> = {
+  name: "name",
+  description: "description",
+};
 
 interface ProxyActionModalProps {
   isModalOpen: boolean;
@@ -42,50 +61,50 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
     userAttributes[0].value
   );
   const [searchValue, setSearchValue] = useState("");
+  const [appliedSearchValue, setAppliedSearchValue] = useState("");
   const [selectedItem, setSelectedItem] = useState<User | Group | null>(null);
   const [apiUsers, setApiUsers] = useState<User[]>([]);
   const [apiGroups, setApiGroups] = useState<Group[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   const [isLoadingGroups, setIsLoadingGroups] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const hasFetchedUsersRef = useRef<boolean>(false);
-  const hasFetchedGroupsRef = useRef<boolean>(false);
-  const isUsersFetchInProgressRef = useRef<boolean>(false);
-  const isGroupsFetchInProgressRef = useRef<boolean>(false);
+  const searchRequestIdRef = useRef(0);
 
-  // Fetch users and groups when modal opens
-  useEffect(() => {
-    if (!isModalOpen) {
-      // Reset flags when modal closes
-      hasFetchedUsersRef.current = false;
-      hasFetchedGroupsRef.current = false;
-      isUsersFetchInProgressRef.current = false;
-      isGroupsFetchInProgressRef.current = false;
+  const sourceData = ownerType === "User" ? apiUsers : apiGroups;
+  const currentAttributes =
+    ownerType === "User" ? userAttributes : groupAttributes;
+
+  // Server-side results are already filtered by the WHERE clause below, so no client-side filtering needed.
+  const filteredData = sourceData;
+
+  // Run the search only when explicitly triggered (Search button / Enter) — queries with a WHERE clause
+  // instead of pulling the whole usr / kf_groups table.
+  const handleSearch = async () => {
+    const term = searchValue.trim();
+    setAppliedSearchValue(term);
+    setApiError(null);
+
+    if (!term) {
+      setApiUsers([]);
+      setApiGroups([]);
       return;
     }
 
-    // Fetch users immediately when modal opens
-    const fetchUsersOnOpen = async () => {
-      if (hasFetchedUsersRef.current || isUsersFetchInProgressRef.current) {
-        return;
-      }
+    const requestId = ++searchRequestIdRef.current;
+    const like = `%${term}%`;
 
+    if (ownerType === "User") {
       setIsLoadingUsers(true);
-      setApiError(null);
-      isUsersFetchInProgressRef.current = true;
-
       try {
-        // Explicitly include userid so we can send the correct internal ID
-        const query = `SELECT *, userid FROM usr`;
-        console.log("Fetching users when modal opens...");
-        
-        const response = await executeQuery<any>(query, []);
-        
+        const column = USER_QUERY_COLUMNS[selectedAttribute] || "username";
+        const query = `SELECT *, userid FROM usr WHERE ${column} ILIKE ? LIMIT 50`;
+        const response = await executeQuery<any>(query, [like]);
+
         let usersData: User[] = [];
         if (response?.resultSet && Array.isArray(response.resultSet)) {
           usersData = response.resultSet.map((user: any) => {
             let emailValue = "";
-            
+
             if (user.email) {
               if (typeof user.email === "string") {
                 emailValue = user.email;
@@ -96,7 +115,7 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
                 emailValue = primaryEmail?.value || "";
               }
             }
-            
+
             // Preserve the internal user identifier (userid/id) so callers
             // can send the correct ID in downstream APIs (e.g., reassign).
             const internalId = user.userid || user.id || user.userUniqueID || "";
@@ -110,111 +129,58 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
           });
         }
 
-        console.log("Fetched users on modal open:", usersData.length);
-        setApiUsers(usersData);
-        hasFetchedUsersRef.current = true;
+        if (requestId === searchRequestIdRef.current) {
+          setApiUsers(usersData);
+        }
       } catch (error) {
-        console.error("Error fetching users when modal opens:", error);
-        setApiError(error instanceof Error ? error.message : "Failed to fetch users");
+        console.error("Error searching users:", error);
+        if (requestId === searchRequestIdRef.current) {
+          setApiError(error instanceof Error ? error.message : "Failed to search users");
+          setApiUsers([]);
+        }
       } finally {
-        setIsLoadingUsers(false);
-        isUsersFetchInProgressRef.current = false;
+        if (requestId === searchRequestIdRef.current) {
+          setIsLoadingUsers(false);
+        }
       }
-    };
-
-    // Fetch groups immediately when modal opens
-    const fetchGroupsOnOpen = async () => {
-      if (hasFetchedGroupsRef.current || isGroupsFetchInProgressRef.current) {
-        return;
-      }
-
+    } else {
       setIsLoadingGroups(true);
-      isGroupsFetchInProgressRef.current = true;
-
       try {
-        const query = `SELECT * FROM kf_groups`;
-        console.log("Fetching groups when modal opens...");
-        
-        const response = await executeQuery<any>(query, []);
-        
+        const column = GROUP_QUERY_COLUMNS[selectedAttribute] || "name";
+        const query = `SELECT * FROM kf_groups WHERE ${column} ILIKE ? LIMIT 50`;
+        const response = await executeQuery<any>(query, [like]);
+
         let groupsData: Group[] = [];
         if (response?.resultSet && Array.isArray(response.resultSet)) {
-          groupsData = response.resultSet.map((group: any) => {
-            return {
-              ...group,
-              id: group.group_id || group.id || "",
-              name: group.group_name || group.name || "",
-            };
-          });
+          groupsData = response.resultSet.map((group: any) => ({
+            ...group,
+            id: group.group_id || group.id || "",
+            name: group.group_name || group.name || "",
+          }));
         }
 
-        console.log("Fetched groups on modal open:", groupsData.length);
-        setApiGroups(groupsData);
-        hasFetchedGroupsRef.current = true;
+        if (requestId === searchRequestIdRef.current) {
+          setApiGroups(groupsData);
+        }
       } catch (error) {
-        console.error("Error fetching groups when modal opens:", error);
-        setApiError(error instanceof Error ? error.message : "Failed to fetch groups");
+        console.error("Error searching groups:", error);
+        if (requestId === searchRequestIdRef.current) {
+          setApiError(error instanceof Error ? error.message : "Failed to search groups");
+          setApiGroups([]);
+        }
       } finally {
-        setIsLoadingGroups(false);
-        isGroupsFetchInProgressRef.current = false;
+        if (requestId === searchRequestIdRef.current) {
+          setIsLoadingGroups(false);
+        }
       }
-    };
+    }
+  };
 
-    // Fetch both users and groups in parallel when modal opens
-    Promise.all([fetchUsersOnOpen(), fetchGroupsOnOpen()]).catch((error) => {
-      console.error("Error in parallel fetch:", error);
-    });
-  }, [isModalOpen]);
-
-
-  const sourceData = ownerType === "User" 
-    ? apiUsers 
-    : (apiGroups.length > 0 ? apiGroups : groups);
-  const currentAttributes =
-    ownerType === "User" ? userAttributes : groupAttributes;
-
-  // Filter API results client-side based on search value and selected attribute
-  const filteredData =
-    searchValue.trim() === ""
-      ? []
-      : sourceData.filter((item) => {
-          if (!item || typeof item !== 'object') return false;
-          
-          // Try multiple possible keys for the attribute
-          const possibleKeys = [
-            selectedAttribute,
-            selectedAttribute.toLowerCase(),
-            selectedAttribute.toUpperCase(),
-          ];
-          
-          // Also try common variations based on selected attribute
-          if (selectedAttribute.toLowerCase() === "username") {
-            possibleKeys.push("username", "user_name", "userName", "USERNAME", "user");
-          } else if (selectedAttribute.toLowerCase() === "email") {
-            possibleKeys.push("email", "EMAIL", "e_mail", "eMail");
-          }
-          
-          // Find the value using any of the possible keys
-          let value = "";
-          for (const key of possibleKeys) {
-            if (item[key] !== undefined && item[key] !== null) {
-              value = String(item[key]);
-              break;
-            }
-          }
-          
-          // If we found a value in the selected attribute, filter by it
-          if (value) {
-            return value.toLowerCase().includes(searchValue.toLowerCase());
-          }
-          
-          // Fallback: search in all string values if attribute not found
-          const allValues = Object.values(item)
-            .filter(v => v !== null && v !== undefined)
-            .map(v => String(v))
-            .join(" ");
-          return allValues.toLowerCase().includes(searchValue.toLowerCase());
-        });
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  };
 
   const handleClose = () => {
     resetState();
@@ -238,28 +204,20 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
     setOwnerType("User");
     setSelectedAttribute(userAttributes[0]?.value || "");
     setSearchValue("");
+    setAppliedSearchValue("");
     setSelectedItem(null);
     setApiUsers([]);
     setApiGroups([]);
     setApiError(null);
     setIsLoadingUsers(false);
     setIsLoadingGroups(false);
-    hasFetchedUsersRef.current = false;
-    hasFetchedGroupsRef.current = false;
-    isUsersFetchInProgressRef.current = false;
-    isGroupsFetchInProgressRef.current = false;
+    searchRequestIdRef.current += 1;
   };
 
   useEffect(() => {
     if (!isModalOpen) resetState();
   }, [isModalOpen]);
 
-  // Reset API users/groups when switching between User and Group
-  useEffect(() => {
-    // Don't reset if data was already fetched on modal open
-    // Only reset the search-related state
-    setApiError(null);
-  }, [ownerType]);
   if (!isModalOpen) {
     return null;
   }
@@ -309,6 +267,11 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
                 type === "User" ? userAttributes[0] : groupAttributes[0];
               setSelectedAttribute(initialAttr?.value || "");
               setSearchValue("");
+              setAppliedSearchValue("");
+              setApiUsers([]);
+              setApiGroups([]);
+              setApiError(null);
+              searchRequestIdRef.current += 1;
             }}
           >
             {type}
@@ -356,38 +319,53 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Search Value
         </label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg
-              className="w-4 h-4 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <button
+              type="button"
+              onClick={handleSearch}
+              className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 hover:text-gray-600"
+              aria-label="Search"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </button>
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              onKeyDown={handleSearchKeyDown}
+              className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Search"
+            />
           </div>
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-            className="w-full border border-gray-300 rounded-md pl-10 pr-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="Search"
-          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            className="px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            Search
+          </button>
         </div>
       </div>
 
       {/* Filtered List */}
-      {searchValue.trim() !== "" && (
-        <div className="max-h-36 overflow-auto border rounded p-2 mb-3 text-sm bg-gray-50">
+      {appliedSearchValue.trim() !== "" && (
+        <div className="max-h-48 overflow-auto border border-gray-200 rounded-lg mb-3 bg-white">
           {(isLoadingUsers && ownerType === "User") || (isLoadingGroups && ownerType === "Group") ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="flex items-center gap-2 text-gray-500">
+            <div className="flex items-center justify-center py-6">
+              <div className="flex items-center gap-2 text-gray-500 text-sm">
                 <svg
                   className="animate-spin h-4 w-4"
                   xmlns="http://www.w3.org/2000/svg"
@@ -412,49 +390,56 @@ const ProxyActionModal: React.FC<ProxyActionModalProps> = ({
               </div>
             </div>
           ) : apiError ? (
-            <p className="text-red-500 italic text-xs py-2">
+            <p className="text-red-500 italic text-xs p-3">
               Error: {apiError}
             </p>
-          ) : filteredData.length === 0 && ((ownerType === "User" && apiUsers.length > 0) || (ownerType === "Group" && apiGroups.length > 0)) ? (
-            <p className="text-gray-500 italic">
-              No results found matching "{searchValue}" in {selectedAttribute}.
-              <br />
-              <span className="text-xs">
-                (Found {ownerType === "User" ? apiUsers.length : apiGroups.length} total {ownerType === "User" ? "users" : "groups"})
-              </span>
-            </p>
           ) : filteredData.length === 0 ? (
-            <p className="text-gray-500 italic">No results found.</p>
+            <p className="text-gray-500 italic text-sm p-3">
+              No results found matching "{appliedSearchValue}" in {selectedAttribute}.
+            </p>
           ) : (
-            <ul className="space-y-1">
-              {filteredData.map((item, index) => (
-                <li
-                  key={index}
-                  className={`p-2 border rounded cursor-pointer transition-colors ${
-                    selectedItem === item
-                      ? "bg-blue-100 border-blue-300"
-                      : "hover:bg-gray-100"
-                  }`}
-                  onClick={() => {
-                    if (inline) {
-                      onSelectOwner(item);
-                      resetState();
-                      closeModal();
-                    } else {
-                      setSelectedItem(item);
-                    }
-                  }}
-                >
-                  {/* Display username and email if available */}
-                  {item.username && item.email
-                    ? `${item.username} | ${item.email}`
-                    : item.email
+            <ul className="divide-y divide-gray-100">
+              {filteredData.map((item, index) => {
+                const isSelected = selectedItem === item;
+                const primary =
+                  item.username || item.name || item.email || Object.values(item)[0] || "Unknown";
+                const secondary =
+                  (item.username || item.name) && item.email && item.email !== primary
                     ? item.email
-                    : item.username
-                    ? item.username
-                    : Object.values(item).join(" | ")}
-                </li>
-              ))}
+                    : null;
+                const initials = primary.toString().slice(0, 2).toUpperCase();
+
+                return (
+                  <li
+                    key={index}
+                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${
+                      isSelected ? "bg-blue-50" : "hover:bg-gray-50"
+                    }`}
+                    onClick={() => {
+                      if (inline) {
+                        onSelectOwner(item);
+                        resetState();
+                        closeModal();
+                      } else {
+                        setSelectedItem(item);
+                      }
+                    }}
+                  >
+                    <div
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
+                        isSelected ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-600"
+                      }`}
+                    >
+                      {initials}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-medium text-gray-900 truncate">{primary}</div>
+                      {secondary && <div className="text-xs text-gray-500 truncate">{secondary}</div>}
+                    </div>
+                    {isSelected && <CircleCheck size={16} className="text-blue-600 shrink-0" />}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

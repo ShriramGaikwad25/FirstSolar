@@ -108,7 +108,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
           marginLeft: isSidebarVisible ? sidebarWidthPx : 0,
         }}
       >
-        <main className={`min-h-0 min-w-0 flex-1 overflow-auto bg-gray-50 ${mainPadClass}`}>
+        <main className={`min-h-0 min-w-0 flex-1 overflow-auto bg-gray-100 ${mainPadClass}`}>
           {children}
         </main>
       </div>

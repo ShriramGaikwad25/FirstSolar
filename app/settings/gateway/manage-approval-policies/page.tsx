@@ -5,15 +5,73 @@ import { themeQuartz } from "ag-grid-community";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useForm, Control, FieldValues, UseFormSetValue, UseFormWatch } from "react-hook-form";
-import { Check, ChevronLeft, ChevronRight, Eye } from "lucide-react";
-import { asterisk, downArrow } from "@/utils/utils";
+import { Check, ChevronLeft, ChevronRight, Eye, Tag, FileText, User, Hash, Search } from "lucide-react";
+import { asterisk } from "@/utils/utils";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import ExpressionBuilder from "@/components/ExpressionBuilder";
 import { executeQuery } from "@/lib/api";
+import CustomPagination from "@/components/agTable/CustomPagination";
 import type { ColDef } from "ag-grid-community";
 
 type Status = "Staging" | "Active" | "Inactive";
 type Priority = "Low" | "Medium" | "High" | "Critical";
+
+type SelectionColorSet = { border: string; bg: string; ring: string; text: string; dot: string };
+
+const PRIORITY_COLORS: Record<Priority, SelectionColorSet> = {
+  Low: {
+    border: "border-emerald-500",
+    bg: "bg-emerald-50",
+    ring: "ring-1 ring-emerald-500/30",
+    text: "text-emerald-700",
+    dot: "bg-emerald-500",
+  },
+  Medium: {
+    border: "border-blue-500",
+    bg: "bg-blue-50",
+    ring: "ring-1 ring-blue-500/30",
+    text: "text-blue-700",
+    dot: "bg-blue-500",
+  },
+  High: {
+    border: "border-amber-500",
+    bg: "bg-amber-50",
+    ring: "ring-1 ring-amber-500/30",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
+  },
+  Critical: {
+    border: "border-red-500",
+    bg: "bg-red-50",
+    ring: "ring-1 ring-red-500/30",
+    text: "text-red-700",
+    dot: "bg-red-500",
+  },
+};
+
+const STATUS_COLORS: Record<Status, SelectionColorSet> = {
+  Staging: {
+    border: "border-amber-500",
+    bg: "bg-amber-50",
+    ring: "ring-1 ring-amber-500/30",
+    text: "text-amber-700",
+    dot: "bg-amber-500",
+  },
+  Active: {
+    border: "border-emerald-500",
+    bg: "bg-emerald-50",
+    ring: "ring-1 ring-emerald-500/30",
+    text: "text-emerald-700",
+    dot: "bg-emerald-500",
+  },
+  Inactive: {
+    border: "border-gray-400",
+    bg: "bg-gray-50",
+    ring: "ring-1 ring-gray-400/30",
+    text: "text-gray-700",
+    dot: "bg-gray-500",
+  },
+};
 
 type ConditionSubject =
   | "Request Type"
@@ -155,7 +213,6 @@ function getWorkflowTemplateIdFromPolicyRow(row: unknown): string | null {
 export default function ManageApprovalPoliciesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<"list" | "create">("list");
   const [policies, setPolicies] = useState<
     {
       id: string;
@@ -171,6 +228,8 @@ export default function ManageApprovalPoliciesPage() {
     }[]
   >([]);
   const [isLoadingList, setIsLoadingList] = useState<boolean>(false);
+  const [listCurrentPage, setListCurrentPage] = useState<number>(1);
+  const [listPageSize, setListPageSize] = useState<number | "all">(10);
   const [listError, setListError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<ApprovalPolicyFormData>({
@@ -201,6 +260,11 @@ export default function ManageApprovalPoliciesPage() {
   const [workflowRows, setWorkflowRows] = useState<WorkflowDefinition[]>([]);
   const { isVisible: isSidebarVisible, sidebarWidthPx } = useLeftSidebar();
   const reviewEditRequested = searchParams.get("edit") === "1";
+  // Mode is derived from the URL (not local state) so the sidebar's "Back to Approval
+  // Policy" link (Navigation.tsx) can detect create mode, and so the browser back
+  // button / that sidebar link reliably return to the list view.
+  const viewParam = searchParams.get("view") ?? "";
+  const mode: "list" | "create" = viewParam === "create" || reviewEditRequested ? "create" : "list";
 
   const AgGridReact = useMemo(
     () => dynamic(() => import("ag-grid-react").then((mod) => mod.AgGridReact), { ssr: false }),
@@ -222,7 +286,11 @@ export default function ManageApprovalPoliciesPage() {
   const approvalConditions = (conditionWatch("approvalConditions") as any[]) || [];
 
   const onEditPolicy = (row: any) => {
-    setMode("create");
+    // Preserve any existing query params (e.g. `edit=1` from the Review page) while
+    // adding `view=create`, so mode derivation above keeps working for both entry points.
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.set("view", "create");
+    router.push(`/settings/gateway/manage-approval-policies?${nextParams.toString()}`);
     setCurrentStep(1);
 
     const linkedWorkflowId = getWorkflowTemplateIdFromPolicyRow(row);
@@ -256,6 +324,44 @@ export default function ManageApprovalPoliciesPage() {
       shouldValidate: false,
     });
     setWorkflowSearch("");
+  };
+
+  /** Reset the wizard back to a blank state before starting a fresh "Create" flow — otherwise
+   * form state from a previous edit/create session (formData, step, conditions) carries over,
+   * since navigating between ?view=create and the list is a query-param change, not a remount. */
+  const handleStartNewPolicy = () => {
+    setFormData({
+      step1: {
+        name: "",
+        description: "",
+        owner: "",
+        tags: "",
+        priority: "Medium",
+        status: "Staging",
+      },
+      step2: {
+        rules: [
+          {
+            id: `rule-${Date.now()}`,
+            subject: "Request Type",
+            attribute: "Type",
+            operand: "equals",
+            value: "Access Request",
+          },
+        ],
+      },
+      step3: {
+        selectedWorkflowId: null,
+      },
+    });
+    setCurrentStep(1);
+    setConditionSubject("Request Type");
+    conditionSetValue("approvalConditions", [], {
+      shouldDirty: false,
+      shouldValidate: false,
+    });
+    setWorkflowSearch("");
+    router.push("/settings/gateway/manage-approval-policies?view=create");
   };
 
   useEffect(() => {
@@ -314,7 +420,7 @@ export default function ManageApprovalPoliciesPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="p-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                className="w-8 h-8 flex items-center justify-center border border-gray-300 rounded-md text-indigo-600 hover:bg-indigo-50 hover:border-indigo-400 transition-colors"
                 aria-label="View approval policy"
                 onClick={() => {
                   const row = params.data;
@@ -344,7 +450,7 @@ export default function ManageApprovalPoliciesPage() {
                   router.push("/settings/gateway/manage-approval-policies/review");
                 }}
               >
-                <Eye className="w-4 h-4 text-gray-700" />
+                <Eye className="w-4 h-4" />
               </button>
             </div>
           );
@@ -354,14 +460,29 @@ export default function ManageApprovalPoliciesPage() {
     [onEditPolicy]
   );
 
+  const listTotalPages = Math.max(
+    1,
+    listPageSize === "all" ? 1 : Math.ceil(policies.length / (listPageSize as number))
+  );
+  const paginatedPolicies = useMemo(() => {
+    if (listPageSize === "all") return policies;
+    const start = (listCurrentPage - 1) * (listPageSize as number);
+    return policies.slice(start, start + (listPageSize as number));
+  }, [policies, listCurrentPage, listPageSize]);
+
   const approvalListRows = useMemo(
     () =>
-      policies.flatMap((p) => [
+      paginatedPolicies.flatMap((p) => [
         { ...p, _rowType: "main" },
         { ...p, _rowType: "description" },
       ]),
-    [policies]
+    [paginatedPolicies]
   );
+
+  // Reset to first page whenever the policy list is (re)loaded
+  useEffect(() => {
+    setListCurrentPage(1);
+  }, [policies]);
 
   // Load policies list from API when in list mode
   useEffect(() => {
@@ -813,42 +934,66 @@ export default function ManageApprovalPoliciesPage() {
   const renderStep = () => {
     if (currentStep === 1) {
       return (
-        <div className="w-full py-3 px-6">
-          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Approval Policy Details
-            </h2>
+        <div className="w-full px-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="space-y-6 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="relative min-w-0">
+                  <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 pointer-events-none" aria-hidden />
+                  <input
+                    type="text"
+                    value={formData.step1.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        step1: { ...prev.step1, name: e.target.value },
+                      }))
+                    }
+                    className="w-full pl-10 pr-9 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
+                    placeholder=" "
+                  />
+                  <label
+                    className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                      formData.step1.name ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                    }`}
+                  >
+                    Name *
+                  </label>
+                  {formData.step1.name.trim() && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" aria-hidden />
+                  )}
+                </div>
 
-            <div className="space-y-4 text-sm">
-              <div>
-                <label
-                  className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}
-                >
-                  Name
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.step1.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      step1: { ...prev.step1, name: e.target.value },
-                    }))
-                  }
-                  placeholder="e.g. High-Risk SAP Access Approval"
-                />
+                <div className="relative min-w-0">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" aria-hidden />
+                  <input
+                    type="text"
+                    value={formData.step1.owner}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        step1: { ...prev.step1, owner: e.target.value },
+                      }))
+                    }
+                    className="w-full pl-10 pr-9 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
+                    placeholder=" "
+                  />
+                  <label
+                    className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                      formData.step1.owner ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                    }`}
+                  >
+                    Owner *
+                  </label>
+                  {formData.step1.owner.trim() && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" aria-hidden />
+                  )}
+                </div>
               </div>
 
-              <div>
-                <label
-                  className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}
-                >
-                  Description
-                </label>
+              <div className="relative">
+                <FileText className="absolute left-3.5 top-5 w-4 h-4 text-amber-500 pointer-events-none" aria-hidden />
                 <textarea
-                  className="form-input resize-y"
-                  rows={3}
                   value={formData.step1.description}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -856,37 +1001,26 @@ export default function ManageApprovalPoliciesPage() {
                       step1: { ...prev.step1, description: e.target.value },
                     }))
                   }
-                  placeholder="Short description of when and how this approval policy should be used."
+                  className="w-full pl-10 pr-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline resize-none"
+                  rows={3}
+                  placeholder=" "
                 />
-              </div>
-
-              <div>
                 <label
-                  className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}
+                  className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                    formData.step1.description ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                  }`}
                 >
-                  Owner
+                  Description *
                 </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.step1.owner}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      step1: { ...prev.step1, owner: e.target.value },
-                    }))
-                  }
-                  placeholder="e.g. IAM Team / Risk Office"
-                />
+                <div className="text-right text-xs text-gray-400 mt-1">
+                  {formData.step1.description.length} characters
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tags
-                </label>
+              <div className="relative">
+                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 pointer-events-none" aria-hidden />
                 <input
                   type="text"
-                  className="form-input"
                   value={formData.step1.tags}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -894,72 +1028,93 @@ export default function ManageApprovalPoliciesPage() {
                       step1: { ...prev.step1, tags: e.target.value },
                     }))
                   }
-                  placeholder="Comma-separated tags, e.g. sox, high-risk, sap"
+                  className="w-full pl-10 pr-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
+                  placeholder=" "
                 />
+                <label
+                  className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                    formData.step1.tags ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                  }`}
+                >
+                  Tags
+                </label>
               </div>
 
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="w-full md:w-1/3">
-                  <label
-                    className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}
-                  >
-                    Priority
-                  </label>
-                  <select
-                    className="form-input bg-white"
-                    value={formData.step1.priority}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        step1: {
-                          ...prev.step1,
-                          priority: e.target.value as Priority,
-                        },
-                      }))
-                    }
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
+              <div>
+                <label
+                  className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
+                >
+                  Priority
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(["Low", "Medium", "High", "Critical"] as Priority[]).map((priority) => {
+                    const isSelected = formData.step1.priority === priority;
+                    const colors = PRIORITY_COLORS[priority];
+                    return (
+                      <div
+                        key={priority}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            step1: { ...prev.step1, priority },
+                          }))
+                        }
+                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                          isSelected
+                            ? `${colors.border} ${colors.bg} ${colors.ring}`
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                        }`}
+                      >
+                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
+                          {priority}
+                        </span>
+                        {isSelected && (
+                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
+              </div>
 
-                <div className="flex-1">
-                  <label
-                    className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
-                  >
-                    Status
-                  </label>
-                  <div className="inline-flex rounded-md border border-gray-300 overflow-hidden">
-                    {(["Staging", "Active", "Inactive"] as Status[]).map(
-                      (status, index, array) => (
-                        <button
-                          key={status}
-                          type="button"
-                          onClick={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              step1: { ...prev.step1, status },
-                            }))
-                          }
-                          className={`relative px-4 py-2 text-xs font-medium border-r last:border-r-0 ${
-                            formData.step1.status === status
-                              ? `bg-[#15274E] text-white ${downArrow}`
-                              : "bg-white text-gray-700"
-                          } ${
-                            index === 0
-                              ? "rounded-l-md"
-                              : index === array.length - 1
-                              ? "rounded-r-md"
-                              : ""
-                          }`}
-                        >
+              <div>
+                <label
+                  className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
+                >
+                  Status
+                </label>
+                <div className="grid grid-cols-3 gap-3 max-w-md">
+                  {(["Staging", "Active", "Inactive"] as Status[]).map((status) => {
+                    const isSelected = formData.step1.status === status;
+                    const colors = STATUS_COLORS[status];
+                    return (
+                      <div
+                        key={status}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            step1: { ...prev.step1, status },
+                          }))
+                        }
+                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
+                          isSelected
+                            ? `${colors.border} ${colors.bg} ${colors.ring}`
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                        }`}
+                      >
+                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
                           {status}
-                        </button>
-                      )
-                    )}
-                  </div>
+                        </span>
+                        {isSelected && (
+                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -970,18 +1125,12 @@ export default function ManageApprovalPoliciesPage() {
 
     if (currentStep === 2) {
       return (
-        <div className="w-full py-3 px-3 space-y-3 text-sm">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-gray-700 whitespace-nowrap mr-1">
+        <div className="w-full px-6 space-y-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Condition Rule
             </label>
-            <select
-              className="form-input w-56 bg-white"
-              value={conditionSubject}
-              onChange={(e) =>
-                setConditionSubject(e.target.value as ConditionSubject)
-              }
-            >
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
               {(
                 [
                   "Request Type",
@@ -990,157 +1139,141 @@ export default function ManageApprovalPoliciesPage() {
                   "Service Account",
                   "User",
                 ] as ConditionSubject[]
-              ).map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              ).map((s) => {
+                const isSelected = conditionSubject === s;
+                return (
+                  <div
+                    key={s}
+                    onClick={() => setConditionSubject(s)}
+                    className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
+                      isSelected
+                        ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <span className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
+                      {s}
+                    </span>
+                    {isSelected && (
+                      <span className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <ExpressionBuilder
-            title="Build Expression"
-            control={
-              conditionControl as unknown as Control<FieldValues>
-            }
-            setValue={
-              conditionSetValue as unknown as UseFormSetValue<FieldValues>
-            }
-            watch={
-              conditionWatch as unknown as UseFormWatch<FieldValues>
-            }
-            fieldName="approvalConditions"
-            attributesOptions={
-              EXPRESSION_ATTRIBUTES[conditionSubject] ??
-              ATTRIBUTE_OPTIONS[conditionSubject].map((attr) => ({
-                label: attr,
-                value: attr.replace(/\s+/g, "_").toLowerCase(),
-              }))
-            }
-            fullWidth
-          />
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <ExpressionBuilder
+              title="Build Expression"
+              control={
+                conditionControl as unknown as Control<FieldValues>
+              }
+              setValue={
+                conditionSetValue as unknown as UseFormSetValue<FieldValues>
+              }
+              watch={
+                conditionWatch as unknown as UseFormWatch<FieldValues>
+              }
+              fieldName="approvalConditions"
+              attributesOptions={
+                EXPRESSION_ATTRIBUTES[conditionSubject] ??
+                ATTRIBUTE_OPTIONS[conditionSubject].map((attr) => ({
+                  label: attr,
+                  value: attr.replace(/\s+/g, "_").toLowerCase(),
+                }))
+              }
+              fullWidth
+            />
+          </div>
         </div>
       );
     }
 
     if (currentStep === 3) {
-      const rowData = filteredWorkflows.map((wf) => ({
-        ...wf,
-        tagsDisplay: (wf.tags ?? []).join(", "),
-      }));
-
-      const columnDefs = [
-        {
-          headerName: "",
-          width: 60,
-          maxWidth: 60,
-          pinned: "left",
-          cellRenderer: (params: any) => {
-            const checked = formData.step3.selectedWorkflowId === params.data.id;
-            return (
-              <input
-                type="radio"
-                checked={checked}
-                onChange={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    step3: { selectedWorkflowId: params.data.id },
-                  }))
-                }
-              />
-            );
-          },
-        },
-        { headerName: "Name", field: "name", flex: 1, minWidth: 220 },
-        { headerName: "Description", field: "description", flex: 2, minWidth: 260 },
-        {
-          headerName: "Stages",
-          field: "stages",
-          width: 110,
-          valueFormatter: (params: any) =>
-            params.value !== undefined && params.value !== null && params.value !== ""
-              ? String(params.value)
-              : "-",
-        },
-        {
-          headerName: "Business Object Type",
-          field: "businessFunction",
-          flex: 1,
-          minWidth: 180,
-        },
-        { headerName: "Owner", field: "owner", flex: 1, minWidth: 160 },
-      ];
-
-      const defaultColDef = {
-        sortable: true,
-        filter: false,
-        resizable: true,
-        wrapText: true,
-        autoHeight: true,
-        cellStyle: {
-          whiteSpace: "normal",
-          wordBreak: "break-word",
-          lineHeight: 1.6,
-          fontSize: "14px",
-        },
-      };
-
       return (
-        <div className="w-full">
-          <div className="flex justify-between items-center mb-3">
-            <div className="relative max-w-md w-full">
-              <input
-                type="text"
-                value={workflowSearch}
-                onChange={(e) => setWorkflowSearch(e.target.value)}
-                placeholder="Search workflows by name, description, tags, owner..."
-                className="form-input w-full"
-              />
-            </div>
-            <div className="text-[11px] text-gray-500">
-              {filteredWorkflows.length} workflow
-              {filteredWorkflows.length === 1 ? "" : "s"} found
-            </div>
-          </div>
-
-          <div className="ag-theme-alpine w-full">
-            <div style={{ width: "100%", minHeight: 260 }}>
-              {/* @ts-ignore - dynamic AgGridReact type */}
-              <AgGridReact
-                theme={themeQuartz}
-                rowData={rowData}
-                columnDefs={columnDefs}
-                defaultColDef={defaultColDef}
-                rowSelection="single"
-                onRowClicked={(event: any) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    step3: { selectedWorkflowId: event.data.id },
-                  }))
-                }
-                domLayout="autoHeight"
-              />
-            </div>
-          </div>
-
-          <style jsx global>{`
-            .ag-theme-alpine {
-              font-size: 14px;
-            }
-            .ag-theme-alpine .ag-cell,
-            .ag-theme-alpine .ag-header-cell-text {
-              line-height: 1.6;
-            }
-          `}</style>
-
-          {/* {currentWorkflow && (
-            <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-900">
-              <div className="font-semibold mb-1">
-                Selected workflow: {currentWorkflow.name}
+        <div className="w-full px-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4 gap-3">
+              <div className="relative max-w-md w-full">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" aria-hidden />
+                <input
+                  type="text"
+                  value={workflowSearch}
+                  onChange={(e) => setWorkflowSearch(e.target.value)}
+                  placeholder="Search workflows by name, description, tags, owner..."
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
-              <div>{currentWorkflow.description}</div>
+              <div className="text-xs text-gray-500 whitespace-nowrap shrink-0">
+                {filteredWorkflows.length} workflow
+                {filteredWorkflows.length === 1 ? "" : "s"} found
+              </div>
             </div>
-          )} */}
+
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+              {filteredWorkflows.length === 0 ? (
+                <div className="text-center text-sm text-gray-400 py-10">
+                  No workflows match your search.
+                </div>
+              ) : (
+                filteredWorkflows.map((wf) => {
+                  const isSelected = formData.step3.selectedWorkflowId === wf.id;
+                  return (
+                    <div
+                      key={wf.id}
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          step3: { selectedWorkflowId: wf.id },
+                        }))
+                      }
+                      className={`relative px-4 py-3 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className={`text-sm font-semibold truncate ${isSelected ? "text-blue-900" : "text-gray-900"}`}>
+                            {wf.name}
+                          </h3>
+                          <p className="text-xs text-gray-600 truncate">{wf.description}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-1.5 shrink-0 max-w-[45%]">
+                          {wf.stages !== undefined && wf.stages !== null && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-medium">
+                              Stages: {wf.stages}
+                            </span>
+                          )}
+                          {wf.businessFunction && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
+                              {wf.businessFunction}
+                            </span>
+                          )}
+                          {wf.owner && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
+                              Owner: {wf.owner}
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       );
     }
@@ -1152,75 +1285,73 @@ export default function ManageApprovalPoliciesPage() {
           .map((t) => t.trim())
           .filter(Boolean) || [];
 
+      const priorityColors = PRIORITY_COLORS[formData.step1.priority];
+      const statusColors = STATUS_COLORS[formData.step1.status];
+
+      const summaryField = (label: string, value: React.ReactNode) => (
+        <div>
+          <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</div>
+          <div className="text-sm text-gray-900 font-medium break-words">{value}</div>
+        </div>
+      );
+
       return (
-        <div className="w-full py-3 px-6 space-y-6">
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">Approval Policy</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+        <div className="w-full px-6 space-y-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Approval Policy</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+              {summaryField(
+                "Name",
+                formData.step1.name || <span className="text-gray-400 font-normal">Not provided</span>
+              )}
+              {summaryField(
+                "Owner",
+                formData.step1.owner || <span className="text-gray-400 font-normal">Not provided</span>
+              )}
               <div>
-                <div className="font-medium text-gray-600 mb-1">Name</div>
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
-                  {formData.step1.name || (
-                    <span className="text-gray-400">Not provided</span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-600 mb-1">Owner</div>
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
-                  {formData.step1.owner || (
-                    <span className="text-gray-400">Not provided</span>
-                  )}
-                </div>
-              </div>
-              <div>
-                <div className="font-medium text-gray-600 mb-1">Priority</div>
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Priority</div>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${priorityColors.bg} ${priorityColors.text}`}>
                   {formData.step1.priority}
-                </div>
+                </span>
               </div>
               <div>
-                <div className="font-medium text-gray-600 mb-1">Status</div>
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Status</div>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors.bg} ${statusColors.text}`}>
                   {formData.step1.status}
-                </div>
+                </span>
               </div>
-              <div className="md:col-span-2">
-                <div className="font-medium text-gray-600 mb-1">Description</div>
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50 text-gray-900">
-                  {formData.step1.description || (
-                    <span className="text-gray-400">Not provided</span>
-                  )}
-                </div>
-              </div>
-              <div className="md:col-span-2">
-                <div className="font-medium text-gray-600 mb-1">Tags</div>
-                <div className="border border-gray-200 rounded-md px-3 py-2 bg-gray-50">
-                  {tags.length ? (
-                    <div className="flex flex-wrap gap-1">
-                      {tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-xs">None</span>
-                  )}
-                </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {summaryField(
+                "Description",
+                formData.step1.description || (
+                  <span className="text-gray-400 font-normal">Not provided</span>
+                )
+              )}
+              <div>
+                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Tags</div>
+                {tags.length ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-[11px] font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-gray-400 text-sm">None</span>
+                )}
               </div>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">
-              Conditions
-            </h4>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Conditions</div>
             {approvalConditions.length ? (
-              <ol className="list-decimal list-inside space-y-1 text-xs text-gray-800">
+              <ol className="list-decimal list-inside space-y-1.5 text-sm text-gray-800">
                 {approvalConditions.map((cond: any, index: number) => (
                   <li key={cond.id || `cond-${index}`}>
                     <span className="font-medium">{conditionSubject}</span>{" "}
@@ -1234,49 +1365,47 @@ export default function ManageApprovalPoliciesPage() {
                 ))}
               </ol>
             ) : (
-              <p className="text-xs text-gray-400">No conditions defined.</p>
+              <p className="text-sm text-gray-400">No conditions defined.</p>
             )}
 
-            <div className="mt-3">
-              <div className="text-[11px] font-semibold text-gray-700 mb-1">
+            <div className="mt-4">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                 Expression Preview
               </div>
-              <pre className="text-xs text-gray-800 bg-gray-100 border border-gray-200 rounded-md p-3 overflow-auto font-mono max-h-32">
+              <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto font-mono max-h-32">
 {renderConditionsPreview()}
               </pre>
             </div>
           </div>
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
-            <h4 className="text-sm font-semibold text-gray-900 mb-3">
-              Attached Workflow
-            </h4>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Attached Workflow</div>
             {currentWorkflow ? (
-              <div className="space-y-1 text-xs text-gray-900">
-                <div className="font-medium">{currentWorkflow.name}</div>
-                <div className="text-gray-700">
+              <div className="space-y-2">
+                <div className="text-sm font-semibold text-gray-900">{currentWorkflow.name}</div>
+                <div className="text-sm text-gray-700">
                   {currentWorkflow.description}
                 </div>
-                <div className="flex flex-wrap gap-2 mt-1">
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700">
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-medium">
                     Stages: {currentWorkflow.stages}
                   </span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
                     {currentWorkflow.businessFunction}
                   </span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-[10px] text-gray-700">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
                     Owner: {currentWorkflow.owner}
                   </span>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-gray-400">
+              <p className="text-sm text-gray-400">
                 No workflow selected. Go back to Step 3 to attach a workflow.
               </p>
             )}
           </div>
 
-          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <p className="text-sm text-blue-800">
               Please review all the information above. Click &quot;Submit&quot; to save this approval policy.
             </p>
@@ -1288,113 +1417,10 @@ export default function ManageApprovalPoliciesPage() {
     return null;
   };
 
-  const renderAttachWorkflowSection = () => {
-    const rowData = filteredWorkflows.map((wf) => ({
-      ...wf,
-      tagsDisplay: (wf.tags ?? []).join(", "),
-    }));
-
-    const columnDefs = [
-      {
-        headerName: "",
-        width: 60,
-        maxWidth: 60,
-        pinned: "left",
-        cellRenderer: (params: any) => {
-          const checked = formData.step3.selectedWorkflowId === params.data.id;
-          return (
-            <input
-              type="radio"
-              checked={checked}
-              onChange={() =>
-                setFormData((prev) => ({
-                  ...prev,
-                  step3: { selectedWorkflowId: params.data.id },
-                }))
-              }
-            />
-          );
-        },
-      },
-      { headerName: "Name", field: "name", flex: 1, minWidth: 220 },
-      { headerName: "Description", field: "description", flex: 2, minWidth: 260 },
-      {
-        headerName: "Stages",
-        field: "stages",
-        width: 110,
-        valueFormatter: (params: any) =>
-          params.value !== undefined && params.value !== null && params.value !== ""
-            ? String(params.value)
-            : "-",
-      },
-      {
-        headerName: "Business Object Type",
-        field: "businessFunction",
-        flex: 1,
-        minWidth: 180,
-      },
-      { headerName: "Owner", field: "owner", flex: 1, minWidth: 160 },
-    ];
-
-    const defaultColDef = {
-      sortable: true,
-      filter: false,
-      resizable: true,
-      wrapText: true,
-      autoHeight: true,
-      cellStyle: {
-        whiteSpace: "normal",
-        wordBreak: "break-word",
-        lineHeight: 1.6,
-        fontSize: "14px",
-      },
-    };
-
-    return (
-      <div className="w-full">
-        <div className="flex justify-between items-center mb-3">
-          <div className="relative max-w-md w-full">
-            <input
-              type="text"
-              value={workflowSearch}
-              onChange={(e) => setWorkflowSearch(e.target.value)}
-              placeholder="Search workflows by name, description, tags, owner..."
-              className="form-input w-full"
-            />
-          </div>
-          <div className="text-[11px] text-gray-500">
-            {filteredWorkflows.length} workflow
-            {filteredWorkflows.length === 1 ? "" : "s"} found
-          </div>
-        </div>
-
-        <div className="ag-theme-alpine w-full">
-          <div style={{ width: "100%", minHeight: 260 }}>
-            {/* @ts-ignore - dynamic AgGridReact type */}
-            <AgGridReact
-              theme={themeQuartz}
-              rowData={rowData}
-              columnDefs={columnDefs}
-              defaultColDef={defaultColDef}
-              rowSelection="single"
-              onRowClicked={(event: any) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  step3: { selectedWorkflowId: event.data.id },
-                }))
-              }
-              domLayout="autoHeight"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   // List view: initial table with Create button
   if (mode === "list") {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-100">
         <div className="w-full py-4 px-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -1407,7 +1433,7 @@ export default function ManageApprovalPoliciesPage() {
             </div>
             <button
               type="button"
-              onClick={() => setMode("create")}
+              onClick={handleStartNewPolicy}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
             >
               Create Approval Policy
@@ -1427,25 +1453,55 @@ export default function ManageApprovalPoliciesPage() {
               No approval policies configured yet.
             </div>
           ) : (
-            <div className="ag-theme-alpine w-full mt-2">
-              {/* @ts-ignore dynamic type */}
-              <AgGridReact
-                rowData={approvalListRows}
-                columnDefs={approvalListColumnDefs}
-                rowSelection="single"
-                rowModelType="clientSide"
-                animateRows={true}
-                defaultColDef={{
-                  sortable: true,
-                  filter: true,
-                  resizable: true,
-                  wrapHeaderText: true,
-                  autoHeaderHeight: true,
-                }}
-                theme={themeQuartz}
-                domLayout="autoHeight"
-              />
-            </div>
+            <>
+              <div className="mt-2">
+                <CustomPagination
+                  totalItems={policies.length}
+                  currentPage={listCurrentPage}
+                  totalPages={listTotalPages}
+                  pageSize={listPageSize}
+                  onPageChange={setListCurrentPage}
+                  onPageSizeChange={(newPageSize) => {
+                    setListPageSize(newPageSize);
+                    setListCurrentPage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50, 100, "all"]}
+                />
+              </div>
+              <div className="ag-theme-alpine w-full mt-2">
+                {/* @ts-ignore dynamic type */}
+                <AgGridReact
+                  rowData={approvalListRows}
+                  columnDefs={approvalListColumnDefs}
+                  rowSelection="single"
+                  rowModelType="clientSide"
+                  animateRows={true}
+                  defaultColDef={{
+                    sortable: true,
+                    filter: true,
+                    resizable: true,
+                    wrapHeaderText: true,
+                    autoHeaderHeight: true,
+                  }}
+                  theme={themeQuartz}
+                  domLayout="autoHeight"
+                />
+              </div>
+              <div className="mt-2">
+                <CustomPagination
+                  totalItems={policies.length}
+                  currentPage={listCurrentPage}
+                  totalPages={listTotalPages}
+                  pageSize={listPageSize}
+                  onPageChange={setListCurrentPage}
+                  onPageSizeChange={(newPageSize) => {
+                    setListPageSize(newPageSize);
+                    setListCurrentPage(1);
+                  }}
+                  pageSizeOptions={[10, 20, 50, 100, "all"]}
+                />
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -1454,7 +1510,7 @@ export default function ManageApprovalPoliciesPage() {
 
   if (mode === "create" && reviewEditRequested) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-100">
         <div className="w-full py-4 px-6 space-y-4">
           <div className="rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
@@ -1477,30 +1533,65 @@ export default function ManageApprovalPoliciesPage() {
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">
-              Approval Policy Details
-            </h2>
-            <div className="space-y-4 text-sm">
-              <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}>Name</label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={formData.step1.name}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      step1: { ...prev.step1, name: e.target.value },
-                    }))
-                  }
-                />
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="space-y-6 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="relative min-w-0">
+                  <Tag className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 pointer-events-none" aria-hidden />
+                  <input
+                    type="text"
+                    value={formData.step1.name}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        step1: { ...prev.step1, name: e.target.value },
+                      }))
+                    }
+                    className="w-full pl-10 pr-9 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
+                    placeholder=" "
+                  />
+                  <label
+                    className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                      formData.step1.name ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                    }`}
+                  >
+                    Name *
+                  </label>
+                  {formData.step1.name.trim() && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" aria-hidden />
+                  )}
+                </div>
+
+                <div className="relative min-w-0">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" aria-hidden />
+                  <input
+                    type="text"
+                    value={formData.step1.owner}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        step1: { ...prev.step1, owner: e.target.value },
+                      }))
+                    }
+                    className="w-full pl-10 pr-9 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
+                    placeholder=" "
+                  />
+                  <label
+                    className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                      formData.step1.owner ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                    }`}
+                  >
+                    Owner *
+                  </label>
+                  {formData.step1.owner.trim() && (
+                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" aria-hidden />
+                  )}
+                </div>
               </div>
-              <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}>Description</label>
+
+              <div className="relative">
+                <FileText className="absolute left-3.5 top-5 w-4 h-4 text-amber-500 pointer-events-none" aria-hidden />
                 <textarea
-                  className="form-input resize-y"
-                  rows={3}
                   value={formData.step1.description}
                   onChange={(e) =>
                     setFormData((prev) => ({
@@ -1508,86 +1599,161 @@ export default function ManageApprovalPoliciesPage() {
                       step1: { ...prev.step1, description: e.target.value },
                     }))
                   }
+                  className="w-full pl-10 pr-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline resize-none"
+                  rows={3}
+                  placeholder=" "
                 />
+                <label
+                  className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                    formData.step1.description ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                  }`}
+                >
+                  Description *
+                </label>
+                <div className="text-right text-xs text-gray-400 mt-1">
+                  {formData.step1.description.length} characters
+                </div>
               </div>
-              <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}>Owner</label>
+
+              <div className="relative">
+                <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-purple-500 pointer-events-none" aria-hidden />
                 <input
                   type="text"
-                  className="form-input"
-                  value={formData.step1.owner}
+                  value={formData.step1.tags}
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      step1: { ...prev.step1, owner: e.target.value },
+                      step1: { ...prev.step1, tags: e.target.value },
                     }))
                   }
+                  className="w-full pl-10 pr-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
+                  placeholder=" "
                 />
+                <label
+                  className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+                    formData.step1.tags ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+                  }`}
+                >
+                  Tags
+                </label>
               </div>
-              <div className="flex flex-wrap items-center gap-6">
-                <div className="w-full md:w-1/3">
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${asterisk}`}>Priority</label>
-                  <select
-                    className="form-input bg-white"
-                    value={formData.step1.priority}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        step1: { ...prev.step1, priority: e.target.value as Priority },
-                      }))
-                    }
-                  >
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Critical">Critical</option>
-                  </select>
+
+              <div>
+                <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>
+                  Priority
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {(["Low", "Medium", "High", "Critical"] as Priority[]).map((priority) => {
+                    const isSelected = formData.step1.priority === priority;
+                    const colors = PRIORITY_COLORS[priority];
+                    return (
+                      <div
+                        key={priority}
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            step1: { ...prev.step1, priority },
+                          }))
+                        }
+                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                          isSelected
+                            ? `${colors.border} ${colors.bg} ${colors.ring}`
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                        }`}
+                      >
+                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
+                          {priority}
+                        </span>
+                        {isSelected && (
+                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-                <div className="flex-1">
-                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>Status</label>
-                  <div className="inline-flex rounded-md border border-gray-300 overflow-hidden">
-                    {(["Staging", "Active", "Inactive"] as Status[]).map((status, index, array) => (
-                      <button
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>
+                  Status
+                </label>
+                <div className="grid grid-cols-3 gap-3 max-w-md">
+                  {(["Staging", "Active", "Inactive"] as Status[]).map((status) => {
+                    const isSelected = formData.step1.status === status;
+                    const colors = STATUS_COLORS[status];
+                    return (
+                      <div
                         key={status}
-                        type="button"
                         onClick={() =>
                           setFormData((prev) => ({
                             ...prev,
                             step1: { ...prev.step1, status },
                           }))
                         }
-                        className={`relative px-4 py-2 text-xs font-medium border-r last:border-r-0 ${
-                          formData.step1.status === status
-                            ? `bg-[#15274E] text-white ${downArrow}`
-                            : "bg-white text-gray-700"
-                        } ${
-                          index === 0 ? "rounded-l-md" : index === array.length - 1 ? "rounded-r-md" : ""
+                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
+                          isSelected
+                            ? `${colors.border} ${colors.bg} ${colors.ring}`
+                            : "border-gray-200 bg-white hover:border-gray-300"
                         }`}
                       >
-                        {status}
-                      </button>
-                    ))}
-                  </div>
+                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
+                          {status}
+                        </span>
+                        {isSelected && (
+                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
+                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <div className="flex items-center gap-2 mb-3">
-              <label className="text-sm font-medium text-gray-700 whitespace-nowrap mr-1">
-                Condition Rule
-              </label>
-              <select
-                className="form-input w-56 bg-white"
-                value={conditionSubject}
-                onChange={(e) => setConditionSubject(e.target.value as ConditionSubject)}
-              >
-                {(["Request Type", "Application", "Entitlement", "Service Account", "User"] as ConditionSubject[]).map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
-              </select>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Condition Rule
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {(
+                [
+                  "Request Type",
+                  "Application",
+                  "Entitlement",
+                  "Service Account",
+                  "User",
+                ] as ConditionSubject[]
+              ).map((s) => {
+                const isSelected = conditionSubject === s;
+                return (
+                  <div
+                    key={s}
+                    onClick={() => setConditionSubject(s)}
+                    className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
+                      isSelected
+                        ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                        : "border-gray-200 bg-white hover:border-gray-300"
+                    }`}
+                  >
+                    <span className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
+                      {s}
+                    </span>
+                    {isSelected && (
+                      <span className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
+                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <ExpressionBuilder
               title="Build Expression"
               control={conditionControl as unknown as Control<FieldValues>}
@@ -1605,9 +1771,84 @@ export default function ManageApprovalPoliciesPage() {
             />
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Attach Workflow</h2>
-            {renderAttachWorkflowSection()}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <div className="flex justify-between items-center mb-4 gap-3">
+              <div className="relative max-w-md w-full">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" aria-hidden />
+                <input
+                  type="text"
+                  value={workflowSearch}
+                  onChange={(e) => setWorkflowSearch(e.target.value)}
+                  placeholder="Search workflows by name, description, tags, owner..."
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div className="text-xs text-gray-500 whitespace-nowrap shrink-0">
+                {filteredWorkflows.length} workflow
+                {filteredWorkflows.length === 1 ? "" : "s"} found
+              </div>
+            </div>
+
+            <div className="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+              {filteredWorkflows.length === 0 ? (
+                <div className="text-center text-sm text-gray-400 py-10">
+                  No workflows match your search.
+                </div>
+              ) : (
+                filteredWorkflows.map((wf) => {
+                  const isSelected = formData.step3.selectedWorkflowId === wf.id;
+                  return (
+                    <div
+                      key={wf.id}
+                      onClick={() =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          step3: { selectedWorkflowId: wf.id },
+                        }))
+                      }
+                      className={`relative px-4 py-3 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        isSelected
+                          ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="min-w-0 flex-1">
+                          <h3 className={`text-sm font-semibold truncate ${isSelected ? "text-blue-900" : "text-gray-900"}`}>
+                            {wf.name}
+                          </h3>
+                          <p className="text-xs text-gray-600 truncate">{wf.description}</p>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-1.5 shrink-0 max-w-[45%]">
+                          {wf.stages !== undefined && wf.stages !== null && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-[11px] font-medium">
+                              Stages: {wf.stages}
+                            </span>
+                          )}
+                          {wf.businessFunction && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
+                              {wf.businessFunction}
+                            </span>
+                          )}
+                          {wf.owner && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 text-[11px] font-medium">
+                              Owner: {wf.owner}
+                            </span>
+                          )}
+                        </div>
+                        <span
+                          className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                            isSelected ? "border-blue-500 bg-blue-500" : "border-gray-300 bg-white"
+                          }`}
+                        >
+                          {isSelected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -1616,7 +1857,7 @@ export default function ManageApprovalPoliciesPage() {
 
   // Wizard view: current step form
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Fixed step bar below header; aligned with content area */}
       <div
         className="fixed top-[60px] z-20 bg-white border-b border-gray-200 shadow-sm px-6 py-4"
@@ -1699,7 +1940,7 @@ export default function ManageApprovalPoliciesPage() {
       </div>
 
       {/* Spacer so content is not hidden under fixed step bar */}
-      <div className="h-[72px]" aria-hidden />
+      <div className="h-16" aria-hidden />
 
       <div className="w-full py-3 px-6">
         <div className="w-full">

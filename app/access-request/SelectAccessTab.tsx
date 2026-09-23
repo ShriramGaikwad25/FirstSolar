@@ -1,5 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import { themeQuartz } from "ag-grid-community";
+import type { ColDef } from "ag-grid-enterprise";
 import { Search, ShoppingCart, Users, Check, User, Info, Calendar, ChevronDown, X } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import HorizontalTabs from "@/components/HorizontalTabs";
@@ -7,6 +10,12 @@ import CustomPagination from "@/components/agTable/CustomPagination";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import AddDetailsSidebarContent, { getRiskColor, type Role } from "./AddDetailsSidebarContent";
 import { getLogoSrc } from "@/components/MsAsyncData";
+import "@/lib/ag-grid-setup";
+
+// Dynamically import AgGridReact with SSR disabled
+const AgGridReact = dynamic(() => import("ag-grid-react").then((mod) => mod.AgGridReact), {
+  ssr: false,
+});
 
 // Normalize catalog role type
 function roleType(role: Role): string {
@@ -58,6 +67,187 @@ function getRoleId(role: Role): string {
   return typeof raw === "string" ? raw.trim() : String(raw ?? "").trim();
 }
 
+interface RemoveAccessTableProps {
+  roles: Role[];
+  preselectedAccessIds?: string[];
+  preselectedAccessNames?: string[];
+}
+
+/**
+ * Remove Access flow: a stable, module-level component (not defined inside SelectAccessTab's
+ * render body) so that cart updates on the parent don't recreate its identity and force AG Grid
+ * to unmount/remount on every selection — that identity churn was the cause of the table flicker.
+ */
+const RemoveAccessTable: React.FC<RemoveAccessTableProps> = ({
+  roles,
+  preselectedAccessIds,
+  preselectedAccessNames,
+}) => {
+  const { addToCart, removeFromCart, isInCart, cartCount, items: cartItems } = useCart();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isTableMounted, setIsTableMounted] = useState(false);
+
+  useEffect(() => {
+    setIsTableMounted(true);
+  }, []);
+
+  const preselectedIdSet = React.useMemo(
+    () =>
+      new Set(
+        (preselectedAccessIds || []).map((id) => (id ? String(id).trim() : "")).filter(Boolean)
+      ),
+    [preselectedAccessIds]
+  );
+
+  const preselectedNameSet = React.useMemo(
+    () =>
+      new Set(
+        (preselectedAccessNames || [])
+          .map((n) => (n ? String(n).toLowerCase().trim() : ""))
+          .filter(Boolean)
+      ),
+    [preselectedAccessNames]
+  );
+
+  const filteredRoles = React.useMemo(
+    () => roles.filter((role) => role.name.toLowerCase().includes(searchQuery.toLowerCase())),
+    [roles, searchQuery]
+  );
+
+  const tableRowData = React.useMemo(
+    () =>
+      filteredRoles.map((role) => {
+        const normalizedId = getRoleId(role);
+        const inCartById = normalizedId ? isInCart(normalizedId) : false;
+        const roleNameNorm = role.name ? role.name.toLowerCase().trim() : "";
+        const inCartByName =
+          roleNameNorm &&
+          cartItems.some((item) => item.name.toLowerCase().trim() === roleNameNorm);
+        const isPreselected =
+          (normalizedId ? preselectedIdSet.has(normalizedId) : false) ||
+          (roleNameNorm ? preselectedNameSet.has(roleNameNorm) : false);
+        const row = (role.catalogRow ?? {}) as Record<string, unknown>;
+        return {
+          id: normalizedId || roleNameNorm || role.id,
+          entitlementName: role.name,
+          entitlementType: (row.entitlementType as string) || (row.entitlementtype as string) || "Entitlement",
+          application: getApplicationName(role),
+          accountName: (row.accountname as string) || (row.accountName as string) || "",
+          description: role.description || "",
+          __role: role,
+          __selected: inCartById || inCartByName || isPreselected,
+        };
+      }),
+    [filteredRoles, cartItems, preselectedIdSet, preselectedNameSet, isInCart]
+  );
+
+  const tableColumnDefs: ColDef[] = React.useMemo(
+    () => [
+      {
+        headerName: "Entitlement",
+        field: "entitlementName",
+        flex: 1.5,
+        wrapText: true,
+        autoHeight: true,
+        cellStyle: { lineHeight: 1.4, paddingTop: 8, paddingBottom: 8, whiteSpace: "normal" },
+      },
+      { headerName: "Type", field: "entitlementType", flex: 1 },
+      { headerName: "Application", field: "application", flex: 1.2 },
+      { headerName: "Account", field: "accountName", flex: 1.2 },
+      {
+        headerName: "Description",
+        field: "description",
+        flex: 3,
+        wrapText: true,
+        autoHeight: true,
+        cellStyle: { lineHeight: 1.4, paddingTop: 8, paddingBottom: 8, whiteSpace: "normal" },
+      },
+      {
+        headerName: "",
+        colId: "actions",
+        flex: 0.8,
+        sortable: false,
+        filter: false,
+        cellRenderer: (p: any) => (
+          <div className="flex items-center justify-center h-full">
+            <button
+              type="button"
+              onClick={() => {
+                const role = p.data.__role as Role;
+                const id = getRoleId(role);
+                if (!id) return;
+                if (p.data.__selected) {
+                  removeFromCart(id);
+                } else {
+                  addToCart({ id, name: role.name, risk: role.risk });
+                }
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                p.data.__selected
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
+            >
+              <ShoppingCart className="w-3.5 h-3.5" />
+              {p.data.__selected ? "Selected" : "Select"}
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [addToCart, removeFromCart]
+  );
+
+  return (
+    <div className="w-full">
+      {/* Search Section */}
+      <div className="mb-6 flex items-center justify-between gap-4">
+        <div className="relative w-[320px] flex-shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search by entitlement..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-10 w-full pl-10 pr-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+          />
+        </div>
+        <button
+          type="button"
+          className="h-10 shrink-0 inline-flex items-center justify-center bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-md font-medium transition-colors relative"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          {cartCount > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {roles.length === 0 ? (
+        <div className="text-center py-12 text-gray-500">Loading...</div>
+      ) : (
+        <div className="ag-theme-alpine" style={{ width: "100%" }}>
+          {isTableMounted && (
+            <AgGridReact
+              rowData={tableRowData}
+              columnDefs={tableColumnDefs}
+              getRowId={(params: any) => String(params.data.id)}
+              defaultColDef={{ sortable: true, filter: true, resizable: true }}
+              domLayout="autoHeight"
+              theme={themeQuartz}
+              pagination={true}
+              paginationPageSize={10}
+              paginationPageSizeSelector={[10, 20, 50]}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 interface User {
   id: string;
   name: string;
@@ -87,6 +277,12 @@ interface SelectAccessTabProps {
   preselectedAccessIds?: string[];
   /** Optional: preselect access names (used when ids differ between policy and catalog) */
   preselectedAccessNames?: string[];
+  /** Optional: hide the tab bar entirely and always show the All list (Remove Access flow) */
+  hideTabs?: boolean;
+  /** Optional: hide the catalog type dropdown (All/Applications/Entitlement/Roles/Tags) */
+  hideCatalogTypeDropdown?: boolean;
+  /** Optional: show the access list as a table (same columns as the Users detail page) instead of cards */
+  tableView?: boolean;
 }
 
 const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
@@ -105,6 +301,9 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
   hideAddDetailsSidebar = false,
   preselectedAccessIds,
   preselectedAccessNames,
+  hideTabs = false,
+  hideCatalogTypeDropdown = false,
+  tableView = false,
 }) => {
   const { addToCart, removeFromCart, isInCart, cartCount, items: cartItems } = useCart();
   const { openSidebar, closeSidebar } = useRightSidebar();
@@ -390,6 +589,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 className="h-10 w-full pl-10 pr-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               />
             </div>
+            {!hideCatalogTypeDropdown && (
             <div className="relative w-[320px] flex-shrink-0">
               <select
                 value={catalogTypeFilter}
@@ -408,6 +608,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 </svg>
               </div>
             </div>
+            )}
             {catalogTypeFilter === "Tags" && (
               <div className="w-[360px] flex-shrink-0 flex items-center gap-2">
                 <input
@@ -1470,11 +1671,21 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
 
   return (
     <div className="w-full">
-      <HorizontalTabs
-        tabs={tabs}
-        activeIndex={activeTab}
-        onChange={setActiveTab}
-      />
+      {tableView ? (
+        <RemoveAccessTable
+          roles={roles}
+          preselectedAccessIds={preselectedAccessIds}
+          preselectedAccessNames={preselectedAccessNames}
+        />
+      ) : hideTabs ? (
+        <AllTab />
+      ) : (
+        <HorizontalTabs
+          tabs={tabs}
+          activeIndex={activeTab}
+          onChange={setActiveTab}
+        />
+      )}
     </div>
   );
 };

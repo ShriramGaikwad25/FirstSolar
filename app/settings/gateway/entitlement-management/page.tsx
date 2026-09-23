@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { ShieldCheck } from "lucide-react";
-import ClientOnlyAgGrid from "@/components/ClientOnlyAgGrid";
-import CustomPagination from "@/components/agTable/CustomPagination";
+import { useState, useEffect, useCallback } from "react";
+import {
+  ShieldCheck,
+  Edit,
+  Check,
+  ChevronDown,
+  Info,
+  Briefcase,
+  Cpu,
+  RefreshCw,
+} from "lucide-react";
 
 const ENTITLEMENT_FIELDS = [
   'ID',
@@ -65,6 +72,71 @@ function isCheckboxHiddenForField(fieldName: string): boolean {
   return FIELDS_WITHOUT_CHECKBOXES.has(fieldName);
 }
 
+type FieldCategory = "general" | "business" | "technical" | "security" | "lifecycle";
+
+/** Same grouping used by the Entitlement Details sidebar elsewhere in the app */
+const FIELD_CATEGORY_MAP: Record<string, FieldCategory> = {
+  'ID': "general",
+  'Type': "general",
+  'Application Name': "general",
+  'Entitlement Name': "general",
+  'Description': "general",
+  'Total Assignments': "general",
+  'Dynamic Tag': "general",
+  'Business Objective': "business",
+  'Business Unit': "business",
+  'Entitlement Owner': "business",
+  'Compliance Type': "business",
+  'Data Classification': "business",
+  'Cost Center': "business",
+  'Created On': "technical",
+  'Last Sync': "technical",
+  'Application Instance': "technical",
+  'Application Owner': "technical",
+  'Hierarchy': "technical",
+  'MFA Status': "technical",
+  'Assignment': "technical",
+  'License Type': "technical",
+  'Risk': "security",
+  'Certifiable': "security",
+  'Revoke on Disable': "security",
+  'Shared Pwd': "security",
+  'SOD Check': "security",
+  'Access Scope': "security",
+  'Review Schedule': "security",
+  'Last Reviewed On': "security",
+  'Privileged': "security",
+  'Non Persistent Access': "security",
+  'Audit Comments': "security",
+  'Account Type Restriction': "security",
+  'Requestable': "lifecycle",
+  'Pre-Requisite': "lifecycle",
+  'Pre-Requisite Details': "lifecycle",
+  'Auto Assign Access Policy': "lifecycle",
+  'Provisioner Group': "lifecycle",
+  'Provisioning Steps': "lifecycle",
+  'Provisioning Mechanism': "lifecycle",
+  'Action on Native Change': "lifecycle",
+};
+
+const CATEGORY_ORDER: FieldCategory[] = ["general", "business", "technical", "security", "lifecycle"];
+
+const CATEGORY_META: Record<
+  FieldCategory,
+  { label: string; icon: typeof Info; badgeBg: string; badgeText: string; borderColor: string; chipBg: string; chipText: string }
+> = {
+  general: { label: "General", icon: Info, badgeBg: "bg-blue-100", badgeText: "text-blue-700", borderColor: "border-l-blue-400", chipBg: "bg-blue-50", chipText: "text-blue-700" },
+  business: { label: "Business", icon: Briefcase, badgeBg: "bg-amber-100", badgeText: "text-amber-700", borderColor: "border-l-amber-400", chipBg: "bg-amber-50", chipText: "text-amber-700" },
+  technical: { label: "Technical", icon: Cpu, badgeBg: "bg-purple-100", badgeText: "text-purple-700", borderColor: "border-l-purple-400", chipBg: "bg-purple-50", chipText: "text-purple-700" },
+  security: { label: "Security", icon: ShieldCheck, badgeBg: "bg-red-100", badgeText: "text-red-700", borderColor: "border-l-red-400", chipBg: "bg-red-50", chipText: "text-red-700" },
+  lifecycle: { label: "Lifecycle", icon: RefreshCw, badgeBg: "bg-teal-100", badgeText: "text-teal-700", borderColor: "border-l-teal-400", chipBg: "bg-teal-50", chipText: "text-teal-700" },
+};
+
+const FIELDS_BY_CATEGORY: Record<FieldCategory, string[]> = CATEGORY_ORDER.reduce((acc, cat) => {
+  acc[cat] = ENTITLEMENT_FIELDS.filter((field) => FIELD_CATEGORY_MAP[field] === cat);
+  return acc;
+}, {} as Record<FieldCategory, string[]>);
+
 interface EntitlementData {
   id: string;
   // Main fields
@@ -120,49 +192,59 @@ interface EntitlementData {
   fieldEditOnReview?: Record<string, boolean>;
 }
 
-interface FieldRow {
-  id: string; // entitlementId-fieldName combination
-  entitlementId: string;
-  fieldName: string;
-  selection: boolean;
-  genAI: boolean;
-  editOnReview: boolean;
+type ToggleKind = "sel" | "genai" | "edit";
+
+const TOGGLE_ON_CLASS: Record<ToggleKind, string> = {
+  sel: "bg-blue-600",
+  genai: "bg-purple-600",
+  edit: "bg-emerald-600",
+};
+
+function ToggleSwitch({
+  checked,
+  disabled,
+  onChange,
+  kind,
+  ariaLabel,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: (next: boolean) => void;
+  kind: ToggleKind;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={() => !disabled && onChange(!checked)}
+      className={`relative inline-flex h-[19px] w-[34px] shrink-0 items-center rounded-full transition-colors ${
+        disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+      } ${checked ? TOGGLE_ON_CLASS[kind] : "bg-gray-300"}`}
+    >
+      <span
+        className={`inline-block h-[15px] w-[15px] transform rounded-full bg-white shadow-sm transition-transform ${
+          checked ? "translate-x-[15px]" : "translate-x-[2px]"
+        }`}
+      />
+    </button>
+  );
 }
 
 export default function EntitlementManagementSettings() {
   const [entitlements, setEntitlements] = useState<EntitlementData[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number | 'all'>(25);
   const [dataLoaded, setDataLoaded] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState(false);
-  const gridApiRef = useRef<any>(null);
-  const [renderKey, setRenderKey] = useState(0);
-
-  // Transform entitlements into field-level rows
-  const fieldRows = useMemo(() => {
-    const rows: FieldRow[] = [];
-    entitlements.forEach(ent => {
-      ENTITLEMENT_FIELDS.forEach(field => {
-        rows.push({
-          id: `${ent.id}-${field}`,
-          entitlementId: ent.id,
-          fieldName: field,
-          selection: ent.fieldSelection?.[field] ?? true,
-          genAI:
-            ent.fieldGenAI?.[field] ??
-            !isCheckboxHiddenForField(field),
-          editOnReview: ent.fieldEditOnReview?.[field] || false
-        });
-      });
-    });
-    return rows;
-  }, [entitlements]);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (dataLoaded) return; // Prevent duplicate loading
-    
+
     const controller = new AbortController();
     let isMounted = true;
     const load = async () => {
@@ -174,7 +256,7 @@ export default function EntitlementManagementSettings() {
         // if (!res.ok) throw new Error(`Request failed: ${res.status}`);
         // const data = await res.json();
         // if (isMounted) setRows(data);
-        
+
         // Placeholder data for now - includes all fields from Entitlement Details sidebar
         const placeholderData: EntitlementData[] = [
           {
@@ -282,207 +364,188 @@ export default function EntitlementManagementSettings() {
     });
   }, []);
 
-  const entitlementColumnDefs = useMemo(
-    () => [
-      {
-        headerName: "Entitlement Meta Data",
-        field: "fieldName",
-        flex: 2,
-        minWidth: 320,
-        sortable: true,
-        filter: true,
-        cellStyle: { overflow: "visible" },
-        cellRenderer: (params: any) => {
-          return (
-            <div className="flex min-h-[2.5rem] items-center py-2 text-sm">
-              <strong>{params.value}</strong>
-            </div>
-          );
-        },
-      },
-      {
-        headerName: "Selection",
-        field: "selection",
-        flex: 1,
-        minWidth: 120,
-        sortable: false,
-        filter: false,
-        cellStyle: {
-          overflow: "visible",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        cellRenderer: (params: any) => {
-          return (
-            <div className="flex min-h-[2.5rem] w-full flex-shrink-0 items-center justify-center py-2">
-              <input
-                type="checkbox"
-                checked={!!params.value}
-                onChange={(e) => {
-                  if (!isEditing) return;
-                  handleSelectionChange(params.data.entitlementId, params.data.fieldName, e.target.checked);
-                }}
-                className={`h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${!isEditing ? "cursor-not-allowed" : ""}`}
-              />
-            </div>
-          );
-        },
-      },
-      {
-        headerName: "GenAI",
-        field: "genAI",
-        flex: 1,
-        minWidth: 120,
-        sortable: false,
-        filter: false,
-        cellStyle: {
-          overflow: "visible",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        cellRenderer: (params: any) => {
-          if (isCheckboxHiddenForField(params.data.fieldName)) {
-            return (
-              <div className="flex min-h-[2.5rem] w-full items-center justify-center py-2">
-                <span className="text-sm text-gray-300" aria-hidden="true">
-                  —
-                </span>
-              </div>
-            );
-          }
-          return (
-            <div className="flex min-h-[2.5rem] w-full flex-shrink-0 items-center justify-center py-2">
-              <input
-                type="checkbox"
-                checked={!!params.value}
-                onChange={(e) => {
-                  if (!isEditing) return;
-                  handleGenAIChange(params.data.entitlementId, params.data.fieldName, e.target.checked);
-                }}
-                className={`h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${!isEditing ? "cursor-not-allowed" : ""}`}
-              />
-            </div>
-          );
-        },
-      },
-      {
-        headerName: "Edit on Review",
-        field: "editOnReview",
-        flex: 1,
-        minWidth: 140,
-        sortable: false,
-        filter: false,
-        cellStyle: {
-          overflow: "visible",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        },
-        cellRenderer: (params: any) => {
-          if (isCheckboxHiddenForField(params.data.fieldName)) {
-            return (
-              <div className="flex min-h-[2.5rem] w-full items-center justify-center py-2">
-                <span className="text-sm text-gray-300" aria-hidden="true">
-                  —
-                </span>
-              </div>
-            );
-          }
-          return (
-            <div className="flex min-h-[2.5rem] w-full flex-shrink-0 items-center justify-center py-2">
-              <input
-                type="checkbox"
-                checked={!!params.value}
-                onChange={(e) => {
-                  if (!isEditing) return;
-                  handleEditOnReviewChange(params.data.entitlementId, params.data.fieldName, e.target.checked);
-                }}
-                className={`h-4 w-4 shrink-0 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${!isEditing ? "cursor-not-allowed" : ""}`}
-              />
-            </div>
-          );
-        },
-      },
-    ],
-    [isEditing, handleSelectionChange, handleGenAIChange, handleEditOnReviewChange]
-  );
-
-  const paginatedRows = useMemo(() => {
-    if (pageSize === 'all') return fieldRows;
-    const start = (currentPage - 1) * (pageSize as number);
-    const end = start + (pageSize as number);
-    return fieldRows.slice(start, end);
-  }, [fieldRows, currentPage, pageSize]);
-
   const handleSave = () => {
     // TODO: Persist changes once save endpoint is available.
     setIsEditing(false);
   };
 
+  const toggleCategory = (key: string) => {
+    setCollapsedCategories((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const entitlement = entitlements[0];
+
   return (
-    <div className="h-full p-6">
-      <div className="mx-auto min-h-[calc(100vh-120px)]">
-        <div className="bg-white rounded-md shadow overflow-hidden">
-          {/* Header bar */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white">
-            <div className="flex items-center gap-3">
-              <div className="w-6 h-6 rounded-full flex items-center justify-center bg-gray-100">
-                <ShieldCheck className="w-4 h-4 text-gray-700" />
-              </div>
-              <h2 className="font-semibold text-gray-900">Entitlement Management</h2>
+    <div className="h-full flex flex-col bg-white">
+      {/* Toolbar */}
+      <div className="border-b border-gray-200 px-6 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-100 text-blue-700">
+              <ShieldCheck className="w-5 h-5" />
+            </span>
+            <div>
+              <h1 className="text-base font-semibold text-gray-900">Entitlement Management</h1>
+              <p className="text-xs text-gray-500">Control which entitlement fields are selectable, GenAI-enabled, or editable on review</p>
             </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(true)}
-                className="px-3 py-1.5 text-sm font-medium rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Edit
-              </button>
+          </div>
+          <div className="flex items-center gap-2">
+            {isEditing ? (
               <button
                 type="button"
                 onClick={handleSave}
-                className="px-3 py-1.5 text-sm font-medium rounded bg-blue-600 text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={!isEditing}
+                className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
               >
+                <Check className="w-4 h-4" />
                 Save
               </button>
-            </div>
-          </div>
-
-          <div className="mt-3 px-5 pb-4">
-            {isLoading && <div className="px-5 py-3 text-sm text-gray-600">Loading...</div>}
-            {error && <div className="px-5 py-3 text-sm text-red-600">{error}</div>}
-            <div className="ag-theme-alpine w-full overflow-x-auto">
-              <div className="min-w-[720px] w-full">
-              <ClientOnlyAgGrid
-                key={renderKey}
-                rowData={paginatedRows}
-                onGridReady={(params: any) => {
-                  gridApiRef.current = params.api;
-                }}
-                getRowId={(params: any) => params.data.id}
-                columnDefs={entitlementColumnDefs}
-                domLayout="autoHeight"
-              />
-              </div>
-            </div>
-            <div className="mt-1">
-              <CustomPagination
-                totalItems={fieldRows.length}
-                currentPage={currentPage}
-                totalPages={pageSize === 'all' ? 1 : Math.max(1, Math.ceil(fieldRows.length / (pageSize as number)))}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-                onPageSizeChange={(sz) => { setPageSize(sz); setCurrentPage(1); }}
-              />
-            </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors text-sm font-medium"
+              >
+                <Edit className="w-4 h-4" />
+                Edit
+              </button>
+            )}
           </div>
         </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 bg-gray-50 p-6">
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md text-sm">
+            {error}
+          </div>
+        )}
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-600 text-sm">Loading entitlements...</p>
+            </div>
+          </div>
+        ) : !entitlement ? (
+          <div className="flex items-center justify-center py-24 text-sm text-gray-400">
+            No entitlement metadata found.
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 mb-4">
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-blue-600" /> Selection
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-purple-600" /> GenAI
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" /> Edit on Review
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {CATEGORY_ORDER.map((catKey) => {
+                const meta = CATEGORY_META[catKey];
+                const CategoryIcon = meta.icon;
+                const fields = FIELDS_BY_CATEGORY[catKey];
+                if (fields.length === 0) return null;
+                const selectedCount = fields.filter((f) => entitlement.fieldSelection?.[f] ?? true).length;
+                const collapsed = !!collapsedCategories[catKey];
+
+                return (
+                  <div
+                    key={catKey}
+                    className={`bg-white rounded-lg shadow-sm border border-gray-200 border-l-4 ${meta.borderColor} overflow-hidden`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleCategory(catKey)}
+                      aria-expanded={!collapsed}
+                      className="w-full flex items-center justify-between gap-3 px-5 py-3.5 text-left hover:bg-gray-50/60 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className={`flex items-center justify-center w-8 h-8 rounded-md shrink-0 ${meta.badgeBg} ${meta.badgeText}`}>
+                          <CategoryIcon className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-sm font-semibold text-gray-900">{meta.label}</h3>
+                        <span className="text-xs text-gray-400">{fields.length} fields</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${meta.chipBg} ${meta.chipText}`}>
+                          {selectedCount}/{fields.length} selected
+                        </span>
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+                      </div>
+                    </button>
+
+                    {!collapsed && (
+                      <div className="border-t border-gray-100">
+                        <div className="grid grid-cols-[1fr_96px_96px_120px] gap-2 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                          <span>Field</span>
+                          <span className="text-center">Selection</span>
+                          <span className="text-center">GenAI</span>
+                          <span className="text-center">Edit on Review</span>
+                        </div>
+                        {fields.map((field) => {
+                          const hidden = isCheckboxHiddenForField(field);
+                          const selected = entitlement.fieldSelection?.[field] ?? true;
+                          const genAI = entitlement.fieldGenAI?.[field] ?? !hidden;
+                          const editOnReview = entitlement.fieldEditOnReview?.[field] || false;
+                          return (
+                            <div
+                              key={field}
+                              className="grid grid-cols-[1fr_96px_96px_120px] gap-2 items-center px-5 py-2.5 border-t border-gray-100 first:border-t-0"
+                            >
+                              <span className="text-sm text-gray-800 truncate">{field}</span>
+                              <div className="flex justify-center">
+                                <ToggleSwitch
+                                  kind="sel"
+                                  checked={selected}
+                                  disabled={!isEditing}
+                                  ariaLabel={`Selection — ${field}`}
+                                  onChange={(next) => handleSelectionChange(entitlement.id, field, next)}
+                                />
+                              </div>
+                              <div className="flex justify-center">
+                                {hidden ? (
+                                  <span className="text-gray-300 text-sm" aria-hidden="true">—</span>
+                                ) : (
+                                  <ToggleSwitch
+                                    kind="genai"
+                                    checked={genAI}
+                                    disabled={!isEditing}
+                                    ariaLabel={`GenAI — ${field}`}
+                                    onChange={(next) => handleGenAIChange(entitlement.id, field, next)}
+                                  />
+                                )}
+                              </div>
+                              <div className="flex justify-center">
+                                {hidden ? (
+                                  <span className="text-gray-300 text-sm" aria-hidden="true">—</span>
+                                ) : (
+                                  <ToggleSwitch
+                                    kind="edit"
+                                    checked={editOnReview}
+                                    disabled={!isEditing}
+                                    ariaLabel={`Edit on Review — ${field}`}
+                                    onChange={(next) => handleEditOnReviewChange(entitlement.id, field, next)}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
 }
-

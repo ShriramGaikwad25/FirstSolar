@@ -105,7 +105,13 @@ export function Navigation() {
     });
     return set;
   })[0];
-  const isMainSidebarRoute = sidebarRouteSet.has(pathname);
+  // Approval Policy's create/edit wizard reuses the list route (with ?view=create or
+  // &edit=1) instead of a distinct URL, so it would otherwise be wrongly treated as the
+  // main sidebar destination and have its back link suppressed below.
+  const isApprovalPolicyCreateMode =
+    pathname === '/settings/gateway/manage-approval-policies' &&
+    (searchParams?.get('view') === 'create' || searchParams?.get('edit') === '1');
+  const isMainSidebarRoute = sidebarRouteSet.has(pathname) && !isApprovalPolicyCreateMode;
 
   // Back link config: first match wins (order = most specific first)
   const getBackConfig = (): { href: string; label: string } | null => {
@@ -175,6 +181,14 @@ export function Navigation() {
       return { href: '/settings/gateway/sod', label: 'Back to SoD' };
     }
     if (pathname === '/settings/gateway/manage-approval-policies/review') {
+      return { href: '/settings/gateway/manage-approval-policies', label: 'Back to Approval Policy' };
+    }
+    // Create/edit wizard reuses the list route with ?view=create (and optionally &edit=1) —
+    // the list-mode base route is otherwise a main sidebar route, which suppresses the back link.
+    if (
+      pathname === '/settings/gateway/manage-approval-policies' &&
+      (searchParams?.get('view') === 'create' || searchParams?.get('edit') === '1')
+    ) {
       return { href: '/settings/gateway/manage-approval-policies', label: 'Back to Approval Policy' };
     }
     if (pathname === '/settings/gateway/manage-business-roles/review') {

@@ -35,7 +35,14 @@ const labelClass = "block text-sm font-medium text-gray-700 mb-1.5";
 /** Grid cell: fills column so inputs use full width of page within the grid */
 const cell = "min-w-0 w-full";
 const fieldClass =
-  "block w-full min-w-0 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500";
+  "block w-full min-w-0 rounded-lg border border-gray-200 bg-white px-3.5 py-2.5 text-sm text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-colors";
+const cardClass =
+  "rounded-2xl border border-[#EEF0F2] bg-white p-6 shadow-[0_1px_2px_rgba(16,24,40,0.04),0_6px_14px_rgba(16,24,40,0.035)] sm:p-8";
+const sectionHeadingClass = "mb-5 text-sm font-semibold text-blue-700";
+
+function Required() {
+  return <span className="text-red-500">*</span>;
+}
 
 export default function CreateUserPage() {
   const router = useRouter();
@@ -51,7 +58,7 @@ export default function CreateUserPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gray-50 py-8">
+    <div className="min-h-screen w-full bg-[#F9FAFB] pb-8">
       <div className="w-full max-w-none px-4 sm:px-6 lg:px-8 xl:px-10">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Create new user</h1>
@@ -60,12 +67,14 @@ export default function CreateUserPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm sm:p-8">
-            <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          {/* Personal information */}
+          <div className={cardClass}>
+            <h2 className={sectionHeadingClass}>Personal Information</h2>
+            <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
               <div className={cell}>
                 <label htmlFor="firstName" className={labelClass}>
-                  First name
+                  First name <Required />
                 </label>
                 <input
                   id="firstName"
@@ -78,7 +87,7 @@ export default function CreateUserPage() {
               </div>
               <div className={cell}>
                 <label htmlFor="lastName" className={labelClass}>
-                  Last name
+                  Last name <Required />
                 </label>
                 <input
                   id="lastName"
@@ -91,7 +100,7 @@ export default function CreateUserPage() {
               </div>
               <div className={cell}>
                 <label htmlFor="email" className={labelClass}>
-                  Email
+                  Email <Required />
                 </label>
                 <input
                   id="email"
@@ -127,6 +136,27 @@ export default function CreateUserPage() {
                   onChange={(e) => setField("alias", e.target.value)}
                 />
               </div>
+              <div className={cell}>
+                <label htmlFor="tags" className={labelClass}>
+                  Tags
+                </label>
+                <input
+                  id="tags"
+                  type="text"
+                  className={fieldClass}
+                  placeholder="e.g. Employee, Contractor"
+                  value={form.tags}
+                  onChange={(e) => setField("tags", e.target.value)}
+                />
+                <p className="mt-2 text-xs text-gray-500">Separate multiple tags with commas.</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Work details */}
+          <div className={cardClass}>
+            <h2 className={sectionHeadingClass}>Work Details</h2>
+            <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
               <div className={cell}>
                 <label htmlFor="title" className={labelClass}>
                   Title
@@ -188,37 +218,23 @@ export default function CreateUserPage() {
                   onChange={(e) => setField("managerEmail", e.target.value)}
                 />
               </div>
-              <div className={cell}>
-                <label htmlFor="tags" className={labelClass}>
-                  Tags
-                </label>
-                <input
-                  id="tags"
-                  type="text"
-                  className={fieldClass}
-                  placeholder="e.g. Employee, Contractor"
-                  value={form.tags}
-                  onChange={(e) => setField("tags", e.target.value)}
-                />
-                <p className="mt-2 text-xs text-gray-500">Separate multiple tags with commas.</p>
-              </div>
             </div>
+          </div>
 
-            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                onClick={() => router.push("/user")}
-                className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="inline-flex justify-center rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
-              >
-                Create user
-              </button>
-            </div>
+          <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => router.push("/user")}
+              className="inline-flex justify-center rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="inline-flex justify-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            >
+              Create user
+            </button>
           </div>
         </form>
       </div>

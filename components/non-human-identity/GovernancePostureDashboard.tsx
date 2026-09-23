@@ -525,7 +525,7 @@ export function GovernancePostureDashboard() {
                 <span className="text-3xl font-semibold tabular-nums text-slate-900">
                   {policyViolationsTotal}
                 </span>
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 sm:text-xs">
                   Total violations
                 </span>
               </div>

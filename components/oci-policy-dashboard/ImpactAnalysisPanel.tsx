@@ -569,7 +569,7 @@ export function ImpactAnalysisPanel({
                               <div className="mt-2.5 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
                                 {p.detail.map((d) => (
                                   <div key={d.label} className="rounded-md border border-gray-200 p-2.5">
-                                    <small className="block text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                    <small className="block text-[11px] font-bold uppercase tracking-wide text-gray-400">
                                       {d.label}
                                     </small>
                                     <span className="text-sm text-gray-800">{d.value}</span>

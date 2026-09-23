@@ -435,7 +435,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
         </button>
         {addStepMenuStageId === stageId && (
           <div className="absolute left-0 top-full z-30 mt-1 max-h-64 w-56 overflow-y-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg">
-            <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+            <p className="px-2 py-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               {category}
             </p>
             {entries.length === 0 ? (
@@ -682,7 +682,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
             <div className="flex-1 grid grid-cols-1 gap-3 overflow-hidden">
               {Object.entries(stepPalette).map(([category, steps]) => (
                 <div key={category} className="flex flex-col min-h-0">
-                  <h4 className="text-[10px] font-semibold text-gray-700 mb-1 uppercase">
+                  <h4 className="text-[11px] font-semibold text-gray-700 mb-1 uppercase">
                     {category.replace(/_/g, " ")}
                   </h4>
                   <div className="flex-1 space-y-1 overflow-y-auto">
@@ -2086,7 +2086,7 @@ function WorkflowReviewSubmit({
           <div className="w-full min-w-0 overflow-x-auto">
             <div className="w-max min-w-full flex flex-nowrap items-center gap-1.5 sm:gap-2">
               <div className="h-18 w-18 shrink-0 rounded-full border-2 border-slate-200 bg-white text-center flex items-center justify-center px-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
                   Request Submitted
                 </span>
               </div>
@@ -2120,7 +2120,7 @@ function WorkflowReviewSubmit({
                               <div className="text-xs font-semibold text-slate-700 leading-tight">
                                 {String(step.label || `Step ${stepIdx + 1}`).toUpperCase()}
                               </div>
-                              <div className="mt-1 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-emerald-800">
+                              <div className="mt-1 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-emerald-800">
                                 {step.code || "N/A"}
                               </div>
                             </div>
@@ -2134,7 +2134,7 @@ function WorkflowReviewSubmit({
               })}
 
               <div className="h-18 w-18 shrink-0 rounded-full border-2 border-slate-200 bg-white text-center flex items-center justify-center px-1.5">
-                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
                   Request Completed
                 </span>
               </div>
@@ -2182,11 +2182,11 @@ function WorkflowReviewSubmit({
             <li key={p.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
               <span className="font-mono text-xs font-medium text-gray-800">{p.label}</span>
               {p.enabled ? (
-                <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800">
+                <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-800">
                   Enabled
                 </span>
               ) : (
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
                   Disabled
                 </span>
               )}
