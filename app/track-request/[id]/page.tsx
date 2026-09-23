@@ -15,7 +15,7 @@ import {
   UserCog,
   type LucideIcon,
 } from "lucide-react";
-import { getReviewerId } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 
@@ -233,14 +233,11 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
       return;
     }
 
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const url = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
+      String(reviewerId).trim()
+    )}/${encodeURIComponent(String(id).trim())}`;
     setLoading(true);
     setError(null);
-
-    const body = {
-      query: "select * from vw_access_request_full_json where requested_by_user_id = ?::uuid",
-      parameters: [reviewerId],
-    };
 
     const formatDate = (value: string | null | undefined): string => {
       if (!value) return "";
@@ -315,22 +312,66 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
     const sortStepsByTemplateOrder = (steps: any[]): any[] =>
       [...steps].sort((a, b) => getTemplateStepOrder(a) - getTemplateStepOrder(b));
 
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Request failed: ${res.status}`);
+    /** API returns { work: "..." } for emails; downstream code expects a plain string. */
+    const flattenEmail = (person: any): void => {
+      if (person && typeof person === "object" && person.email && typeof person.email === "object") {
+        person.email = person.email.work ?? person.email.personal ?? "";
+      }
+    };
+
+    /**
+     * This endpoint's dbResponse is a single request's detail (access_request,
+     * workflow_instance, access_items[], instance_steps[] as siblings) rather than the
+     * SQL-view row shape the rest of this file was built against. Normalize it so the
+     * existing (unchanged) parsing below — which already knows how to read a raw
+     * "workflow_instance"/"access_request" object directly — can consume it as-is.
+     */
+    const normalizeDetailResponse = (dbResponse: any): any => {
+      if (!dbResponse || typeof dbResponse !== "object") return dbResponse;
+
+      flattenEmail(dbResponse?.access_request?.requested_by);
+      flattenEmail(dbResponse?.access_request?.requested_for);
+      flattenEmail(dbResponse?.workflow_instance?.requested_by);
+      flattenEmail(dbResponse?.workflow_instance?.requested_for);
+
+      const topLevelSteps: any[] = Array.isArray(dbResponse.instance_steps) ? dbResponse.instance_steps : [];
+      const accessItems: any[] = Array.isArray(dbResponse.access_items) ? dbResponse.access_items : [];
+      for (const item of accessItems) {
+        if (!item || typeof item !== "object") continue;
+        if (item.instance_steps == null) {
+          item.instance_steps = topLevelSteps.filter(
+            (step) => step?.wf_instance_id != null && step.wf_instance_id === item.wf_instance_id
+          );
         }
-        return res.json();
-      })
+        if (item.item_comments == null && item.entitlement_metadata?.comments != null) {
+          item.item_comments = item.entitlement_metadata.comments;
+        }
+        if (item.lineitemid == null && item.line_item_id != null) {
+          item.lineitemid = item.line_item_id;
+        }
+      }
+
+      return dbResponse;
+    };
+
+    apiRequestWithAuth<any>(url, { method: "GET" })
       .then((data) => {
+        console.log("Track Request (details) API raw response:", data);
         let rawRows: any[] = [];
         if (Array.isArray(data)) rawRows = data;
-        else if (Array.isArray((data as any).resultSet)) rawRows = (data as any).resultSet;
-        else if (Array.isArray((data as any).rows)) rawRows = (data as any).rows;
+        else if (Array.isArray((data as any)?.resultSet)) rawRows = (data as any).resultSet;
+        else if (Array.isArray((data as any)?.rows)) rawRows = (data as any).rows;
+        else if (Array.isArray((data as any)?.items)) rawRows = (data as any).items;
+        else if (Array.isArray((data as any)?.requests)) rawRows = (data as any).requests;
+        else if (
+          (data as any)?.dbResponse &&
+          typeof (data as any).dbResponse === "object" &&
+          !Array.isArray((data as any).dbResponse)
+        ) {
+          rawRows = [normalizeDetailResponse((data as any).dbResponse)];
+        } else if (Array.isArray((data as any)?.data)) rawRows = (data as any).data;
+        else if (Array.isArray((data as any)?.result)) rawRows = (data as any).result;
+        else if (data && typeof data === "object") rawRows = [data];
 
         if (!rawRows || rawRows.length === 0) {
           setRequest(null);
@@ -584,7 +625,14 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
           });
 
         const mapped: Request[] = rawRows.map((row) => {
-          const requestJson = row.request_json ?? {};
+          const requestJson =
+            row?.request_json ??
+            row?.requestJson ??
+            row?.request ??
+            row?.data ??
+            (row?.workflow_instance || row?.workflowInstance || row?.access_request || row?.accessRequest
+              ? row
+              : {});
           const sodResults =
             requestJson?.workflow_instance?.context_json?.sodResults ??
             requestJson?.workflowInstance?.context_json?.sodResults ??
@@ -1056,7 +1104,10 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
           [...relatedByBestPrimary].sort((a, b) => scoreCandidate(b) - scoreCandidate(a))[0] ??
           null;
 
-        setRequest(bestRelated ?? bestPrimary ?? null);
+        // This endpoint already scopes the response to a single request server-side, so if the
+        // id-matching heuristics above (built for the old "fetch everything, find the row" flow)
+        // don't find a string match, fall back to the only row we got rather than showing blank.
+        setRequest(bestRelated ?? bestPrimary ?? mapped[0] ?? null);
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : "Failed to load request.";

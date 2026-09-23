@@ -15,6 +15,12 @@ interface TabsProps {
   onChange?: (index: number) => void;
   /** Optional content rendered at the end of the tab row (e.g. a "Clone Connector" button). */
   headerActions?: React.ReactNode;
+  /** Optional classes for the tab list container, appended to the default layout classes. */
+  tabListClassName?: string;
+  /** Optional override for each tab button's classes. Falls back to the default pill style when omitted. */
+  getTabButtonClassName?: (isActive: boolean) => string;
+  /** Optional horizontal rule between the tab header row and the panel content. */
+  showHeaderDivider?: boolean;
 }
 
 const HorizontalTabs: React.FC<TabsProps> = ({
@@ -23,6 +29,9 @@ const HorizontalTabs: React.FC<TabsProps> = ({
   activeIndex: controlledIndex,
   onChange,
   headerActions,
+  tabListClassName,
+  getTabButtonClassName,
+  showHeaderDivider,
 }) => {
   const isControlled = controlledIndex !== undefined;
   const [internalIndex, setInternalIndex] = useState(defaultIndex);
@@ -91,40 +100,48 @@ const HorizontalTabs: React.FC<TabsProps> = ({
         <div
           role="tablist"
           aria-label="Tabs"
-          className="flex flex-wrap gap-2"
+          className={`flex flex-wrap gap-2 ${tabListClassName ?? ''}`}
         >
-          {tabs.map((tab, index) => (
-            <button
-              key={index}
-              type="button"
-              ref={(el) => (tabRefs.current[index] = el)}
-              role="tab"
-              id={tabId(index)}
-              aria-controls={panelId(index)}
-              aria-selected={activeIndex === index}
-              tabIndex={activeIndex === index ? 0 : -1}
-              className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg inline-flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                index === activeIndex
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-              onClick={(event) => {
-                event.stopPropagation();
-                handleTabClick(index);
-              }}
-              onKeyDown={(e) => handleKeyDown(e, index)}
-            >
-              {tab.icon && index === activeIndex ? (
-                <tab.icon size={16} className="text-white" aria-hidden="true" />
-              ) : tab.iconOff ? (
-                <tab.iconOff size={16} className="text-gray-500" aria-hidden="true" />
-              ) : null}
-              {tab.label}
-            </button>
-          ))}
+          {tabs.map((tab, index) => {
+            const isActive = index === activeIndex;
+            const buttonClassName = getTabButtonClassName
+              ? getTabButtonClassName(isActive)
+              : `px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg inline-flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                  isActive
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`;
+            return (
+              <button
+                key={index}
+                type="button"
+                ref={(el) => (tabRefs.current[index] = el)}
+                role="tab"
+                id={tabId(index)}
+                aria-controls={panelId(index)}
+                aria-selected={isActive}
+                tabIndex={isActive ? 0 : -1}
+                className={buttonClassName}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleTabClick(index);
+                }}
+                onKeyDown={(e) => handleKeyDown(e, index)}
+              >
+                {tab.icon && isActive ? (
+                  <tab.icon size={16} className="text-white" aria-hidden="true" />
+                ) : tab.iconOff ? (
+                  <tab.iconOff size={16} className="text-gray-500" aria-hidden="true" />
+                ) : null}
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
         {headerActions}
       </div>
+
+      {showHeaderDivider && <div className="border-b border-gray-200 mt-3" />}
 
       {/* Active Tab Content */}
       <div 

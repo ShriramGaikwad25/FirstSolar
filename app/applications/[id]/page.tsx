@@ -34,6 +34,8 @@ import {
   Link2,
   Tag,
   Lock,
+  Users,
+  KeyRound,
 } from "lucide-react";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -2761,55 +2763,21 @@ export default function ApplicationDetailPage() {
         hide: true,
         cellRenderer: (params: ICellRendererParams) => {
           const risk = params.data?.Risk || params.data?.risk || "Unknown";
-          const riskInitial =
-            risk === "High" ? "H" : risk === "Medium" ? "M" : "L";
-          const riskColor =
-            risk === "High" ? "red" : risk === "Medium" ? "orange" : "green";
+          const riskPillClass =
+            risk === "High"
+              ? "bg-red-100 text-red-700 border border-red-200"
+              : risk === "Medium"
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                : risk === "Low"
+                  ? "bg-green-100 text-green-700 border border-green-200"
+                  : "bg-gray-100 text-gray-600 border border-gray-200";
 
-          // Special styling for High risk - show in red bubble
-          if (risk === "High") {
-            return (
-              <div className="flex items-center">
-                <span
-                  className="px-3 py-1 text-gray-800 font-medium rounded-full"
-                  style={{
-                    backgroundColor: "#ffebee",
-                    color: "#d32f2f",
-                    border: "1px solid #ffcdd2",
-                  }}
-                >
-                  {risk}
-                </span>
-              </div>
-            );
-          }
-
-          // Special styling for Low risk - show in green bubble
-          if (risk === "Low") {
-            return (
-              <div className="flex items-center">
-                <span
-                  className="px-3 py-1 text-gray-800 font-medium rounded-full"
-                  style={{
-                    backgroundColor: "#e8f5e8",
-                    color: "#2e7d32",
-                    border: "1px solid #c8e6c9",
-                  }}
-                >
-                  {risk}
-                </span>
-              </div>
-            );
-          }
-
-          // Default styling for Medium risk
           return (
             <div className="flex items-center">
               <span
-                className="px-2 py-1 text-xs rounded font-medium"
-                style={{ backgroundColor: riskColor, color: "white" }}
+                className={`px-3 py-1 text-xs font-semibold rounded-full ${riskPillClass}`}
               >
-                {riskInitial}
+                {risk}
               </span>
             </div>
           );
@@ -3245,10 +3213,16 @@ export default function ApplicationDetailPage() {
         hide: true,
         cellRenderer: (params: ICellRendererParams) => {
           const risk = params.value || params.data?.Risk || params.data?.risk;
-          const riskColor =
-            risk === "High" ? "red" : risk === "Medium" ? "orange" : "green";
+          const riskPillClass =
+            risk === "High"
+              ? "bg-red-100 text-red-700 border border-red-200"
+              : risk === "Medium"
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                : risk === "Low"
+                  ? "bg-green-100 text-green-700 border border-green-200"
+                  : "bg-gray-100 text-gray-600 border border-gray-200";
           return (
-            <span className="font-medium" style={{ color: riskColor }}>
+            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${riskPillClass}`}>
               {risk}
             </span>
           );
@@ -3513,10 +3487,16 @@ export default function ApplicationDetailPage() {
         hide: true,
         cellRenderer: (params: ICellRendererParams) => {
           const risk = params.value || params.data?.Risk || params.data?.risk;
-          const riskColor =
-            risk === "High" ? "red" : risk === "Medium" ? "orange" : "green";
+          const riskPillClass =
+            risk === "High"
+              ? "bg-red-100 text-red-700 border border-red-200"
+              : risk === "Medium"
+                ? "bg-amber-100 text-amber-700 border border-amber-200"
+                : risk === "Low"
+                  ? "bg-green-100 text-green-700 border border-green-200"
+                  : "bg-gray-100 text-gray-600 border border-gray-200";
           return (
-            <span className="font-medium" style={{ color: riskColor }}>
+            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${riskPillClass}`}>
               {risk}
             </span>
           );
@@ -3955,28 +3935,25 @@ export default function ApplicationDetailPage() {
   const entitlementsTabRenderRef = useRef<(() => React.ReactNode) | null>(null);
   entitlementsTabRenderRef.current = () => {
     return (
-      <div
-        className="ag-theme-alpine"
-        style={{ width: "100%" }}
-      >
-        <div className="relative mb-2 flex flex-col gap-2">
+      <div style={{ width: "100%" }}>
+        <div className="relative mb-3 pt-4 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-4 flex-1 justify-end min-w-0">
-              <div className="relative max-w-md w-full">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  ref={entitlementsSearchInputRef}
-                  type="text"
-                  placeholder="Search by entitlement name..."
-                  value={entitlementsSearchQuery}
-                  onChange={(e) => setEntitlementsSearchQuery(e.target.value)}
-                  onFocus={() => setIsEntitlementsSearchFocused(true)}
-                  onBlur={() => setIsEntitlementsSearchFocused(false)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
+            <div className="relative max-w-md w-full">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
               </div>
+              <input
+                ref={entitlementsSearchInputRef}
+                type="text"
+                placeholder="Search by entitlement name..."
+                value={entitlementsSearchQuery}
+                onChange={(e) => setEntitlementsSearchQuery(e.target.value)}
+                onFocus={() => setIsEntitlementsSearchFocused(true)}
+                onBlur={() => setIsEntitlementsSearchFocused(false)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-4">
               {entitlementsSearchQuery.trim() !== "" && (
                 <p className="text-sm text-gray-600 whitespace-nowrap shrink-0">
                   Showing {filteredEntRowData.length} of {entRowData.length}{" "}
@@ -3987,10 +3964,12 @@ export default function ApplicationDetailPage() {
             </div>
           </div>
         </div>
-        {/* Always render the All tab content without showing inner tabs */}
-        {tabsDataEnt[0]?.component && (
-          <div>{tabsDataEnt[0].component()}</div>
-        )}
+        <div className="ag-theme-alpine rounded-xl border border-gray-200 shadow-sm overflow-hidden" style={{ width: "100%" }}>
+          {/* Always render the All tab content without showing inner tabs */}
+          {tabsDataEnt[0]?.component && (
+            <div>{tabsDataEnt[0].component()}</div>
+          )}
+        </div>
       </div>
     );
   };
@@ -4012,32 +3991,26 @@ export default function ApplicationDetailPage() {
       // Grid will update automatically via rowData prop and key
 
     return (
-      <div
-        className="ag-theme-alpine"
-        style={{
-          width: "100%",
-          height: 500,
-        }}
-      >
-        <div className="mb-2 relative z-10 pt-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-4 flex-1 justify-end">
-              {/* Search Bar */}
-              <div className="relative max-w-md w-full">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  ref={accountsSearchInputRef}
-                  type="text"
-                  placeholder="Search by Account, Identity, Entitlement..."
-                  value={accountsSearchQuery}
-                  onChange={(e) => setAccountsSearchQuery(e.target.value)}
-                  onFocus={() => setIsSearchInputFocused(true)}
-                  onBlur={() => setIsSearchInputFocused(false)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                />
+      <div style={{ width: "100%" }}>
+        <div className="mb-3 pt-4">
+          <div className="flex items-center justify-between mb-3">
+            {/* Search Bar */}
+            <div className="relative max-w-md w-full">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                <Search className="h-5 w-5 text-gray-400" />
               </div>
+              <input
+                ref={accountsSearchInputRef}
+                type="text"
+                placeholder="Search by Account, Identity, Entitlement..."
+                value={accountsSearchQuery}
+                onChange={(e) => setAccountsSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchInputFocused(true)}
+                onBlur={() => setIsSearchInputFocused(false)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-4">
               {accountsSearchQuery && (
                 <p className="text-sm text-gray-600">
                   Showing {filteredAccountsRowData.length} of {accountsRowData.length} accounts
@@ -4062,20 +4035,22 @@ export default function ApplicationDetailPage() {
             />
           </div>
         </div>
-        {mounted && (
-          <AgGridReact
-            key={`accounts-grid-${currentPage}-${pageSize}`}
-            rowData={paginatedData}
-            columnDefs={columnDefs}
-            defaultColDef={defaultColDef}
-            masterDetail={true}
-            onGridReady={(params: any) => {
-              gridApiRef.current = params.api;
-            }}
-            // detailCellRendererParams={detailCellRendererParams}
-          />
-        )}
-        <div className="flex justify-center">
+        <div className="ag-theme-alpine rounded-xl border border-gray-200 shadow-sm overflow-hidden" style={{ width: "100%", height: 500 }}>
+          {mounted && (
+            <AgGridReact
+              key={`accounts-grid-${currentPage}-${pageSize}`}
+              rowData={paginatedData}
+              columnDefs={columnDefs}
+              defaultColDef={defaultColDef}
+              masterDetail={true}
+              onGridReady={(params: any) => {
+                gridApiRef.current = params.api;
+              }}
+              // detailCellRendererParams={detailCellRendererParams}
+            />
+          )}
+        </div>
+        <div className="flex justify-center mt-3">
           <CustomPagination
             totalItems={totalItems}
             currentPage={currentPage}
@@ -4098,8 +4073,8 @@ export default function ApplicationDetailPage() {
   const tabsData = useMemo(() => [
     {
       label: "About",
-      icon: ChevronDown,
-      iconOff: ChevronUp,
+      icon: Info,
+      iconOff: Info,
       component: () => {
         const Field = ({
           label,
@@ -4132,9 +4107,9 @@ export default function ApplicationDetailPage() {
           title: string;
           children: React.ReactNode;
         }) => (
-          <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-5">
+          <div className="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow p-5">
             <div className="flex items-center gap-2 pb-3 mb-4 border-b border-gray-100">
-              <span className={`flex items-center justify-center w-7 h-7 rounded-md ${iconColor}`}>
+              <span className={`flex items-center justify-center w-8 h-8 rounded-lg ${iconColor}`}>
                 <SectionIcon size={15} />
               </span>
               <h3 className="text-sm font-semibold text-gray-800">{title}</h3>
@@ -4188,7 +4163,8 @@ export default function ApplicationDetailPage() {
               </Section>
 
               <Section icon={Tag} iconColor="bg-teal-100 text-teal-700" title="Tags">
-                <div className="col-span-full text-sm text-gray-500">
+                <div className="col-span-full flex items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 py-6 text-sm text-gray-400">
+                  <Tag size={14} className="text-gray-300" />
                   No tags assigned
                 </div>
               </Section>
@@ -4199,20 +4175,20 @@ export default function ApplicationDetailPage() {
     },
     {
       label: "Accounts",
-      icon: ChevronDown,
-      iconOff: ChevronUp,
+      icon: Users,
+      iconOff: Users,
       component: AccountsTabComponent,
     },
     {
       label: "Entitlements",
-      icon: ChevronDown,
-      iconOff: ChevronUp,
+      icon: KeyRound,
+      iconOff: KeyRound,
       component: EntitlementsTabComponent,
     },
     {
       label: "Sampling",
-      icon: ChevronDown,
-      iconOff: ChevronUp,
+      icon: Search,
+      iconOff: Search,
       component: () => {
         const [selectedApplication, setSelectedApplication] =
           useState<string>("");
@@ -4432,7 +4408,7 @@ export default function ApplicationDetailPage() {
                     setSearchError(null);
                     setSelectedUser(null);
                   }}
-                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl bg-white shadow-sm text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                 />
               </div>
 
@@ -4440,7 +4416,7 @@ export default function ApplicationDetailPage() {
               <button
                 onClick={handleGetResult}
                 disabled={!userName || searchLoading}
-                className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors min-w-[110px] ${
+                className={`px-5 py-2 rounded-xl text-sm font-medium transition-colors min-w-[110px] shadow-sm ${
                   userName && !searchLoading
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -4456,25 +4432,48 @@ export default function ApplicationDetailPage() {
                 <h3 className="text-sm font-semibold text-gray-800 mb-2">Search Results</h3>
 
                 {searchError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600 mb-2">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 mb-2">
                     {searchError}
                   </div>
                 )}
 
                 {searchResults.length > 0 && (
-                  <div className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">
+                  <div className="border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                    <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-200 text-sm font-semibold text-gray-700">
                       Found {searchResults.length} result(s)
                     </div>
                     <div className="max-h-96 overflow-y-auto divide-y divide-gray-100">
-                      {searchResults.map((result, index) => (
-                        <pre
-                          key={index}
-                          className="text-xs font-mono bg-gray-50 p-3 whitespace-pre-wrap m-0"
-                        >
-                          {JSON.stringify(result, null, 2)}
-                        </pre>
-                      ))}
+                      {searchResults.map((result: any, index) => {
+                        const displayName = result.displayName || result.userName || "Unknown";
+                        const initials = displayName
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .filter(Boolean)
+                          .slice(0, 2)
+                          .join("")
+                          .toUpperCase();
+                        const email = result.emails?.[0]?.value;
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs font-semibold shrink-0">
+                              {initials || "U"}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-sm font-medium text-gray-900 truncate">{displayName}</div>
+                              {(result.userName || email) && (
+                                <div className="text-xs text-gray-500 truncate">
+                                  {result.userName}
+                                  {result.userName && email ? " · " : ""}
+                                  {email}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -4486,7 +4485,7 @@ export default function ApplicationDetailPage() {
               <div className="mx-5 mb-5">
                 <div className="flex gap-4" style={{ height: 500 }}>
                   {/* Part 1: Left Sidebar - User List */}
-                  <div className="w-64 shrink-0 border border-gray-200 rounded-lg bg-gray-50 overflow-y-auto">
+                  <div className="w-64 shrink-0 border border-gray-200 rounded-xl shadow-sm bg-gray-50 overflow-y-auto">
                     <div className="px-3 py-2.5 bg-gray-100 border-b border-gray-200 text-sm font-semibold text-gray-700 sticky top-0">
                       Users ({responseBody.Resources.length})
                     </div>
@@ -4508,7 +4507,7 @@ export default function ApplicationDetailPage() {
                   </div>
 
                   {/* Part 2: Middle Panel - User Profile Card */}
-                  <div className="w-[420px] shrink-0 border border-gray-200 rounded-lg bg-white overflow-y-auto">
+                  <div className="w-[420px] shrink-0 border border-gray-200 rounded-xl shadow-sm bg-white overflow-y-auto">
                     {selectedUser ? (
                       <div className="flex flex-col">
                         {/* Header band with Avatar, Name and Status */}
@@ -4601,10 +4600,13 @@ export default function ApplicationDetailPage() {
                   </div>
 
                   {/* Part 3: Right Panel - JSON Data */}
-                  <div className="flex-1 border border-gray-200 rounded-lg bg-gray-900 overflow-y-auto">
+                  <div className="flex-1 border border-gray-200 rounded-xl shadow-sm bg-gray-900 overflow-y-auto">
                     {selectedUser ? (
-                      <div className="p-4">
-                        <pre className="text-xs font-mono text-gray-100 whitespace-pre-wrap m-0">
+                      <div className="flex flex-col h-full">
+                        <div className="px-4 py-2.5 bg-gray-800 border-b border-gray-700 text-sm font-semibold text-gray-200 sticky top-0">
+                          Raw Response
+                        </div>
+                        <pre className="text-xs font-mono text-gray-100 whitespace-pre-wrap m-0 p-4">
                           {JSON.stringify(selectedUser, null, 2)}
                         </pre>
                       </div>
@@ -4630,11 +4632,17 @@ export default function ApplicationDetailPage() {
     <div>
       <HorizontalTabs
         tabs={tabsData}
-        activeClass="bg-[#15274E] text-white rounded-sm -ml-1"
-        buttonClass="h-10 -mt-1 w-50"
-        className="ml-0.5 border border-gray-300 w-80 h-8 rounded-md"
         activeIndex={tabIndex}
         onChange={setTabIndex}
+        tabListClassName="bg-white border border-gray-200 p-1.5 rounded-xl gap-1.5 shadow-sm"
+        getTabButtonClassName={(isActive) =>
+          `px-4 py-2 text-sm font-semibold rounded-lg inline-flex items-center justify-center gap-2 cursor-pointer transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 ${
+            isActive
+              ? "bg-blue-600 text-white shadow-sm"
+              : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+          }`
+        }
+        showHeaderDivider
       />
 
       {/* Global Right Sidebar used via openSidebar */}
