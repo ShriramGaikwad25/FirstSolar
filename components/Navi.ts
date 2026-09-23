@@ -6,7 +6,6 @@ import {
   LayoutPanelLeft,
   User2Icon,
   UserCircle2Icon,
-  ScreenShareIcon,
   Package,
   Server,
   FileText,
@@ -29,8 +28,6 @@ import {
   Tags,
   Target,
   Wrench,
-  Zap,
-  Sparkles,
 } from "lucide-react";
 import { riskAnalysisSubItems } from "@/lib/risk-analysis-routes";
 
@@ -57,8 +54,25 @@ export const navLinks: NavItem[] = [
       { name: "My Profile", href: "/profile", icon: UserCircle2Icon },
       { name: "Users", href: "/user", icon: User2Icon },
       { name: "Applications", href: "/applications", icon: LayoutPanelLeft },
-      { name: "Catalog", href: "/catalog", icon: ScreenShareIcon },
     ],
+  },
+  {
+    name: "Request Management",
+    href: "/access-request",
+    icon: ClipboardList,
+    subItems: [
+      { name: "Access Management", href: "/access-request", icon: ClipboardList },
+      { name: "Track Request", href: "/track-request", icon: Search },
+      { name: "My Approvals", href: "/access-request/pending-approvals", icon: AlertCircle },
+    ],
+  },
+  {
+    name: "Risk Analysis",
+    href: "/risk-analysis",
+    icon: LineChart,
+    subItems: riskAnalysisSubItems.filter((i) =>
+      ["Dashboard", "Rulesets", "Rules", "Functions", "Violations"].includes(i.name)
+    ),
   },
   {
     name: "Administration",
@@ -71,26 +85,6 @@ export const navLinks: NavItem[] = [
       { name: "Workflow Builder", href: "/settings/gateway/workflow-builder", icon: Workflow },
       { name: "Email Templates", href: "/settings/gateway/email-templates", icon: FileText },
       { name: "Entitlement management", href: "/settings/gateway/entitlement-management", icon: FileCode2 },
-      { name: "AI Insights Configuration", href: "/settings/gateway/ai-insights-configuration", icon: Sparkles },
-    ],
-  },
-  {
-    name: "Risk Analysis",
-    href: "/risk-analysis",
-    icon: LineChart,
-    subItems: riskAnalysisSubItems.filter((i) =>
-      ["Dashboard", "Rulesets", "Rules", "Functions", "Violations"].includes(i.name)
-    ),
-  },
-  {
-    name: "Request Management",
-    href: "/access-request",
-    icon: ClipboardList,
-    subItems: [
-      { name: "Access Management", href: "/access-request", icon: ClipboardList },
-      { name: "JIT Access", href: "/jit-access", icon: Zap },
-      { name: "Track Request", href: "/track-request", icon: Search },
-      { name: "My Approvals", href: "/access-request/pending-approvals", icon: AlertCircle },
     ],
   },
 ];
