@@ -9,14 +9,23 @@ interface UserSearchTabProps {
 }
 
 const UserSearchTab: React.FC<UserSearchTabProps> = ({ singleSelect = false }) => {
-  const { selectedUsers: contextSelectedUsers, addUser, removeUser, setSelectedUsers } = useSelectedUsers();
-  const [searchCriteria, setSearchCriteria] = useState("name");
-  const [searchValue, setSearchValue] = useState("");
-  const [searchResults, setSearchResults] = useState<User[]>([]);
+  const {
+    selectedUsers: contextSelectedUsers,
+    addUser,
+    removeUser,
+    setSelectedUsers,
+    searchCriteria,
+    setSearchCriteria,
+    searchValue,
+    setSearchValue,
+    searchResults,
+    setSearchResults,
+    hasSearched,
+    setHasSearched,
+  } = useSelectedUsers();
   const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set());
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
   const [allUsers, setAllUsers] = useState<User[]>([]);
 
   // Sync local selected IDs with context

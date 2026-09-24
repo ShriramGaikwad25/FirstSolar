@@ -14,40 +14,8 @@ import CustomPagination from "@/components/agTable/CustomPagination";
 import type { ColDef } from "ag-grid-community";
 
 type Status = "Staging" | "Active" | "Inactive";
-type Priority = "Low" | "Medium" | "High" | "Critical";
 
 type SelectionColorSet = { border: string; bg: string; ring: string; text: string; dot: string };
-
-const PRIORITY_COLORS: Record<Priority, SelectionColorSet> = {
-  Low: {
-    border: "border-emerald-500",
-    bg: "bg-emerald-50",
-    ring: "ring-1 ring-emerald-500/30",
-    text: "text-emerald-700",
-    dot: "bg-emerald-500",
-  },
-  Medium: {
-    border: "border-blue-500",
-    bg: "bg-blue-50",
-    ring: "ring-1 ring-blue-500/30",
-    text: "text-blue-700",
-    dot: "bg-blue-500",
-  },
-  High: {
-    border: "border-amber-500",
-    bg: "bg-amber-50",
-    ring: "ring-1 ring-amber-500/30",
-    text: "text-amber-700",
-    dot: "bg-amber-500",
-  },
-  Critical: {
-    border: "border-red-500",
-    bg: "bg-red-50",
-    ring: "ring-1 ring-red-500/30",
-    text: "text-red-700",
-    dot: "bg-red-500",
-  },
-};
 
 const STATUS_COLORS: Record<Status, SelectionColorSet> = {
   Staging: {
@@ -162,6 +130,19 @@ const OPERAND_OPTIONS: { value: Operand; label: string }[] = [
   { value: "not_in", label: "Not in (comma separated)" },
 ];
 
+// Hardcoded to match the "ACMECOM" tenant convention already used elsewhere in this app
+// (e.g. add-application/page.tsx), but kf_wf_p_upsert_approval_policy expects the tenant's UUID.
+const APPROVAL_POLICY_TENANT_ID = "a0000000-0000-0000-0000-000000000001";
+
+function slugifyPolicyCode(name: string): string {
+  const base = name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `${base || "APPROVAL_POLICY"}_V1`;
+}
+
 // Fallback workflows used only if API call fails or returns no rows
 const FALLBACK_WORKFLOWS: WorkflowDefinition[] = [
   {
@@ -181,7 +162,7 @@ interface ApprovalPolicyFormData {
     description: string;
     owner: string;
     tags: string;
-    priority: Priority;
+    priority: number | null;
     status: Status;
   };
   step2: {
@@ -238,7 +219,7 @@ export default function ManageApprovalPoliciesPage() {
       description: "",
       owner: "",
       tags: "",
-      priority: "Medium",
+      priority: null,
       status: "Staging",
     },
     step2: {
@@ -256,6 +237,8 @@ export default function ManageApprovalPoliciesPage() {
       selectedWorkflowId: null,
     },
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [workflowSearch, setWorkflowSearch] = useState("");
   const [workflowRows, setWorkflowRows] = useState<WorkflowDefinition[]>([]);
   const { isVisible: isSidebarVisible, sidebarWidthPx } = useLeftSidebar();
@@ -302,9 +285,9 @@ export default function ManageApprovalPoliciesPage() {
         owner: row.owner || "",
         tags: "", // tags not available from view yet
         priority:
-          (row.priority as Priority) && ["Low", "Medium", "High", "Critical"].includes(String(row.priority))
-            ? (row.priority as Priority)
-            : "Medium",
+          row.priority !== undefined && row.priority !== null && row.priority !== ""
+            ? Number(row.priority)
+            : null,
         status:
           (row.status as Status) && ["Staging", "Active", "Inactive"].includes(String(row.status))
             ? (row.status as Status)
@@ -336,7 +319,7 @@ export default function ManageApprovalPoliciesPage() {
         description: "",
         owner: "",
         tags: "",
-        priority: "Medium",
+        priority: null,
         status: "Staging",
       },
       step2: {
@@ -835,7 +818,8 @@ export default function ManageApprovalPoliciesPage() {
           !!name.trim() &&
           !!description.trim() &&
           !!owner.trim() &&
-          !!priority &&
+          priority !== null &&
+          Number.isFinite(priority) &&
           !!status
         );
       }
@@ -857,25 +841,49 @@ export default function ManageApprovalPoliciesPage() {
     }
   };
 
-  const handleSubmit = () => {
-    const payload = {
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const policyPayload = {
+      tenantId: APPROVAL_POLICY_TENANT_ID,
+      code: slugifyPolicyCode(formData.step1.name),
       name: formData.step1.name,
       description: formData.step1.description,
-      owner: formData.step1.owner,
-      tags: formData.step1.tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      priority: formData.step1.priority,
-      status: formData.step1.status,
-      conditions: formData.step2.rules,
-      workflow: currentWorkflow,
+      version: 1,
+      status: formData.step1.status.toUpperCase(),
+      priority: formData.step1.priority ?? 0,
+      businessObjectType: "ACCESS_REQUEST",
+      selectorJson: {
+        scope: "CUSTOM",
+        conditions: approvalConditions.map((cond: any) => ({
+          subject: conditionSubject,
+          attribute: cond.attribute?.value ?? null,
+          operator: cond.operator?.value ?? null,
+          value: cond.value ?? null,
+          logicalOp: cond.logicalOp ?? null,
+        })),
+      },
+      validFrom: new Date().toISOString(),
+      validTo: null,
+      isActive: formData.step1.status === "Active",
+      groupingPolicyCode: null,
+      actor: "SYSTEM",
     };
 
-    // In a real implementation this would POST to an API.
-    // For now we log and show a confirmation.
-    console.log("Approval policy payload", payload);
-    alert("Approval policy saved successfully.");
+    try {
+      await executeQuery<unknown>(
+        "CALL kf_wf_p_upsert_approval_policy(?::jsonb, NULL)",
+        [policyPayload]
+      );
+      alert("Approval policy saved successfully.");
+      router.push("/settings/gateway/manage-approval-policies");
+    } catch (e: any) {
+      console.error("Failed to save approval policy:", e);
+      setSubmitError(e?.message || "Failed to save approval policy.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderConditionsPreview = () => {
@@ -1040,81 +1048,71 @@ export default function ManageApprovalPoliciesPage() {
                 </label>
               </div>
 
-              <div>
-                <label
-                  className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
-                >
-                  Priority
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {(["Low", "Medium", "High", "Critical"] as Priority[]).map((priority) => {
-                    const isSelected = formData.step1.priority === priority;
-                    const colors = PRIORITY_COLORS[priority];
-                    return (
-                      <div
-                        key={priority}
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            step1: { ...prev.step1, priority },
-                          }))
-                        }
-                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                          isSelected
-                            ? `${colors.border} ${colors.bg} ${colors.ring}`
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
-                          {priority}
-                        </span>
-                        {isSelected && (
-                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
-                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label
+                    className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
+                  >
+                    Priority
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={formData.step1.priority ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        step1: {
+                          ...prev.step1,
+                          priority: raw === "" ? null : Number(raw),
+                        },
+                      }));
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter priority (e.g. 10)"
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label
-                  className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
-                >
-                  Status
-                </label>
-                <div className="grid grid-cols-3 gap-3 max-w-md">
-                  {(["Staging", "Active", "Inactive"] as Status[]).map((status) => {
-                    const isSelected = formData.step1.status === status;
-                    const colors = STATUS_COLORS[status];
-                    return (
-                      <div
-                        key={status}
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            step1: { ...prev.step1, status },
-                          }))
-                        }
-                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
-                          isSelected
-                            ? `${colors.border} ${colors.bg} ${colors.ring}`
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
-                          {status}
-                        </span>
-                        {isSelected && (
-                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
-                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                <div>
+                  <label
+                    className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}
+                  >
+                    Status
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(["Staging", "Active", "Inactive"] as Status[]).map((status) => {
+                      const isSelected = formData.step1.status === status;
+                      const colors = STATUS_COLORS[status];
+                      return (
+                        <div
+                          key={status}
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              step1: { ...prev.step1, status },
+                            }))
+                          }
+                          className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
+                            isSelected
+                              ? `${colors.border} ${colors.bg} ${colors.ring}`
+                              : "border-gray-200 bg-white hover:border-gray-300"
+                          }`}
+                        >
+                          <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
+                            {status}
                           </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                          {isSelected && (
+                            <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
+                              <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1285,7 +1283,6 @@ export default function ManageApprovalPoliciesPage() {
           .map((t) => t.trim())
           .filter(Boolean) || [];
 
-      const priorityColors = PRIORITY_COLORS[formData.step1.priority];
       const statusColors = STATUS_COLORS[formData.step1.status];
 
       const summaryField = (label: string, value: React.ReactNode) => (
@@ -1310,8 +1307,8 @@ export default function ManageApprovalPoliciesPage() {
               )}
               <div>
                 <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Priority</div>
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${priorityColors.bg} ${priorityColors.text}`}>
-                  {formData.step1.priority}
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                  {formData.step1.priority ?? <span className="text-gray-400 font-normal">Not provided</span>}
                 </span>
               </div>
               <div>
@@ -1525,12 +1522,16 @@ export default function ManageApprovalPoliciesPage() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+                disabled={isSubmitting}
+                className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Check className="h-4 w-4" />
-                Update Policy
+                {isSubmitting ? "Saving..." : "Update Policy"}
               </button>
             </div>
+            {submitError && (
+              <p className="mt-2 text-xs text-red-600">{submitError}</p>
+            )}
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -1638,77 +1639,67 @@ export default function ManageApprovalPoliciesPage() {
                 </label>
               </div>
 
-              <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>
-                  Priority
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {(["Low", "Medium", "High", "Critical"] as Priority[]).map((priority) => {
-                    const isSelected = formData.step1.priority === priority;
-                    const colors = PRIORITY_COLORS[priority];
-                    return (
-                      <div
-                        key={priority}
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            step1: { ...prev.step1, priority },
-                          }))
-                        }
-                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
-                          isSelected
-                            ? `${colors.border} ${colors.bg} ${colors.ring}`
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
-                          {priority}
-                        </span>
-                        {isSelected && (
-                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
-                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>
+                    Priority
+                  </label>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    step={1}
+                    value={formData.step1.priority ?? ""}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        step1: {
+                          ...prev.step1,
+                          priority: raw === "" ? null : Number(raw),
+                        },
+                      }));
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Enter priority (e.g. 10)"
+                  />
                 </div>
-              </div>
 
-              <div>
-                <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>
-                  Status
-                </label>
-                <div className="grid grid-cols-3 gap-3 max-w-md">
-                  {(["Staging", "Active", "Inactive"] as Status[]).map((status) => {
-                    const isSelected = formData.step1.status === status;
-                    const colors = STATUS_COLORS[status];
-                    return (
-                      <div
-                        key={status}
-                        onClick={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            step1: { ...prev.step1, status },
-                          }))
-                        }
-                        className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
-                          isSelected
-                            ? `${colors.border} ${colors.bg} ${colors.ring}`
-                            : "border-gray-200 bg-white hover:border-gray-300"
-                        }`}
-                      >
-                        <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
-                          {status}
-                        </span>
-                        {isSelected && (
-                          <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
-                            <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${asterisk}`}>
+                    Status
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(["Staging", "Active", "Inactive"] as Status[]).map((status) => {
+                      const isSelected = formData.step1.status === status;
+                      const colors = STATUS_COLORS[status];
+                      return (
+                        <div
+                          key={status}
+                          onClick={() =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              step1: { ...prev.step1, status },
+                            }))
+                          }
+                          className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
+                            isSelected
+                              ? `${colors.border} ${colors.bg} ${colors.ring}`
+                              : "border-gray-200 bg-white hover:border-gray-300"
+                          }`}
+                        >
+                          <span className={`text-sm font-medium ${isSelected ? colors.text : "text-gray-900"}`}>
+                            {status}
                           </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                          {isSelected && (
+                            <span className={`absolute top-2 right-2 w-4 h-4 ${colors.dot} rounded-full flex items-center justify-center shrink-0`}>
+                              <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1929,15 +1920,21 @@ export default function ManageApprovalPoliciesPage() {
               <button
                 type="button"
                 onClick={handleSubmit}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium"
+                disabled={isSubmitting}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm font-medium disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Check className="w-4 h-4 mr-2" />
-                {reviewEditRequested ? "Update Policy" : "Submit"}
+                {isSubmitting ? "Saving..." : reviewEditRequested ? "Update Policy" : "Submit"}
               </button>
             )}
           </div>
         </div>
       </div>
+      {submitError && (
+        <div className="px-6">
+          <p className="text-xs text-red-600">{submitError}</p>
+        </div>
+      )}
 
       {/* Spacer so content is not hidden under fixed step bar */}
       <div className="h-16" aria-hidden />

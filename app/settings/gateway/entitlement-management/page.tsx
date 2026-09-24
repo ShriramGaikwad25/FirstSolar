@@ -56,22 +56,6 @@ const ENTITLEMENT_FIELDS = [
   'Action on Native Change'
 ];
 
-/** Entitlement metadata fields that do not show GenAI / Edit on Review checkboxes (Selection always has checkboxes) */
-const FIELDS_WITHOUT_CHECKBOXES = new Set<string>([
-  'ID',
-  'Type',
-  'Application Name',
-  'Total Assignments',
-  'Created On',
-  'Last Sync',
-  'Application Instance',
-  'Last Reviewed On',
-]);
-
-function isCheckboxHiddenForField(fieldName: string): boolean {
-  return FIELDS_WITHOUT_CHECKBOXES.has(fieldName);
-}
-
 type FieldCategory = "general" | "business" | "technical" | "security" | "lifecycle";
 
 /** Same grouping used by the Entitlement Details sidebar elsewhere in the app */
@@ -188,29 +172,17 @@ interface EntitlementData {
   actionOnNativeChange?: string;
   // Table controls - per field selection
   fieldSelection?: Record<string, boolean>;
-  fieldGenAI?: Record<string, boolean>;
-  fieldEditOnReview?: Record<string, boolean>;
 }
-
-type ToggleKind = "sel" | "genai" | "edit";
-
-const TOGGLE_ON_CLASS: Record<ToggleKind, string> = {
-  sel: "bg-blue-600",
-  genai: "bg-purple-600",
-  edit: "bg-emerald-600",
-};
 
 function ToggleSwitch({
   checked,
   disabled,
   onChange,
-  kind,
   ariaLabel,
 }: {
   checked: boolean;
   disabled: boolean;
   onChange: (next: boolean) => void;
-  kind: ToggleKind;
   ariaLabel: string;
 }) {
   return (
@@ -223,7 +195,7 @@ function ToggleSwitch({
       onClick={() => !disabled && onChange(!checked)}
       className={`relative inline-flex h-[19px] w-[34px] shrink-0 items-center rounded-full transition-colors ${
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-      } ${checked ? TOGGLE_ON_CLASS[kind] : "bg-gray-300"}`}
+      } ${checked ? "bg-blue-600" : "bg-gray-300"}`}
     >
       <span
         className={`inline-block h-[15px] w-[15px] transform rounded-full bg-white shadow-sm transition-transform ${
@@ -303,8 +275,6 @@ export default function EntitlementManagementSettings() {
             provisioningMechanism: 'Automated',
             actionOnNativeChange: 'Sync',
             fieldSelection: {},
-            fieldGenAI: {},
-            fieldEditOnReview: {}
           }
         ];
         if (isMounted) {
@@ -340,30 +310,6 @@ export default function EntitlementManagementSettings() {
     });
   }, []);
 
-  const handleGenAIChange = useCallback((entitlementId: string, fieldName: string, checked: boolean) => {
-    setEntitlements(prev => {
-      return prev.map(ent => {
-        if (ent.id === entitlementId) {
-          const fieldGenAI = ent.fieldGenAI || {};
-          return { ...ent, fieldGenAI: { ...fieldGenAI, [fieldName]: checked } };
-        }
-        return ent;
-      });
-    });
-  }, []);
-
-  const handleEditOnReviewChange = useCallback((entitlementId: string, fieldName: string, checked: boolean) => {
-    setEntitlements(prev => {
-      return prev.map(ent => {
-        if (ent.id === entitlementId) {
-          const fieldEditOnReview = ent.fieldEditOnReview || {};
-          return { ...ent, fieldEditOnReview: { ...fieldEditOnReview, [fieldName]: checked } };
-        }
-        return ent;
-      });
-    });
-  }, []);
-
   const handleSave = () => {
     // TODO: Persist changes once save endpoint is available.
     setIsEditing(false);
@@ -386,7 +332,7 @@ export default function EntitlementManagementSettings() {
             </span>
             <div>
               <h1 className="text-base font-semibold text-gray-900">Entitlement Management</h1>
-              <p className="text-xs text-gray-500">Control which entitlement fields are selectable, GenAI-enabled, or editable on review</p>
+              <p className="text-xs text-gray-500">Control which entitlement fields are selectable</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -437,12 +383,6 @@ export default function EntitlementManagementSettings() {
               <span className="inline-flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-blue-600" /> Selection
               </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-purple-600" /> GenAI
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-600" /> Edit on Review
-              </span>
             </div>
 
             <div className="space-y-3">
@@ -482,57 +422,25 @@ export default function EntitlementManagementSettings() {
 
                     {!collapsed && (
                       <div className="border-t border-gray-100">
-                        <div className="grid grid-cols-[1fr_96px_96px_120px] gap-2 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                        <div className="grid grid-cols-[1fr_96px] gap-2 px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
                           <span>Field</span>
                           <span className="text-center">Selection</span>
-                          <span className="text-center">GenAI</span>
-                          <span className="text-center">Edit on Review</span>
                         </div>
                         {fields.map((field) => {
-                          const hidden = isCheckboxHiddenForField(field);
                           const selected = entitlement.fieldSelection?.[field] ?? true;
-                          const genAI = entitlement.fieldGenAI?.[field] ?? !hidden;
-                          const editOnReview = entitlement.fieldEditOnReview?.[field] || false;
                           return (
                             <div
                               key={field}
-                              className="grid grid-cols-[1fr_96px_96px_120px] gap-2 items-center px-5 py-2.5 border-t border-gray-100 first:border-t-0"
+                              className="grid grid-cols-[1fr_96px] gap-2 items-center px-5 py-2.5 border-t border-gray-100 first:border-t-0"
                             >
                               <span className="text-sm text-gray-800 truncate">{field}</span>
                               <div className="flex justify-center">
                                 <ToggleSwitch
-                                  kind="sel"
                                   checked={selected}
                                   disabled={!isEditing}
                                   ariaLabel={`Selection — ${field}`}
                                   onChange={(next) => handleSelectionChange(entitlement.id, field, next)}
                                 />
-                              </div>
-                              <div className="flex justify-center">
-                                {hidden ? (
-                                  <span className="text-gray-300 text-sm" aria-hidden="true">—</span>
-                                ) : (
-                                  <ToggleSwitch
-                                    kind="genai"
-                                    checked={genAI}
-                                    disabled={!isEditing}
-                                    ariaLabel={`GenAI — ${field}`}
-                                    onChange={(next) => handleGenAIChange(entitlement.id, field, next)}
-                                  />
-                                )}
-                              </div>
-                              <div className="flex justify-center">
-                                {hidden ? (
-                                  <span className="text-gray-300 text-sm" aria-hidden="true">—</span>
-                                ) : (
-                                  <ToggleSwitch
-                                    kind="edit"
-                                    checked={editOnReview}
-                                    disabled={!isEditing}
-                                    ariaLabel={`Edit on Review — ${field}`}
-                                    onChange={(next) => handleEditOnReviewChange(entitlement.id, field, next)}
-                                  />
-                                )}
                               </div>
                             </div>
                           );

@@ -359,7 +359,7 @@ const columnDefs = useMemo<ColDef[]>(
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
               {searchTerm && (
                 <button
@@ -781,7 +781,7 @@ function UserGroupsTab() {
               placeholder="Search user groups by name, description, tags, owner..."
               value={searchTermGroups}
               onChange={(e) => setSearchTermGroups(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
           </div>
           {searchTermGroups && (
