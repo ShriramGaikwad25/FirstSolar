@@ -344,7 +344,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
           <h2 className="text-sm font-semibold text-gray-900 mb-1">Access Distribution</h2>
-          <p className="text-xs text-gray-400 mb-2">By assignment method</p>
+          <p className="text-xs text-gray-400 mb-2">By category</p>
           <DonutChart
             analyticsData={{
               totalAccess: chartData.totalAccess,
