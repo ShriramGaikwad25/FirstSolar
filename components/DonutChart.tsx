@@ -25,22 +25,19 @@ const DonutChart = ({ analyticsData }: DonutChartProps) => {
   const inactiveAccounts = analyticsData?.inactiveAccounts || 0;
 
   const chartData = {
-    labels: ["Access", "Low Risk", "Roles", "John Kelly", "SOD Violations", "Inactive Accounts"],
+    labels: ["Low Risk", "Roles", "Users", "SOD Violations", "Inactive Accounts"],
     datasets: [
       {
-        data: [totalAccess, lowRisk, roles, users, sodViolations, inactiveAccounts],
-        backgroundColor: ["#2979FF", "#00BFA5", "#9933FF", "#11C65E", "#F9B824", "#00BCD4"],
+        data: [lowRisk, roles, users, sodViolations, inactiveAccounts],
+        backgroundColor: ["#00BFA5", "#9933FF", "#11C65E", "#F9B824", "#00BCD4"],
         borderWidth: 2,
       },
     ],
   };
 
-  // Calculate total for percentage display
-  const total = chartData.datasets[0].data.reduce((sum, val) => sum + val, 0);
-  const percentage = total > 0 ? Math.round((totalAccess / total) * 100) : 0;
-
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
     cutout: "72%", // Controls the thickness of the donut
     plugins: {
       legend: { display: false }, // Hide default legend
@@ -50,25 +47,30 @@ const DonutChart = ({ analyticsData }: DonutChartProps) => {
   };
 
   return (
-    <div className="flex gap-6 p-4">
-      {/* Donut Chart */}   
-      <div className="w-52 relative">
+    <div className="flex flex-wrap items-center gap-6 p-2">
+      {/* Donut Chart */}
+      <div className="w-40 h-40 relative shrink-0">
         <Doughnut data={chartData} options={options} />
 
         {/* Center Text */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-gray-500 text-sm">Total Access</span>
-          <span className="text-black font-bold text-2xl">{totalAccess}</span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+          <span className="text-gray-500 text-xs">Total Access</span>
+          <span className="text-black font-bold text-xl">{totalAccess.toLocaleString()}</span>
         </div>
       </div>
 
       {/* Custom Legend */}
-      <div className="mt-4 w-48 space-y-2">
+      <div className="flex-1 min-w-[160px] space-y-2">
         {chartData.labels.map((label, index) => (
           <div key={index} className="flex items-center gap-2 text-gray-600 text-sm">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: chartData.datasets[0].backgroundColor[index] }}></div>
-            <span>{label}</span>
-            <span className="ml-auto font-bold">{chartData.datasets[0].data[index]}</span>
+            <div
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: chartData.datasets[0].backgroundColor[index] }}
+            ></div>
+            <span className="truncate">{label}</span>
+            <span className="ml-auto font-bold text-gray-900 shrink-0">
+              {chartData.datasets[0].data[index].toLocaleString()}
+            </span>
           </div>
         ))}
       </div>
