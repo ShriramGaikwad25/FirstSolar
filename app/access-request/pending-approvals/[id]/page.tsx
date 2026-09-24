@@ -19,7 +19,7 @@ import {
   UserCog,
   type LucideIcon,
 } from "lucide-react";
-import { getReviewerId } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 
@@ -50,6 +50,7 @@ interface RequestLineItem {
   startDate: string;
   endDate: string;
   comments: string;
+  hasConflict?: boolean;
   hasInfoIcon?: boolean;
   hasHighRisk?: boolean;
   hasTrainingCheck?: boolean;
@@ -488,50 +489,6 @@ const toObjectSafe = (value: unknown): Record<string, any> => {
   return {};
 };
 
-function collectLineItemIdSet(entry: unknown): Set<string> {
-  const ids = new Set<string>();
-  const add = (v: unknown) => {
-    const n = normalizeId(v);
-    if (n) ids.add(n);
-  };
-  if (!entry || typeof entry !== "object") return ids;
-  const o = entry as Record<string, unknown>;
-  add(o.lineItemId ?? o.line_item_id ?? o.lineitemid ?? o.lineitemId);
-  add(o.catalogId ?? o.catalog_id ?? o.catalogid);
-  add(o.entitlementId ?? o.entitlement_id ?? o.entitlementid);
-  add(
-    o.requested_itemid ??
-      o.requestedItemId ??
-      o.requesteditemid ??
-      o.requestedItemid,
-  );
-  add(o.entity_id ?? o.entityId);
-  add(o.item_id ?? o.itemId);
-  const cat = o.catalog;
-  if (cat && typeof cat === "object" && !Array.isArray(cat)) {
-    const c = cat as Record<string, unknown>;
-    add(c.catalogid ?? c.catalogId ?? c.catalog_id ?? c.id);
-    add(c.entitlementid ?? c.entitlementId ?? c.entitlement_id);
-  }
-  return ids;
-}
-
-/** Resolve action_payload.lineItems entries to full objects from itemdetails when possible. */
-function findItemDetailForActionLine(
-  actionLine: unknown,
-  details: any[],
-): any | undefined {
-  const actionIds = collectLineItemIdSet(actionLine);
-  if (actionIds.size === 0) return undefined;
-  for (const d of details) {
-    const detailIds = collectLineItemIdSet(d);
-    for (const id of actionIds) {
-      if (detailIds.has(id)) return d;
-    }
-  }
-  return undefined;
-}
-
 const REQUESTER_COMMENTS_STORAGE_PREFIX =
   "ispm:pending-approval-requester-comments";
 
@@ -736,8 +693,6 @@ const PendingApprovalDetailPage = ({
   };
 
   useEffect(() => {
-    const url =
-      "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
     const reviewerId = getReviewerId();
 
     if (!reviewerId) {
@@ -751,714 +706,310 @@ const PendingApprovalDetailPage = ({
     setLoading(true);
     setError(null);
 
-    fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        query:
-          "select * from kf_wf_get_approval_task where assignee_id = ?::uuid AND task_status = 'OPEN'",
-        parameters: [reviewerId],
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error(`Request failed: ${res.status}`);
-        return res.json();
-      })
+    const trimmedReviewerId = String(reviewerId).trim();
+    const url = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/detail/${encodeURIComponent(
+      String(id).trim(),
+    )}`;
+
+    apiRequestWithAuth<any>(url, { method: "GET" })
       .then((data) => {
-        const rows: any[] = Array.isArray(data)
-          ? data
-          : Array.isArray((data as any)?.resultSet)
-            ? (data as any).resultSet
-            : Array.isArray((data as any)?.rows)
-              ? (data as any).rows
-              : Array.isArray((data as any)?.data)
-                ? (data as any).data
-                : [];
+        console.log("[PendingApprovalDetail] raw response:", data);
+        const dbResponse = toObjectSafe((data as any)?.dbResponse ?? data);
+        const tasks: any[] = toArraySafe(dbResponse.tasks);
 
-        const mapped = rows.map((row, rowIdx) => {
-          if (rowIdx === 0) {
-            console.log(
-              "[PendingApprovalDetail] raw row keys:",
-              Object.keys(row || {}),
-            );
-            console.log(
-              "[PendingApprovalDetail] full row:",
-              JSON.stringify(row, null, 2),
-            );
-          }
-          const contextJson = toObjectSafe(
-            row.context_json ?? row.contextJson ?? {},
-          );
-          const requestJson = toObjectSafe(
-            row.request_json ??
-              row.requestJson ??
-              row.requestjson ??
-              row.payload_json ??
-              row.payloadJson ??
-              {},
-          );
-          const sodResults =
-            contextJson?.sodResults ??
-            contextJson?.sod_results ??
-            contextJson?.sodresults ??
-            requestJson?.workflow_instance?.context_json?.sodResults ??
-            requestJson?.workflow_instance?.context_json?.sod_results ??
-            requestJson?.workflow_instance?.context_json?.sodresults ??
-            requestJson?.workflowInstance?.context_json?.sodResults ??
-            requestJson?.workflowInstance?.context_json?.sod_results ??
-            requestJson?.workflowInstance?.context_json?.sodresults ??
-            requestJson?.workflow_instance?.contextJson?.sodResults ??
-            requestJson?.workflow_instance?.contextJson?.sod_results ??
-            requestJson?.workflow_instance?.contextJson?.sodresults ??
-            requestJson?.workflowInstance?.contextJson?.sodResults ??
-            requestJson?.workflowInstance?.contextJson?.sod_results ??
-            requestJson?.workflowInstance?.contextJson?.sodresults;
-          const hasGlobalSodConflict = Boolean(sodResults?.hasConflict);
-          const sodConflictingRoles: string[] = Array.isArray(
-            sodResults?.conflictingRoles,
-          )
-            ? sodResults.conflictingRoles
-                .map((r: any) => String(r).trim())
-                .filter(Boolean)
-            : [];
-          const primaryConflictingRole = sodConflictingRoles[0] ?? "";
-          const sodPolicyDetails: SodPolicyDetails | null =
-            (sodResults?.sodPolicyDetails as SodPolicyDetails | undefined) ??
-            (sodResults?.SODPolicyDetails as SodPolicyDetails | undefined) ??
-            (sodResults?.sod_policy_details as SodPolicyDetails | undefined) ??
-            null;
-          const sodSeverity: string | null =
-            typeof sodResults?.severity === "string"
-              ? sodResults.severity
-              : null;
+        if (tasks.length === 0) {
+          setRequest(null);
+          return;
+        }
 
-          // Debug SOD signal used to compute the red badge.
-          // This helps confirm whether we have: sodResults.hasConflict, conflictingRoles[0],
-          // and whether request.sodPolicyDetails is present.
-          if (
-            hasGlobalSodConflict ||
-            primaryConflictingRole ||
-            sodPolicyDetails
-          ) {
-            console.log("[PendingApprovalDetail][SOD]", {
-              hasGlobalSodConflict,
-              primaryConflictingRole,
-              hasSodPolicyDetails: Boolean(sodPolicyDetails),
-              sodSeverity,
-              sodPolicyDetailsKeys: sodPolicyDetails
-                ? Object.keys(sodPolicyDetails)
-                : [],
-            });
-          }
-          const requestId = toStringSafe(
-            row.request_id ??
-              row.requestId ??
-              row.requestid ??
-              row.req_id ??
-              row.task_id ??
-              row.taskId ??
-              row.taskid ??
-              row.id,
-          );
-          const requesterName = toStringSafe(
-            row?.requester?.displayname ??
-              row.requester_name ??
-              row.requestor_name ??
-              row.requested_by,
-          );
-          const beneficiaryName = toStringSafe(
-            row?.beneficiary?.username ??
-              row.beneficiary_name ??
-              row.beneficiary ??
-              row.user_name,
-          );
+        // The task assigned to the current reviewer that's still open is the one this page
+        // lets them act on; fall back to any open task, then to the most recent task.
+        const activeTask =
+          tasks.find(
+            (t) =>
+              normalizeId(t?.assignee_id) === normalizeId(trimmedReviewerId) &&
+              String(t?.task_status ?? "").toUpperCase() === "OPEN",
+          ) ??
+          tasks.find(
+            (t) => String(t?.task_status ?? "").toUpperCase() === "OPEN",
+          ) ??
+          tasks[tasks.length - 1];
 
-          // Richer identity fields — row-level requester/beneficiary objects (thin, from this
-          // task query) merged over the fuller access_request objects (same shape used by
-          // vw_access_request_full_json), so either source can fill in the gaps.
-          const requesterObj: Record<string, any> = {
-            ...toObjectSafe(requestJson?.access_request?.requested_by),
-            ...toObjectSafe(row?.requester),
-          };
-          const beneficiaryObj: Record<string, any> = {
-            ...toObjectSafe(requestJson?.access_request?.requested_for),
-            ...toObjectSafe(row?.beneficiary),
-          };
-          const requesterUsername = toStringSafe(
-            requesterObj.username ?? requesterObj.userid ?? requesterObj.email,
-          );
-          const beneficiaryUsername = toStringSafe(
-            beneficiaryObj.username ?? beneficiaryObj.userid ?? beneficiaryObj.email ?? beneficiaryName,
-          );
-          const requesterEmail = toStringSafe(requesterObj.email);
-          const requesterDepartment = toStringSafe(requesterObj.department);
-          const requesterJobTitle = toStringSafe(
-            requesterObj.title ?? requesterObj.jobtitle ?? requesterObj.job_title,
-          );
-          const requesterEmployeeId = toStringSafe(
-            requesterObj.employeeid ?? requesterObj.employee_id,
-          );
-          const requesterManager = toStringSafe(
-            requesterObj.manager_name ?? requesterObj.managername ?? requesterObj.manager,
-          );
+        const requesterObj = toObjectSafe(activeTask?.requester);
+        const beneficiaryObj = toObjectSafe(activeTask?.beneficiary);
 
-          const createdOnRaw =
-            row.created_on ??
-            row.createdOn ??
-            row.created_at ??
-            row.assigned_on ??
-            row.assignedOn;
-          const createdOn = formatDate(toStringSafe(createdOnRaw));
-          const createdOnDateTime = formatDateTime(toStringSafe(createdOnRaw)) || createdOn;
-          const justification = toStringSafe(
-            row.requester_justification ??
-              row.comments ??
-              row.comment ??
-              row.remarks,
-          );
-
-          const itemDetails: any[] = toArraySafe(
-            row.itemdetails ?? row.itemDetails,
-          );
-
-          const actionPayload = toObjectSafe(
-            row.action_payload ??
-              row.actionPayload ??
-              row.actionpayload ??
-              contextJson.action_payload ??
-              contextJson.actionPayload ??
-              requestJson.action_payload ??
-              requestJson.actionPayload ??
-              {},
-          );
-          const actionLineItemsFromPayload = toArraySafe(
-            actionPayload.lineItems ?? actionPayload.lineitems,
-          );
-          const detailItemsForMapping =
-            actionLineItemsFromPayload.length > 0
-              ? actionLineItemsFromPayload.map((actionLine) => {
-                  const match = findItemDetailForActionLine(
-                    actionLine,
-                    itemDetails,
-                  );
-                  if (match) return match;
-                  const al = actionLine as Record<string, any>;
-                  const cat = al.catalog;
-                  return {
-                    ...al,
-                    catalog:
-                      cat &&
-                      typeof cat === "object" &&
-                      !Array.isArray(cat)
-                        ? cat
-                        : {},
-                  };
-                })
-              : itemDetails;
-
-          const aiRecommendations = toAiRecommendationArray(
-            row.ai_recommendation ??
-              row.aiRecommendation ??
-              requestJson?.ai_recommendation ??
-              requestJson?.aiRecommendation ??
-              contextJson?.ai_recommendation ??
-              contextJson?.aiRecommendation,
-          );
-
-          const lineItems: RequestLineItem[] = detailItemsForMapping.map(
-            (item, itemIdx) => {
-              const catalog = item?.catalog ?? {};
-              if (itemIdx === 0) {
-                console.log(
-                  "[PendingApprovalDetail] raw item keys:",
-                  Object.keys(item || {}),
-                );
-                console.log(
-                  "[PendingApprovalDetail] raw catalog keys:",
-                  Object.keys(catalog || {}),
-                );
-                console.log(
-                  "[PendingApprovalDetail] full item:",
-                  JSON.stringify(item, null, 2),
-                );
-              }
-              const lineName = toStringSafe(
-                catalog.name ??
-                  catalog.entitlementname ??
-                  catalog.applicationname ??
-                  item?.entity_name ??
-                  item?.entityName ??
-                  item?.name,
-              );
-              const lineType = toStringSafe(
-                catalog.type ??
-                  catalog.entitlementtype ??
-                  catalog.metadata?.entitlementType ??
-                  item?.entity_type ??
-                  item?.entityType ??
-                  "Entitlement",
-              );
-              const applicationName = toStringSafe(
-                catalog.applicationname ??
-                  catalog.applicationName ??
-                  item?.application_name ??
-                  item?.applicationName,
-              );
-              const accountName = toStringSafe(
-                item?.account_name ??
-                  item?.accountname ??
-                  item?.account?.name ??
-                  beneficiaryUsername,
-              );
-              const startDate = formatDate(toStringSafe(item?.item_startdate));
-              const endDate = formatDate(toStringSafe(item?.item_enddate));
-              const riskLevel = String(catalog.risk ?? "").toLowerCase();
-              const lineNameKey = toStringSafe(
-                catalog.name ??
-                  catalog.entitlementname ??
-                  catalog.applicationname ??
-                  item?.entity_name ??
-                  item?.entityName ??
-                  item?.name,
-              ).trim();
-              const lineEntitlementIdKey = toStringSafe(
-                catalog?.entitlementid ??
-                  catalog?.entitlementId ??
-                  item?.entitlement_id ??
-                  item?.entitlementId ??
-                  "",
-              ).trim();
-              const lineIdKey = toStringSafe(
-                catalog?.catalogid ??
-                  catalog?.catalogId ??
-                  catalog?.catalog_id ??
-                  catalog?.id ??
-                  "",
-              ).trim();
-              const lineHasConflict =
-                hasGlobalSodConflict &&
-                primaryConflictingRole &&
-                (lineNameKey === primaryConflictingRole ||
-                  lineIdKey === primaryConflictingRole ||
-                  lineEntitlementIdKey === primaryConflictingRole ||
-                  applicationName === primaryConflictingRole);
-              if (
-                itemIdx < 3 &&
-                (hasGlobalSodConflict || primaryConflictingRole) // avoid spam when no SOD at all
-              ) {
-                console.log("[PendingApprovalDetail][SOD][Line]", {
-                  itemIdx,
-                  primaryConflictingRole,
-                  lineNameKey,
-                  lineIdKey,
-                  lineEntitlementIdKey,
-                  applicationName,
-                  matchByName: lineNameKey === primaryConflictingRole,
-                  matchByCatalogId: lineIdKey === primaryConflictingRole,
-                  matchByEntitlementId:
-                    lineEntitlementIdKey === primaryConflictingRole,
-                  matchByApplicationName:
-                    applicationName === primaryConflictingRole,
-                  lineHasConflict,
-                });
-              }
-              const hasTrainingCheck = (() => {
-                const raw =
-                  catalog?.training_code ??
-                  catalog?.trainingCode ??
-                  item?.training_code ??
-                  item?.trainingCode;
-                const arr = Array.isArray(raw) ? raw : [];
-                if (arr.length === 0) return false;
-                const first = arr[0] as Record<string, unknown>;
-                return !!toStringSafe(first?.code).trim();
-              })();
-
-              const requestedItemId = toStringSafe(
-                item?.requested_itemid ??
-                  item?.requestedItemId ??
-                  item?.requesteditemid ??
-                  item?.requestedItemid ??
-                  "",
-              );
-              const entitlementId = toStringSafe(
-                catalog?.entitlementid ??
-                  catalog?.entitlementId ??
-                  item?.entitlement_id ??
-                  item?.entitlementId ??
-                  item?.entity_id ??
-                  item?.entityId ??
-                  item?.lineItemId ??
-                  item?.line_item_id ??
-                  item?.itemId ??
-                  item?.item_id ??
-                  item?.id ??
-                  "",
-              );
-
-              const catalogId = toStringSafe(
-                catalog?.catalogid ??
-                  catalog?.catalogId ??
-                  catalog?.catalog_id ??
-                  catalog?.id ??
-                  "",
-              );
-
-              const matchedAiRecommendation =
-                aiRecommendations.find((rec) => {
-                  const recRequestedItemId = toStringSafe(
-                    rec?.requested_itemid ?? rec?.requestedItemId,
-                  ).trim();
-                  const recLineItemId = toStringSafe(
-                    rec?.lineitemid ?? rec?.lineItemId,
-                  ).trim();
-                  const recEntitlementId = toStringSafe(
-                    rec?.entitlement?.entitlement_id ??
-                      rec?.entitlement?.entitlementId,
-                  ).trim();
-                  return (
-                    (requestedItemId &&
-                      recRequestedItemId &&
-                      requestedItemId === recRequestedItemId) ||
-                    (catalogId &&
-                      recLineItemId &&
-                      catalogId === recLineItemId) ||
-                    (entitlementId &&
-                      recEntitlementId &&
-                      entitlementId === recEntitlementId)
-                  );
-                }) ?? aiRecommendations[0];
-
-              const peerSummaryMessages = Array.isArray(
-                matchedAiRecommendation?.peer_analysis?.summary,
-              )
-                ? matchedAiRecommendation.peer_analysis.summary
-                    .map((entry: any) => toInsightMessage(entry?.message))
-                    .filter(Boolean)
-                    .join(" ")
-                : null;
-
-              return {
-                lineItemId: requestedItemId || catalogId || entitlementId,
-                catalogId,
-                entitlementId,
-                name: lineName,
-                displayName: lineName,
-                applicationName,
-                accountName,
-                type: lineType,
-                startDate,
-                endDate,
-                comments: "",
-                hasConflict: lineHasConflict,
-                hasInfoIcon:
-                  String(catalog.privileged ?? "").toLowerCase() === "yes" ||
-                  riskLevel.startsWith("high"),
-                hasHighRisk: riskLevel.startsWith("high"),
-                hasTrainingCheck,
-                beneficiaryAnalysis:
-                  toInsightMessage(
-                    matchedAiRecommendation?.beneficiary_analysis?.message ??
-                      matchedAiRecommendation?.beneficiary_analysis ??
-                      item?.beneficiary_analysis ??
-                      item?.beneficiaryAnalysis ??
-                      catalog?.beneficiary_analysis ??
-                      catalog?.beneficiaryAnalysis,
-                  ) ?? undefined,
-                contextualRisk:
-                  toInsightMessage(
-                    matchedAiRecommendation?.contextual_risk?.message ??
-                      matchedAiRecommendation?.contextual_risk ??
-                      item?.contextual_risk ??
-                      item?.contextualRisk ??
-                      catalog?.contextual_risk ??
-                      catalog?.contextualRisk,
-                  ) ?? undefined,
-                riskSensitivityAnalysis:
-                  toInsightMessage(
-                    matchedAiRecommendation?.risk_sensitivity_analysis
-                      ?.message ??
-                      matchedAiRecommendation?.risk_sensitivity_analysis ??
-                      item?.risk_sensitivity_analysis ??
-                      item?.riskSensitivityAnalysis ??
-                      catalog?.risk_sensitivity_analysis ??
-                      catalog?.riskSensitivityAnalysis,
-                  ) ?? undefined,
-                peerAnalysis:
-                  toInsightMessage(
-                    peerSummaryMessages ??
-                      matchedAiRecommendation?.peer_analysis?.message ??
-                      matchedAiRecommendation?.peer_analysis ??
-                      item?.peer_analysis ??
-                      item?.peerAnalysis ??
-                      catalog?.peer_analysis ??
-                      catalog?.peerAnalysis,
-                  ) ?? undefined,
-              };
-            },
-          );
-
-          const reviewerId = toStringSafe(
-            row.assignee_id ??
-              row.assigneeId ??
-              row.reviewer_id ??
-              row.reviewerId ??
-              "f558e3b2-348b-4ff3-be4c-a3c5dc8b5a91",
-          );
-          const taskIdRaw =
-            row.task_id ?? row.taskId ?? row.taskid ?? row.id ?? requestId;
-          const numericTaskId = Number(taskIdRaw);
-          const taskId =
-            Number.isFinite(numericTaskId) && taskIdRaw !== ""
-              ? numericTaskId
-              : toStringSafe(taskIdRaw);
-          const fallbackEntitlementId = toStringSafe(
-            row.entitlement_id ??
-              row.entitlementId ??
-              row.entity_id ??
-              row.entityId ??
-              row.certification_id ??
-              row.certificationId ??
-              row.cert_id ??
-              row.certId ??
-              "",
-          );
-
-          const normalizedLineItems =
-            lineItems.length > 0
-              ? lineItems
-              : [
-                  {
-                    lineItemId: toStringSafe(
-                      row.requested_itemid ??
-                        row.requestedItemId ??
-                        row.requesteditemid ??
-                        row.requestedItemid ??
-                        row.entitlement_id ??
-                        row.entitlementId ??
-                        row.entity_id ??
-                        row.entityId ??
-                        row.lineItemId ??
-                        row.line_item_id ??
-                        row.item_id ??
-                        "",
-                    ),
-                    catalogId: toStringSafe(
-                      row.catalog_id ??
-                        row.catalogId ??
-                        row.catalogid ??
-                        row.id ??
-                        "",
-                    ),
-                    entitlementId: toStringSafe(
-                      row.entitlement_id ??
-                        row.entitlementId ??
-                        row.entity_id ??
-                        row.entityId ??
-                        "",
-                    ),
-                    name: toStringSafe(
-                      row.entity_name ?? row.entityName ?? "Requested Access",
-                    ),
-                    displayName: toStringSafe(
-                      row.entity_name ?? row.entityName ?? "Requested Access",
-                    ),
-                    applicationName: toStringSafe(
-                      row.application_name ?? row.applicationName ?? "",
-                    ),
-                    accountName: beneficiaryUsername,
-                    type: toStringSafe(
-                      row.entity_type ?? row.entityType ?? "Entitlement",
-                    ),
-                    startDate: "",
-                    endDate: "",
-                    comments: "",
-                    hasConflict: (() => {
-                      if (!hasGlobalSodConflict || !primaryConflictingRole)
-                        return false;
-                      const nameKey = toStringSafe(
-                        row.entity_name ?? row.entityName ?? "Requested Access",
-                      ).trim();
-                      const idKey = toStringSafe(
-                        row.entitlement_id ??
-                          row.entitlementId ??
-                          row.entity_id ??
-                          row.entityId ??
-                          "",
-                      ).trim();
-                      return (
-                        nameKey === primaryConflictingRole ||
-                        idKey === primaryConflictingRole
-                      );
-                    })(),
-                    hasInfoIcon: false,
-                    hasHighRisk: false,
-                    hasTrainingCheck: (() => {
-                      const raw = row.training_code ?? row.trainingCode;
-                      const arr = Array.isArray(raw) ? raw : [];
-                      if (arr.length === 0) return false;
-                      const first = arr[0] as Record<string, unknown>;
-                      return !!toStringSafe(first?.code).trim();
-                    })(),
-                  },
-                ];
-
-          // Read server decisions so refreshed page can render filled action buttons.
-          const decisionJson = toObjectSafe(
-            row.decision_json ?? row.decisionJson ?? row.decisionjson ?? {},
-          );
-          const decisionLineItems = toArraySafe(
-            decisionJson.lineItems ?? decisionJson.lineitems,
-          );
-
-          const decisionActionByLineItemId: Record<
-            string,
-            "approve" | "reject" | "consulted"
-          > = {};
-          const decisionActionByCatalogId: Record<
-            string,
-            "approve" | "reject" | "consulted"
-          > = {};
-
-          decisionLineItems.forEach((item) => {
-            const actionRaw = toStringSafe(
-              item?.ACTION ?? item?.action ?? item?.Action,
-            )
-              .trim()
-              .toUpperCase();
-            const mappedAction =
-              actionRaw === "APPROVE"
-                ? "approve"
-                : actionRaw === "REJECT" || actionRaw === "REVOKE"
-                  ? "reject"
-                  : actionRaw === "CONSULTED"
-                    ? "consulted"
-                    : null;
-            if (!mappedAction) return;
-
-            const decisionLineItemId = normalizeId(
-              item?.lineItemId ?? item?.line_item_id,
-            );
-            const decisionCatalogId = normalizeId(
-              item?.catalogId ?? item?.catalogid ?? item?.catalog_id,
-            );
-
-            if (decisionLineItemId) {
-              decisionActionByLineItemId[decisionLineItemId] = mappedAction;
-            }
-            if (decisionCatalogId) {
-              decisionActionByCatalogId[decisionCatalogId] = mappedAction;
-            }
-          });
-
-          const initialLineItemActions: Record<
-            string,
-            "approve" | "reject" | null
-          > = {};
-          const baselineLineItemActions: Record<
-            string,
-            "approve" | "reject" | "consulted" | null
-          > = {};
-          normalizedLineItems.forEach((lineItem, idx) => {
-            const byLineItemId =
-              decisionActionByLineItemId[normalizeId(lineItem.lineItemId)];
-            const byCatalogId =
-              decisionActionByCatalogId[normalizeId(lineItem.catalogId)];
-            const baselineAction = byLineItemId ?? byCatalogId ?? null;
-            baselineLineItemActions[String(idx)] = baselineAction;
-            initialLineItemActions[String(idx)] =
-              baselineAction === "approve" || baselineAction === "reject"
-                ? baselineAction
-                : null;
-          });
-
-          const durationDays = createdOnRaw
-            ? Math.max(
-                0,
-                Math.round(
-                  (Date.now() - new Date(String(createdOnRaw)).getTime()) /
-                    (1000 * 60 * 60 * 24),
-                ),
-              )
-            : undefined;
-
-          // Approval-history stepper: same request_json shape as the requester-facing tracker,
-          // so reuse the same step extraction (gracefully empty when this query's row doesn't
-          // carry workflow_instance data).
-          const requestJsonStepsRaw = pickBestStepArray(
-            requestJson?.instance_steps,
-            requestJson?.workflow_instance?.instance_steps,
-            requestJson?.workflowInstance?.instance_steps,
-            row?.instance_steps,
-            requestJson,
-            row,
-          );
-          const trainingValidation =
-            contextJson?.validation?.training ??
-            requestJson?.workflow_instance?.context_json?.validation?.training ??
-            requestJson?.workflowInstance?.context_json?.validation?.training ??
-            requestJson?.workflow_instance?.contextJson?.validation?.training ??
-            requestJson?.workflowInstance?.contextJson?.validation?.training;
-          const sodValidation =
-            contextJson?.validation?.sod ??
-            requestJson?.workflow_instance?.context_json?.validation?.sod ??
-            requestJson?.workflowInstance?.context_json?.validation?.sod ??
-            requestJson?.workflow_instance?.contextJson?.validation?.sod ??
-            requestJson?.workflowInstance?.contextJson?.validation?.sod;
-          const mappedWorkflowSteps = mapInstanceSteps(
-            sortStepsByTemplateOrder(requestJsonStepsRaw),
-            trainingValidation,
-            sodValidation,
-          );
-          const submittedStep: InstanceStep[] = createdOnRaw
-            ? [
-                {
-                  action: "Request Submitted",
-                  date: formatDateTime(toStringSafe(createdOnRaw)),
-                  userActor: requesterName ? `${requesterName} (Requester)` : "Requester",
-                  status: "Completed",
-                },
-              ]
-            : [];
-          const instanceSteps: InstanceStep[] =
-            mappedWorkflowSteps.length > 0 ? [...submittedStep, ...mappedWorkflowSteps] : [];
-
-          return {
-            id: requestId,
-            taskId,
-            reviewerId,
-            fallbackEntitlementId: fallbackEntitlementId || requestId,
-            // Every row here comes from task_status = 'OPEN', so this task is always pending review.
-            status: "Pending",
-            requesterName,
-            requesterUsername,
-            requesterEmail,
-            requesterDepartment,
-            requesterJobTitle,
-            requesterEmployeeId,
-            requesterManager,
+        const requesterName = toStringSafe(
+          requesterObj.displayname ?? requesterObj.display_name,
+        );
+        const beneficiaryName = toStringSafe(
+          beneficiaryObj.displayname ?? beneficiaryObj.display_name,
+        );
+        const requesterUsername = toStringSafe(
+          requesterObj.username ??
+            requesterObj.userid ??
+            requesterObj.email?.work ??
+            requesterObj.email,
+        );
+        const beneficiaryUsername = toStringSafe(
+          beneficiaryObj.username ??
+            beneficiaryObj.userid ??
+            beneficiaryObj.email?.work ??
             beneficiaryName,
-            beneficiaryUsername,
-            durationDays,
-            details: {
-              dateCreated: createdOn,
-              dateCreatedTime: createdOnDateTime,
-              type: toStringSafe(row.request_type ?? row.type ?? "Entitlement"),
-              justification,
-            },
-            lineItems: normalizedLineItems,
-            instanceSteps,
-            initialLineItemActions,
-            baselineLineItemActions,
-            sodPolicyDetails,
-            sodSeverity,
-            sodConflictingRoles,
-          } as PendingApprovalDetail;
+        );
+        const requesterEmail = toStringSafe(
+          requesterObj.email?.work ?? requesterObj.email,
+        );
+        const requesterDepartment = toStringSafe(requesterObj.department);
+        const requesterJobTitle = toStringSafe(requesterObj.title);
+        const requesterEmployeeId = toStringSafe(requesterObj.employeeid);
+        const requesterManager = toStringSafe(
+          requesterObj.managername ?? requesterObj.manager_name,
+        );
+
+        const createdOnRaw = activeTask?.created_at;
+        const createdOn = formatDate(toStringSafe(createdOnRaw));
+        const createdOnDateTime =
+          formatDateTime(toStringSafe(createdOnRaw)) || createdOn;
+        const justification = toStringSafe(activeTask?.requester_justification);
+
+        // Every task for this request carries the same catalog-backed line items; use the
+        // active task's copy, falling back to any task that has one.
+        const itemDetails: any[] =
+          toArraySafe(activeTask?.itemdetails).length > 0
+            ? toArraySafe(activeTask?.itemdetails)
+            : (tasks
+                .map((t) => toArraySafe(t?.itemdetails))
+                .find((arr) => arr.length > 0) ?? []);
+
+        const contextJson = toObjectSafe(activeTask?.context_json);
+        const sodValidation = toObjectSafe(contextJson?.validation?.sod);
+        const trainingValidation = toObjectSafe(contextJson?.validation?.training);
+        const hasSodConflict = Boolean(
+          sodValidation?.hasConflict ?? contextJson?.vars?.sodHasConflict,
+        );
+        const sodSeverity: string | null =
+          typeof sodValidation?.riskLevel === "string" &&
+          sodValidation.riskLevel.toUpperCase() !== "NONE"
+            ? sodValidation.riskLevel
+            : null;
+        // This payload doesn't carry a named SOD policy record (owner / business process /
+        // description) — only violations + risk level — so there's nothing to show in the
+        // policy-details sidebar.
+        const sodPolicyDetails: SodPolicyDetails | null = null;
+        const sodConflictingRoles: string[] = [];
+
+        // context_json.lineItems[].lineItemId is the numeric id the approver-action API
+        // expects; itemdetails[].lineitemid is a different ("business") id used only for
+        // display, so map from catalogId to recover the id actions must be sent with.
+        const contextLineItems: any[] = toArraySafe(contextJson?.lineItems);
+        const lineItemIdByCatalogId = new Map<string, number>();
+        contextLineItems.forEach((cli) => {
+          const catId = normalizeId(cli?.catalogId);
+          const lid = Number(cli?.lineItemId);
+          if (catId && Number.isFinite(lid)) lineItemIdByCatalogId.set(catId, lid);
         });
 
-        const routeId = normalizeId(id);
-        const matched = mapped.find((row) => normalizeId(row.id) === routeId);
-        setRequest(matched ?? null);
+        const aiRecommendations = toAiRecommendationArray(
+          activeTask?.ai_recommendation,
+        );
+
+        const lineItems: RequestLineItem[] = itemDetails.map((item) => {
+          const catalog = item?.catalog ?? {};
+          const lineName = toStringSafe(
+            catalog.name ?? catalog.entitlementname ?? catalog.applicationname,
+          );
+          const lineType = toStringSafe(
+            catalog.entitlementtype ??
+              catalog.type ??
+              catalog?.metadata?.entitlementType ??
+              "Entitlement",
+          );
+          const applicationName = toStringSafe(catalog.applicationname);
+          const accountName = toStringSafe(item?.account_name ?? beneficiaryUsername);
+          const startDate = formatDate(toStringSafe(item?.item_startdate));
+          const endDate = formatDate(toStringSafe(item?.item_enddate));
+          const riskLevel = String(catalog.risk ?? "").toLowerCase();
+
+          const requestedItemId = toStringSafe(item?.requested_itemid);
+          const catalogId = toStringSafe(catalog?.catalogid ?? requestedItemId);
+          const entitlementId = toStringSafe(catalog?.entitlementid ?? "");
+          const resolvedLineItemId =
+            lineItemIdByCatalogId.get(normalizeId(catalogId)) ?? item?.lineitemid;
+
+          const hasTrainingCheck = (() => {
+            const raw = catalog?.training_code;
+            const arr = Array.isArray(raw) ? raw : [];
+            if (arr.length === 0) return false;
+            const first = arr[0] as Record<string, unknown>;
+            return !!toStringSafe(first?.code).trim();
+          })();
+
+          const matchedAiRecommendation =
+            aiRecommendations.find((rec) => {
+              const recRequestedItemId = toStringSafe(
+                rec?.requested_itemid ?? rec?.requestedItemId,
+              ).trim();
+              return (
+                requestedItemId &&
+                recRequestedItemId &&
+                requestedItemId === recRequestedItemId
+              );
+            }) ?? aiRecommendations[0];
+
+          return {
+            lineItemId: toStringSafe(resolvedLineItemId),
+            catalogId,
+            entitlementId,
+            name: lineName,
+            displayName: lineName,
+            applicationName,
+            accountName,
+            type: lineType,
+            startDate,
+            endDate,
+            comments: toStringSafe(item?.item_comments),
+            hasConflict: hasSodConflict,
+            hasInfoIcon: riskLevel.startsWith("high"),
+            hasHighRisk: riskLevel.startsWith("high"),
+            hasTrainingCheck,
+            beneficiaryAnalysis:
+              toInsightMessage(
+                matchedAiRecommendation?.beneficiary_analysis?.message ??
+                  matchedAiRecommendation?.beneficiary_analysis,
+              ) ?? undefined,
+            contextualRisk:
+              toInsightMessage(
+                matchedAiRecommendation?.contextual_risk?.message ??
+                  matchedAiRecommendation?.contextual_risk,
+              ) ?? undefined,
+            riskSensitivityAnalysis:
+              toInsightMessage(
+                matchedAiRecommendation?.risk_sensitivity_analysis?.message ??
+                  matchedAiRecommendation?.risk_sensitivity_analysis,
+              ) ?? undefined,
+            peerAnalysis:
+              toInsightMessage(
+                matchedAiRecommendation?.peer_analysis?.message ??
+                  matchedAiRecommendation?.peer_analysis,
+              ) ?? undefined,
+          };
+        });
+
+        // Read this task's already-recorded per-item decisions (if any) so a refreshed page
+        // still renders filled action buttons instead of re-offering Approve/Reject.
+        const decisionJson = toObjectSafe(activeTask?.decision_json);
+        const decisionLineItems = toArraySafe(decisionJson.lineItems);
+        const decisionActionByLineItemId: Record<
+          string,
+          "approve" | "reject" | "consulted"
+        > = {};
+        decisionLineItems.forEach((entry) => {
+          const actionRaw = toStringSafe(entry?.action ?? entry?.ACTION)
+            .trim()
+            .toUpperCase();
+          const mappedAction =
+            actionRaw === "APPROVE"
+              ? "approve"
+              : actionRaw === "REJECT" || actionRaw === "REVOKE"
+                ? "reject"
+                : actionRaw === "CONSULTED"
+                  ? "consulted"
+                  : null;
+          if (!mappedAction) return;
+          const decisionLineItemId = normalizeId(entry?.lineItemId);
+          if (decisionLineItemId) {
+            decisionActionByLineItemId[decisionLineItemId] = mappedAction;
+          }
+        });
+
+        const initialLineItemActions: Record<
+          string,
+          "approve" | "reject" | null
+        > = {};
+        const baselineLineItemActions: Record<
+          string,
+          "approve" | "reject" | "consulted" | null
+        > = {};
+        lineItems.forEach((lineItem, idx) => {
+          const baselineAction =
+            decisionActionByLineItemId[normalizeId(lineItem.lineItemId)] ?? null;
+          baselineLineItemActions[String(idx)] = baselineAction;
+          initialLineItemActions[String(idx)] =
+            baselineAction === "approve" || baselineAction === "reject"
+              ? baselineAction
+              : null;
+        });
+
+        const durationDays = createdOnRaw
+          ? Math.max(
+              0,
+              Math.round(
+                (Date.now() - new Date(String(createdOnRaw)).getTime()) /
+                  (1000 * 60 * 60 * 24),
+              ),
+            )
+          : undefined;
+
+        // Approval-history stepper: same instance_steps shape the requester-facing Track
+        // Request detail page consumes.
+        const mappedWorkflowSteps = mapInstanceSteps(
+          sortStepsByTemplateOrder(toArraySafe(dbResponse.instance_steps)),
+          trainingValidation,
+          sodValidation,
+        );
+        const submittedStep: InstanceStep[] = createdOnRaw
+          ? [
+              {
+                action: "Request Submitted",
+                date: formatDateTime(toStringSafe(createdOnRaw)),
+                userActor: requesterName ? `${requesterName} (Requester)` : "Requester",
+                status: "Completed",
+              },
+            ]
+          : [];
+        const instanceSteps: InstanceStep[] =
+          mappedWorkflowSteps.length > 0
+            ? [...submittedStep, ...mappedWorkflowSteps]
+            : [];
+
+        const activeReviewerId =
+          toStringSafe(activeTask?.assignee_id) || trimmedReviewerId;
+
+        const built: PendingApprovalDetail = {
+          id: toStringSafe(dbResponse.requestUuid ?? id),
+          taskId: activeTask?.taskid ?? activeTask?.taskId,
+          reviewerId: activeReviewerId,
+          fallbackEntitlementId: lineItems[0]?.entitlementId || "",
+          status:
+            String(activeTask?.task_status ?? "").toUpperCase() === "OPEN"
+              ? "Pending"
+              : normalizeStatus(activeTask?.task_status) || "Pending",
+          requesterName,
+          requesterUsername,
+          requesterEmail,
+          requesterDepartment,
+          requesterJobTitle,
+          requesterEmployeeId,
+          requesterManager,
+          beneficiaryName,
+          beneficiaryUsername,
+          durationDays,
+          details: {
+            dateCreated: createdOn,
+            dateCreatedTime: createdOnDateTime,
+            type: lineItems[0]?.type || "Entitlement",
+            justification,
+          },
+          lineItems,
+          instanceSteps,
+          initialLineItemActions,
+          baselineLineItemActions,
+          sodPolicyDetails,
+          sodSeverity,
+          sodConflictingRoles,
+        };
+
+        setRequest(built);
       })
       .catch((err: unknown) => {
         setError(
