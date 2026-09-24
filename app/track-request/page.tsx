@@ -62,6 +62,12 @@ interface Request {
 
 const TRACK_REQUEST_EXPIRY_DAYS = 14;
 
+type TrackRequestTab = "Open" | "Closed";
+
+/** Pending / awaiting-info requests are still "Open"; terminal decisions are "Closed". */
+const OPEN_STATUS_BUCKETS: MyApprovalsStatusFilter[] = ["Pending", "Info Requested"];
+const CLOSED_STATUS_BUCKETS: MyApprovalsStatusFilter[] = ["Approved", "Rejected"];
+
 function formatTrackDate(value: string | null | undefined): string {
   if (!value) return "";
   const d = new Date(value);
@@ -102,6 +108,7 @@ const wrappedTextCol: Partial<ColDef> = {
 };
 
 const TrackRequest: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<TrackRequestTab>("Open");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<MyApprovalsStatusFilter>("All");
@@ -258,11 +265,22 @@ const TrackRequest: React.FC = () => {
       });
   }, []);
 
+  const tabStatusBuckets =
+    activeTab === "Open" ? OPEN_STATUS_BUCKETS : CLOSED_STATUS_BUCKETS;
+
+  const statusOptionsForTab = useMemo(
+    () =>
+      MY_APPROVALS_STATUS_SELECT_OPTIONS.filter(
+        ({ value }) => value === "All" || tabStatusBuckets.includes(value)
+      ),
+    [activeTab]
+  );
+
   const filteredRequests = requests.filter((request) => {
-    if (statusFilter !== "All") {
-      const bucket = mapAccessRequestStatusToMyApprovalsFilter(request.status);
-      if (bucket !== statusFilter) return false;
-    }
+    const bucket = mapAccessRequestStatusToMyApprovalsFilter(request.status);
+    if (!tabStatusBuckets.includes(bucket)) return false;
+
+    if (statusFilter !== "All" && bucket !== statusFilter) return false;
 
     const query = searchQuery.trim().toLowerCase();
 
@@ -332,7 +350,11 @@ const TrackRequest: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, raisedFrom, raisedTo, systemFilter, entitlementFilter]);
+  }, [activeTab, searchQuery, statusFilter, raisedFrom, raisedTo, systemFilter, entitlementFilter]);
+
+  useEffect(() => {
+    setStatusFilter("All");
+  }, [activeTab]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -490,6 +512,26 @@ const TrackRequest: React.FC = () => {
         Track requests
       </h1>
 
+      {/* Open / Closed tabs */}
+      <div className="mb-4 flex gap-2" role="tablist" aria-label="Track request status">
+        {(["Open", "Closed"] as const).map((tab) => (
+          <button
+            key={tab}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium transition-all duration-200 rounded-lg inline-flex items-center justify-center gap-2 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              activeTab === tab
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
       {/* Search and Filter Section — full-width white box; every control sits in a single row */}
       <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="flex w-full flex-wrap items-end gap-4">
@@ -517,7 +559,7 @@ const TrackRequest: React.FC = () => {
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             >
-              {MY_APPROVALS_STATUS_SELECT_OPTIONS.map(({ value, label }) => (
+              {statusOptionsForTab.map(({ value, label }) => (
                 <option key={value} value={value}>
                   {label}
                 </option>

@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { CircleCheck, CircleX } from "lucide-react";
-import { getReviewerId } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
 import "@/lib/ag-grid-setup";
 import {
   type MyApprovalsStatusFilter,
@@ -22,6 +22,8 @@ const AgGridReact = dynamic(
 
 type PendingApproval = {
   id: string;
+  /** Task-level requestUuid — the detail endpoint's path identifier for this request. */
+  requestUuid: string;
   /** 1-based position of this access item within its parent request. */
   subId: number;
   /** Workflow task id — the approver-action API's path/payload identifier for this request. */
@@ -93,6 +95,15 @@ function addDaysToCreatedOn(createdOn: string, days: number): string {
   return out.toISOString();
 }
 
+/** Normalizes an itemNames[].status value ("PENDING" / "APPROVE" / "REJECT" / ...) into the shared filter bucket. */
+function normalizeItemStatus(value: unknown): PendingApprovalStatus {
+  const s = String(value ?? "").trim().toUpperCase();
+  if (s.includes("REJECT") || s.includes("DENIED")) return "Rejected";
+  if (s.includes("INFO")) return "Info Requested";
+  if (s.includes("APPROVE") || s.includes("COMPLETE")) return "Approved";
+  return "Pending";
+}
+
 async function fetchPendingApprovals(): Promise<PendingApproval[]> {
   const reviewerId = getReviewerId();
 
@@ -101,249 +112,84 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
     return [];
   }
 
-  const response = await fetch(
-    "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        // Add authorization here if required, e.g. Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        query:
-          "select * from kf_wf_get_approval_task where assignee_id = ?::uuid AND task_status = 'OPEN'",
-        parameters: [reviewerId],
-      }),
+  const trimmedReviewerId = String(reviewerId).trim();
+  const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/${encodeURIComponent(
+    trimmedReviewerId
+  )}`;
+
+  /** Response is a page of tasks: { dbResponse: { data: [...], page: { totalPages, ... } } }. */
+  const fetchPage = (page: number) =>
+    apiRequestWithAuth<any>(`${baseUrl}?page=${page}&size=100&status=OPEN`, { method: "GET" });
+
+  const extractPageItems = (pageData: any): any[] =>
+    Array.isArray(pageData?.dbResponse?.data) ? pageData.dbResponse.data : [];
+
+  const firstPageData = await fetchPage(0);
+  console.log("My Approvals (table) API raw response (page 0):", firstPageData);
+  const totalPages: number = Number(firstPageData?.dbResponse?.page?.totalPages ?? 1) || 1;
+
+  let allTasks = extractPageItems(firstPageData);
+  if (totalPages > 1) {
+    const remainingPages = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 1))
+    );
+    for (const pageData of remainingPages) {
+      allTasks = allTasks.concat(extractPageItems(pageData));
     }
-  );
-
-  if (!response.ok) {
-    throw new Error(`Failed to load pending approvals (${response.status})`);
   }
-
-  const json = await response.json();
 
   const toStringSafe = (value: unknown) =>
     value === null || value === undefined ? "" : String(value);
-  const pick = (row: Record<string, any>, keys: string[]) => {
-    for (const key of keys) {
-      const value = row[key];
-      if (value !== undefined && value !== null && value !== "") return value;
-    }
-    return "";
-  };
 
-  const rows: any[] = Array.isArray(json)
-    ? json
-    : Array.isArray((json as any)?.resultSet)
-    ? (json as any).resultSet
-    : Array.isArray((json as any)?.data)
-    ? (json as any).data
-    : Array.isArray((json as any)?.rows)
-    ? (json as any).rows
-    : [];
+  // Tracks workflowInstanceIds already emitted so a duplicate task/item pairing only
+  // shows up as a single row.
+  const seenWorkflowInstanceIds = new Set<number>();
 
-  return rows.flatMap((row, index) => {
-    const statusRaw = toStringSafe(
-      pick(row, ["status", "task_status", "taskStatus", "STATE", "state"]) ||
-        "Pending"
-    );
+  return allTasks.flatMap((task) => {
+    const taskId = toStringSafe(task?.taskId);
+    const requestId = toStringSafe(task?.requestId);
+    const taskRequestUuid = toStringSafe(task?.requestUuid);
+    const requester = toStringSafe(task?.requestedByDisplayName) || "-";
+    const beneficiary = toStringSafe(task?.requestedForDisplayName) || "-";
+    const createdOn = toStringSafe(task?.createdAt ?? task?.openedAt);
 
-    const normalizedStatus =
-      (["Pending", "Approved", "Rejected", "Info Requested"] as const).find(
-        (s) => s.toLowerCase() === String(statusRaw).toLowerCase()
-      ) ?? "Pending";
+    const itemNames: any[] = Array.isArray(task?.itemNames) ? task.itemNames : [];
+    const itemsToRender: any[] = itemNames.length > 0 ? itemNames : [{}];
 
-    const createdOn = toStringSafe(
-      pick(row, [
-        "created_on",
-        "createdOn",
-        "created_at",
-        "assigned_on",
-        "assignedOn",
-        "start_date",
-        "requested_on",
-      ])
-    );
+    return itemsToRender
+      .map((item, index) => {
+        const rawWorkflowInstanceId = item?.workflowInstanceIds;
+        const workflowInstanceId =
+          rawWorkflowInstanceId != null ? Number(rawWorkflowInstanceId) : null;
 
-    const lastActedOn = toStringSafe(
-      pick(row, [
-        "last_acted_on",
-        "lastActedOn",
-        "updated_at",
-        "modified_at",
-        "expires_on",
-        "expiresOn",
-        "due_date",
-        "expiry_date",
-      ])
-    );
+        if (workflowInstanceId != null) {
+          if (seenWorkflowInstanceIds.has(workflowInstanceId)) return null;
+          seenWorkflowInstanceIds.add(workflowInstanceId);
+        }
 
-    const requester = toStringSafe(
-      row?.requester?.displayname ??
-        pick(row, [
-          "requester_name",
-          "requestor_name",
-          "requester",
-          "requested_by_name",
-          "requested_by",
-        ])
-    );
-
-    const beneficiary = toStringSafe(
-      row?.beneficiary?.username ??
-        pick(row, [
-          "beneficiary_name",
-          "beneficiary",
-          "user_name",
-          "account_name",
-          "requested_for",
-        ])
-    );
-
-    const requestJson =
-      row?.request_json ??
-      row?.requestJson ??
-      row?.request ??
-      row?.data ??
-      {};
-
-    // Task rows often expose sodResults on context_json (approval API). Also support workflow payload shape.
-    const contextJsonFromRow = row?.context_json ?? row?.contextJson ?? null;
-    const contextJsonFromWorkflow =
-      requestJson?.workflow_instance?.context_json ??
-      requestJson?.workflowInstance?.context_json ??
-      requestJson?.workflow_instance?.contextJson ??
-      requestJson?.workflowInstance?.contextJson ??
-      null;
-
-    // Mirror Track Request: sodResults may live on task context_json or workflow_instance.context_json.
-    const sodResults =
-      contextJsonFromRow?.sodResults ??
-      contextJsonFromRow?.sod_results ??
-      contextJsonFromRow?.sodresults ??
-      contextJsonFromWorkflow?.sodResults ??
-      contextJsonFromWorkflow?.sod_results ??
-      contextJsonFromWorkflow?.sodresults ??
-      requestJson?.workflow_instance?.context_json?.sodResults ??
-      requestJson?.workflow_instance?.context_json?.sod_results ??
-      requestJson?.workflow_instance?.context_json?.sodresults ??
-      requestJson?.workflowInstance?.context_json?.sodResults ??
-      requestJson?.workflowInstance?.context_json?.sod_results ??
-      requestJson?.workflowInstance?.context_json?.sodresults ??
-      requestJson?.workflow_instance?.contextJson?.sodResults ??
-      requestJson?.workflow_instance?.contextJson?.sod_results ??
-      requestJson?.workflow_instance?.contextJson?.sodresults ??
-      requestJson?.workflowInstance?.contextJson?.sodResults;
-
-    const hasGlobalSodConflict = Boolean(sodResults?.hasConflict);
-    const conflictingRoles: string[] = Array.isArray(sodResults?.conflictingRoles)
-      ? sodResults.conflictingRoles.map((r: any) => String(r).trim()).filter(Boolean)
-      : [];
-
-    // Catalog-based per-item detail — same shape used by the request detail page and by
-    // Track Request (row.itemdetails: [{ catalog: { name, applicationname, type, ... } }]).
-    const itemDetailsRaw = row.itemdetails ?? row.itemDetails;
-    const itemDetails: any[] = Array.isArray(itemDetailsRaw)
-      ? itemDetailsRaw
-      : itemDetailsRaw && typeof itemDetailsRaw === "object"
-      ? Object.values(itemDetailsRaw)
-      : [];
-
-    const requestId = toStringSafe(
-      pick(row, [
-        "request_id",
-        "requestid",
-        "req_id",
-        "task_id",
-        "taskid",
-        "taskId",
-        "id",
-        "requestId",
-      ]) || index + 1
-    );
-    const taskId = toStringSafe(
-      pick(row, ["task_id", "taskId", "taskid", "id"]) || requestId
-    );
-    const rowReviewerId = toStringSafe(
-      row.assignee_id ?? row.assigneeId ?? row.reviewer_id ?? row.reviewerId ?? reviewerId
-    );
-
-    // One row per requested access item; a request with no catalog items still gets a single
-    // row (using whatever entity-level fields the row itself carries) so it never disappears.
-    const itemsToRender: any[] = itemDetails.length > 0 ? itemDetails : [{}];
-
-    return itemsToRender.map((item, itemIdx) => {
-      const catalog = item?.catalog ?? {};
-      const entitlementName = toStringSafe(
-        catalog.name ?? catalog.entitlementname ?? item?.entityName ?? item?.name
-      );
-      const systemName = toStringSafe(
-        catalog.applicationname ?? catalog.applicationName ?? item?.applicationName
-      );
-      const reqType = toStringSafe(
-        catalog.type ?? catalog.entitlementtype ?? item?.type ?? item?.entityType ?? "Entitlement"
-      );
-
-      const nameKey = entitlementName.trim();
-      const idKey = String(
-        catalog?.catalogid ??
-          catalog?.catalogId ??
-          catalog?.entitlementid ??
-          catalog?.entitlementId ??
-          item?.id ??
-          item?.entitlementId ??
-          item?.entitlement_id ??
-          ""
-      ).trim();
-      const itemHasConflict =
-        Boolean(item?.hasConflict ?? item?.has_conflict) ||
-        (hasGlobalSodConflict &&
-          (conflictingRoles.length === 0 ||
-            conflictingRoles.some((name) => name === nameKey || name === idKey)));
-
-      // Identifiers the approver-action API expects for this line item — same field
-      // resolution the request detail page uses to build its submit payload.
-      const requestedItemId = toStringSafe(
-        item?.requested_itemid ?? item?.requestedItemId ?? item?.requesteditemid ?? ""
-      );
-      const catalogId = toStringSafe(
-        catalog?.catalogid ?? catalog?.catalogId ?? catalog?.catalog_id ?? catalog?.id ?? ""
-      );
-      const entitlementId = toStringSafe(
-        catalog?.entitlementid ??
-          catalog?.entitlementId ??
-          item?.entitlement_id ??
-          item?.entitlementId ??
-          item?.lineItemId ??
-          item?.line_item_id ??
-          item?.id ??
-          ""
-      );
-      const lineItemId = requestedItemId || catalogId || entitlementId;
-
-      return {
-        id: requestId,
-        subId: itemIdx + 1,
-        taskId,
-        reviewerId: rowReviewerId,
-        lineItemId,
-        catalogId: catalogId || entitlementId,
-        requester,
-        beneficiary,
-        createdOn,
-        lastActedOn,
-        expiryDate: addDaysToCreatedOn(createdOn, APPROVAL_EXPIRY_DAYS),
-        reqType,
-        systemName,
-        entitlementName,
-        status: normalizedStatus,
-        hasConflict:
-          itemHasConflict ||
-          (itemDetails.length === 0 &&
-            (Boolean(row.hasConflict ?? row.has_conflict) || hasGlobalSodConflict)),
-      };
-    });
+        return {
+          id: requestId || taskId,
+          requestUuid: toStringSafe(item?.requestUuids) || taskRequestUuid,
+          subId: workflowInstanceId ?? index + 1,
+          taskId,
+          reviewerId: trimmedReviewerId,
+          // This endpoint doesn't return catalog/lineItemId identifiers — best available
+          // stand-in until the approver-action call is updated to match.
+          lineItemId: workflowInstanceId != null ? String(workflowInstanceId) : "",
+          catalogId: "",
+          requester,
+          beneficiary,
+          createdOn,
+          lastActedOn: "",
+          expiryDate: addDaysToCreatedOn(createdOn, APPROVAL_EXPIRY_DAYS),
+          reqType: "Entitlement",
+          systemName: "",
+          entitlementName: toStringSafe(item?.lineitem),
+          status: normalizeItemStatus(item?.status),
+          hasConflict: false,
+        } as PendingApproval;
+      })
+      .filter((row): row is PendingApproval => row !== null);
   });
 }
 
@@ -514,10 +360,10 @@ const PendingApprovalsPage: React.FC = () => {
         cellRenderer: (params: ICellRendererParams) => {
           const data = params.data as PendingApproval | undefined;
           if (!data) return null;
-          const requestId = data.id;
+          const detailRouteId = data.requestUuid || data.id;
           return (
             <div className="flex h-full w-full min-w-0 items-center gap-1.5">
-              {requestId ? (
+              {detailRouteId ? (
                 <button
                   type="button"
                   className="tabular-nums text-blue-600 hover:underline focus:outline-none"
@@ -525,7 +371,7 @@ const PendingApprovalsPage: React.FC = () => {
                     e.stopPropagation();
                     router.push(
                       `/access-request/pending-approvals/${encodeURIComponent(
-                        String(requestId)
+                        String(detailRouteId)
                       )}`
                     );
                   }}
