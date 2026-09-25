@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
@@ -49,6 +49,10 @@ type PendingApproval = {
 
 // Fallback mock data used only when API returns no records
 const mockDataFallback: PendingApproval[] = [];
+
+/** QUEUE tasks that haven't been claimed yet can only be claimed, not approved/rejected in bulk. */
+const isQueueClaimable = (data: PendingApproval | undefined | null): boolean =>
+  data?.assigneeType === "QUEUE" && data?.claimable === true;
 
 const toStringSafe = (value: unknown): string =>
   value === null || value === undefined ? "" : String(value);
@@ -247,6 +251,119 @@ async function resolveApproverActionIds(
   return { catalogId, lineItemId: resolvedLineItemId };
 }
 
+/**
+ * ag-grid's built-in checkboxSelection cell injection doesn't align well alongside a custom
+ * cellRenderer (checkbox ends up floating between rows), so the checkbox is rendered manually
+ * here and kept in sync with the row node's selection state instead.
+ */
+const ReqIdCellRenderer: React.FC<ICellRendererParams> = (params) => {
+  const data = params.data as PendingApproval | undefined;
+  const [selected, setSelected] = useState<boolean>(() => params.node.isSelected() ?? false);
+
+  useEffect(() => {
+    const listener = () => setSelected(params.node.isSelected() ?? false);
+    params.node.addEventListener("rowSelected", listener);
+    return () => {
+      params.node.removeEventListener("rowSelected", listener);
+    };
+  }, [params.node]);
+
+  if (!data) return null;
+  const detailRouteId = data.requestUuid || data.id;
+  const selectable = !isQueueClaimable(data);
+
+  return (
+    <div className="flex h-full w-full min-w-0 items-center gap-2">
+      {selectable ? (
+        <input
+          type="checkbox"
+          checked={selected}
+          onChange={(e) => params.node.setSelected(e.target.checked)}
+          onClick={(e) => e.stopPropagation()}
+          className="h-3.5 w-3.5 shrink-0 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        />
+      ) : (
+        <span className="inline-block w-3.5 shrink-0" aria-hidden />
+      )}
+      {detailRouteId ? (
+        <button
+          type="button"
+          className="tabular-nums text-blue-600 hover:underline focus:outline-none"
+          onClick={(e) => {
+            e.stopPropagation();
+            params.context?.router?.push(
+              `/access-request/pending-approvals/${encodeURIComponent(String(detailRouteId))}`
+            );
+          }}
+        >
+          {data.id}
+        </button>
+      ) : (
+        <span className="tabular-nums">{data.id}</span>
+      )}
+      {data.hasConflict ? (
+        <span
+          className="inline-flex shrink-0 items-center rounded border border-red-400 bg-red-50 px-1 py-0.5 text-[11px] font-normal uppercase leading-none text-red-600"
+          title="Segregation of duties (SOD) conflict"
+        >
+          SOD
+        </span>
+      ) : null}
+    </div>
+  );
+};
+
+const ReqIdHeaderRenderer: React.FC<any> = (params) => {
+  const [checkedState, setCheckedState] = useState<"all" | "some" | "none">("none");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const computeState = (): "all" | "some" | "none" => {
+      let total = 0;
+      let selected = 0;
+      params.api.forEachNodeAfterFilterAndSort((node: any) => {
+        if (!isQueueClaimable(node.data)) {
+          total += 1;
+          if (node.isSelected()) selected += 1;
+        }
+      });
+      if (total === 0 || selected === 0) return "none";
+      return selected === total ? "all" : "some";
+    };
+
+    const update = () => setCheckedState(computeState());
+    update();
+    params.api.addEventListener("selectionChanged", update);
+    params.api.addEventListener("modelUpdated", update);
+    return () => {
+      params.api.removeEventListener("selectionChanged", update);
+      params.api.removeEventListener("modelUpdated", update);
+    };
+  }, [params.api]);
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = checkedState === "some";
+  }, [checkedState]);
+
+  return (
+    <div className="flex h-full items-center gap-2">
+      <input
+        ref={inputRef}
+        type="checkbox"
+        checked={checkedState === "all"}
+        onChange={(e) => {
+          const shouldSelect = e.target.checked;
+          params.api.forEachNodeAfterFilterAndSort((node: any) => {
+            if (!isQueueClaimable(node.data)) node.setSelected(shouldSelect);
+          });
+        }}
+        className="h-3.5 w-3.5 cursor-pointer rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+      />
+      <span>{params.displayName}</span>
+    </div>
+  );
+};
+
 const PendingApprovalsPage: React.FC = () => {
   const [gridApi, setGridApi] = useState<any | null>(null);
   const router = useRouter();
@@ -273,6 +390,10 @@ const PendingApprovalsPage: React.FC = () => {
   const [actionLoadingKey, setActionLoadingKey] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<Record<string, string | null>>({});
   const [claimConfirmRow, setClaimConfirmRow] = useState<PendingApproval | null>(null);
+  const [selectedRows, setSelectedRows] = useState<PendingApproval[]>([]);
+  const [bulkConfirmAction, setBulkConfirmAction] = useState<"approve" | "reject" | null>(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   const rowKey = (row: PendingApproval) => `${row.id}_${row.subId}`;
 
@@ -366,6 +487,66 @@ const PendingApprovalsPage: React.FC = () => {
     [actionLoadingKey, queryClient]
   );
 
+  const handleBulkAction = useCallback(
+    async (rows: PendingApproval[], action: "approve" | "reject") => {
+      if (rows.length === 0 || bulkSubmitting) return;
+
+      setBulkSubmitting(true);
+      setBulkError(null);
+
+      const failures: string[] = [];
+      for (const row of rows) {
+        try {
+          const { catalogId, lineItemId } = await resolveApproverActionIds(row);
+          const parsedLineItemId = Number(lineItemId);
+          const payload = {
+            taskid: row.taskId,
+            overallAction: action === "approve" ? "APPROVE" : "REJECT",
+            comments: "",
+            lineItems: [
+              {
+                catalogId,
+                lineItemId: Number.isFinite(parsedLineItemId) ? parsedLineItemId : lineItemId,
+                ACTION: action === "approve" ? "APPROVE" : "REJECT",
+                comments: action === "approve" ? "Approved via UI" : "Revoked via UI",
+                entitlementName: null,
+              },
+            ],
+          };
+
+          const response = await fetch(
+            `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${row.reviewerId}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Request failed (${response.status})`);
+          }
+        } catch (err: unknown) {
+          failures.push(
+            `Req ${row.id} / Sub ${row.subId}: ${err instanceof Error ? err.message : "failed"}`
+          );
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
+      setBulkSubmitting(false);
+
+      if (failures.length > 0) {
+        setBulkError(
+          `${failures.length} of ${rows.length} item(s) could not be ${action}d — ${failures.join("; ")}`
+        );
+      } else {
+        setSelectedRows([]);
+      }
+    },
+    [bulkSubmitting, queryClient]
+  );
+
   const parseInputDate = (value: string): Date | null => {
     if (!value) return null;
     const parts = value.split("-");
@@ -447,45 +628,12 @@ const PendingApprovalsPage: React.FC = () => {
         headerName: "Req Id",
         field: "id",
         flex: 0.85,
-        minWidth: 130,
+        minWidth: 150,
         sortable: true,
         sort: "desc",
         cellClass: "pending-approvals-req-id-cell",
-        cellRenderer: (params: ICellRendererParams) => {
-          const data = params.data as PendingApproval | undefined;
-          if (!data) return null;
-          const detailRouteId = data.requestUuid || data.id;
-          return (
-            <div className="flex h-full w-full min-w-0 items-center gap-1.5">
-              {detailRouteId ? (
-                <button
-                  type="button"
-                  className="tabular-nums text-blue-600 hover:underline focus:outline-none"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    router.push(
-                      `/access-request/pending-approvals/${encodeURIComponent(
-                        String(detailRouteId)
-                      )}`
-                    );
-                  }}
-                >
-                  {data.id}
-                </button>
-              ) : (
-                <span className="tabular-nums">{data.id}</span>
-              )}
-              {data.hasConflict ? (
-                <span
-                  className="inline-flex shrink-0 items-center rounded border border-red-400 bg-red-50 px-1 py-0.5 text-[11px] font-normal uppercase leading-none text-red-600"
-                  title="Segregation of duties (SOD) conflict"
-                >
-                  SOD
-                </span>
-              ) : null}
-            </div>
-          );
-        },
+        headerComponent: ReqIdHeaderRenderer,
+        cellRenderer: ReqIdCellRenderer,
       },
       {
         headerName: "Sub Id",
@@ -768,11 +916,21 @@ const PendingApprovalsPage: React.FC = () => {
               <AgGridReact
                 rowData={paginatedRowData}
                 columnDefs={columnDefs}
+                context={{ router }}
               rowClassRules={{
                 "my-approvals-row-striped": (params) =>
                   (params.node.rowIndex ?? 0) % 2 === 1,
               }}
-              rowSelection="single"
+              rowSelection="multiple"
+              suppressRowClickSelection
+              isRowSelectable={(rowNode: any) => !isQueueClaimable(rowNode?.data)}
+              onSelectionChanged={(params) => {
+                try {
+                  setSelectedRows(params.api.getSelectedRows() as PendingApproval[]);
+                } catch {
+                  // ignore
+                }
+              }}
               rowModelType="clientSide"
               animateRows
               domLayout="autoHeight"
@@ -879,6 +1037,87 @@ const PendingApprovalsPage: React.FC = () => {
                   className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   Claim
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedRows.length > 0 && (
+          <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2">
+            <div className="flex items-center gap-3 rounded-full border border-gray-200 bg-white px-4 py-2 shadow-lg">
+              <span className="text-sm font-medium text-gray-700">
+                {selectedRows.length} selected
+              </span>
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => setBulkConfirmAction("approve")}
+                className="rounded-full bg-green-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Approve
+              </button>
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => setBulkConfirmAction("reject")}
+                className="rounded-full bg-red-600 px-4 py-1.5 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Reject
+              </button>
+              <button
+                type="button"
+                disabled={bulkSubmitting}
+                onClick={() => setSelectedRows([])}
+                className="text-sm font-medium text-gray-500 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Clear
+              </button>
+            </div>
+            {bulkError && (
+              <div className="mt-2 max-w-md rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+                {bulkError}
+              </div>
+            )}
+          </div>
+        )}
+
+        {bulkConfirmAction && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3"
+            onClick={() => setBulkConfirmAction(null)}
+          >
+            <div
+              className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold text-gray-900">
+                {bulkConfirmAction === "approve" ? "Approve" : "Reject"} {selectedRows.length} selected
+                item{selectedRows.length === 1 ? "" : "s"}?
+              </h3>
+              <p className="mt-1.5 text-sm text-gray-600">This action can&apos;t be undone.</p>
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBulkConfirmAction(null)}
+                  className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const action = bulkConfirmAction;
+                    setBulkConfirmAction(null);
+                    if (action) handleBulkAction(selectedRows, action);
+                  }}
+                  className={`rounded-md px-4 py-2 text-sm font-medium text-white ${
+                    bulkConfirmAction === "approve"
+                      ? "bg-green-600 hover:bg-green-700"
+                      : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {bulkConfirmAction === "approve" ? "Approve" : "Reject"}
                 </button>
               </div>
             </div>
