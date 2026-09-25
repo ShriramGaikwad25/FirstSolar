@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   FileText,
   ChevronDown,
@@ -13,6 +14,7 @@ import {
   Building2,
   Briefcase,
   UserCog,
+  MessageCircleQuestion,
   type LucideIcon,
 } from "lucide-react";
 import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
@@ -31,6 +33,9 @@ interface InstanceStep {
   sodStatus?: string;
   trainingWarnings?: Array<{ message: string }>;
   trainingNotRequired?: boolean;
+  /** Open clarification question asked of the requester on this step, when one is outstanding. */
+  clarificationQuestion?: string;
+  clarificationTaskId?: number;
 }
 
 interface RequestDetails {
@@ -219,12 +224,16 @@ const DETAIL_TABS: Array<{ key: DetailTab; label: string }> = [
 
 const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = React.use(params);
+  const router = useRouter();
   const { openSidebar } = useRightSidebar();
   const [request, setRequest] = useState<Request | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expandedLineItems, setExpandedLineItems] = useState<Record<string, boolean>>({});
   const [activeTab, setActiveTab] = useState<DetailTab>("history");
+  const [clarificationAnswer, setClarificationAnswer] = useState("");
+  const [answerSubmitting, setAnswerSubmitting] = useState(false);
+  const [answerError, setAnswerError] = useState<string | null>(null);
 
   useEffect(() => {
     const reviewerId = getReviewerId();
@@ -529,6 +538,17 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                   }))
                 : undefined;
 
+            const clarificationTask = Array.isArray(step?.tasks)
+              ? step.tasks.find(
+                  (t: any) =>
+                    t?.payload_json?.kind === "CLARIFICATION" &&
+                    String(t?.task_status ?? "").toUpperCase() === "OPEN"
+                )
+              : undefined;
+            const clarificationQuestion = clarificationTask?.payload_json?.question
+              ? String(clarificationTask.payload_json.question)
+              : undefined;
+
             const isSodStep = String(step?.step_code ?? "").toUpperCase().includes("SOD");
             const sodViolationsRaw = sodValidation?.violations ?? sodValidation?.Violations;
             const sodStatusRaw = sodValidation?.status ?? sodValidation?.Status;
@@ -621,6 +641,8 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
             sodStatus: sodClean ? String(sodStatusRaw ?? "") : undefined,
             trainingWarnings,
             trainingNotRequired: trainingCompletedNotRequired,
+            clarificationQuestion,
+            clarificationTaskId: clarificationTask?.id,
           };
           });
 
@@ -1182,6 +1204,10 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
     String(step.status ?? "").toLowerCase().includes("pending")
   );
 
+  const stepWithOpenClarification = visibleInstanceSteps.find(
+    (step) => step.clarificationQuestion
+  );
+
   const isStepPending = (step: InstanceStep | undefined): boolean => {
     if (!step) return false;
     const s = (step.status || "").toLowerCase();
@@ -1329,6 +1355,80 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
       ) : (
         <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-sm text-gray-500">
           No approval history yet.
+        </div>
+      )}
+
+      {stepWithOpenClarification && (
+        <div className="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex items-start gap-2.5">
+            <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-600">
+              <MessageCircleQuestion className="h-4 w-4" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-gray-900">Clarification Requested</h3>
+              <p className="mt-0.5 text-sm text-gray-600">
+                {stepWithOpenClarification.clarificationQuestion}
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 pl-9">
+            <textarea
+              value={clarificationAnswer}
+              onChange={(e) => setClarificationAnswer(e.target.value)}
+              rows={2}
+              placeholder="Type your answer..."
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {answerError && (
+              <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+                {answerError}
+              </div>
+            )}
+            <div className="mt-2 flex justify-end">
+              <button
+                type="button"
+                disabled={!clarificationAnswer.trim() || answerSubmitting}
+                onClick={async () => {
+                  const clarificationTaskId = stepWithOpenClarification?.clarificationTaskId;
+                  const answer = clarificationAnswer.trim();
+                  if (!clarificationTaskId || !answer) return;
+
+                  const reviewerId = getReviewerId();
+                  if (!reviewerId) return;
+
+                  setAnswerSubmitting(true);
+                  setAnswerError(null);
+                  try {
+                    const response = await fetch(
+                      `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/clarification/provide/${String(reviewerId).trim()}`,
+                      {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          clarificationTaskId: String(clarificationTaskId),
+                          answer,
+                        }),
+                      },
+                    );
+
+                    if (!response.ok) {
+                      throw new Error(`Request failed (${response.status})`);
+                    }
+
+                    setClarificationAnswer("");
+                    router.push("/track-request");
+                  } catch (err: unknown) {
+                    setAnswerError(err instanceof Error ? err.message : "Failed to submit answer");
+                  } finally {
+                    setAnswerSubmitting(false);
+                  }
+                }}
+                className="rounded-md bg-blue-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {answerSubmitting ? "Submitting..." : "Answer"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

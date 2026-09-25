@@ -2279,58 +2279,15 @@ const PendingApprovalDetailPage = ({
 
                     try {
                       const message = infoRequestMessage.trim();
-                      const lineItemsPayload = request.lineItems.map(
-                        (lineItem, idx) => {
-                          const key = String(idx);
-                          const parsedLineItemId = Number(lineItem.lineItemId);
-
-                          const base = {
-                            catalogId:
-                              lineItem.catalogId ||
-                              lineItem.entitlementId ||
-                              null,
-                            lineItemId: Number.isFinite(parsedLineItemId)
-                              ? parsedLineItemId
-                              : lineItem.lineItemId,
-                            entitlementName: null,
-                          };
-
-                          if (key === infoRequestItemKey) {
-                            return {
-                              ...base,
-                              ACTION: "CONSULTED",
-                              comments: message,
-                            };
-                          }
-
-                          const effectiveAction =
-                            lineItemActions[key] ??
-                            baselineLineItemActions[key] ??
-                            null;
-
-                          if (!effectiveAction) return base;
-
-                          return {
-                            ...base,
-                            ACTION:
-                              effectiveAction === "approve"
-                                ? "APPROVE"
-                                : effectiveAction === "reject"
-                                  ? "REJECT"
-                                  : "CONSULTED",
-                          };
-                        },
-                      );
-
                       const payload = {
-                        taskid: request.taskId ?? request.id,
-                        comments: "",
-                        lineItems: lineItemsPayload,
+                        target: "REQUESTER",
+                        taskId: String(request.taskId ?? request.id),
+                        question: message,
                       };
 
                       const submittingReviewerId = getReviewerId();
                       const response = await fetch(
-                        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
+                        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/clarification/request/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
@@ -2340,7 +2297,7 @@ const PendingApprovalDetailPage = ({
 
                       if (!response.ok) {
                         throw new Error(
-                          `Approver action failed (${response.status})`,
+                          `Clarification request failed (${response.status})`,
                         );
                       }
 
@@ -2354,7 +2311,7 @@ const PendingApprovalDetailPage = ({
                       });
                       setInfoRequestItemKey(null);
                       setInfoRequestMessage("");
-                      window.location.reload();
+                      router.push("/access-request/pending-approvals");
                     } catch (err: unknown) {
                       console.error("Failed to send info request:", err);
                       setLineItemError((prev) => ({

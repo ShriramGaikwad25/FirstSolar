@@ -54,6 +54,8 @@ interface Request {
   canProvideAdditionalDetails?: boolean;
   /** True when API / SOD evaluation reports a segregation-of-duties conflict for this request. */
   hasConflict?: boolean;
+  /** True when a clarification question is outstanding for this request's workflow instance. */
+  hasClarification?: boolean;
   /** ISO date string: creation date + 14 days (aligned with My Approvals). */
   expiryDate: string;
   details?: RequestDetails;
@@ -132,8 +134,9 @@ const TrackRequest: React.FC = () => {
       return;
     }
 
+    const trimmedReviewerId = String(reviewerId).trim();
     const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
-      String(reviewerId).trim()
+      trimmedReviewerId
     )}`;
     setLoading(true);
     setError(null);
@@ -145,23 +148,45 @@ const TrackRequest: React.FC = () => {
     const extractPageItems = (pageData: any): any[] =>
       Array.isArray(pageData?.dbResponse?.data) ? pageData.dbResponse.data : [];
 
-    fetchPage(0)
-      .then(async (firstPageData) => {
-        console.log("Track Request (table) API raw response (page 0):", firstPageData);
-        const totalPages: number = Number(firstPageData?.dbResponse?.page?.totalPages ?? 1) || 1;
+    const fetchSubmissions = fetchPage(0).then(async (firstPageData) => {
+      console.log("Track Request (table) API raw response (page 0):", firstPageData);
+      const totalPages: number = Number(firstPageData?.dbResponse?.page?.totalPages ?? 1) || 1;
 
-        let allSubmissions = extractPageItems(firstPageData);
-        if (totalPages > 1) {
-          const remainingPages = await Promise.all(
-            Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 1))
-          );
-          for (const pageData of remainingPages) {
-            allSubmissions = allSubmissions.concat(extractPageItems(pageData));
-          }
+      let allSubmissions = extractPageItems(firstPageData);
+      if (totalPages > 1) {
+        const remainingPages = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, i) => fetchPage(i + 1))
+        );
+        for (const pageData of remainingPages) {
+          allSubmissions = allSubmissions.concat(extractPageItems(pageData));
         }
-        return allSubmissions;
+      }
+      return allSubmissions;
+    });
+
+    /** wfInstanceId set for requests with an open clarification question, for the "C" badge. */
+    const fetchClarificationWfInstanceIds = apiRequestWithAuth<any>(
+      `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/inbox/${encodeURIComponent(
+        trimmedReviewerId
+      )}`,
+      { method: "GET" }
+    )
+      .then((data) => {
+        const tasks: any[] = Array.isArray(data?.dbResponse?.tasks) ? data.dbResponse.tasks : [];
+        const ids = new Set<number>();
+        tasks.forEach((t) => {
+          const wfInstanceId = t?.wfInstanceId;
+          if (wfInstanceId != null) ids.add(Number(wfInstanceId));
+        });
+        return ids;
       })
-      .then((submissions: any[]) => {
+      .catch((err: unknown) => {
+        console.warn("Track Request: failed to load clarification inbox", err);
+        return new Set<number>();
+      });
+
+    Promise.all([fetchSubmissions, fetchClarificationWfInstanceIds])
+      .then(([submissions, clarificationWfInstanceIds]: [any[], Set<number>]) => {
         if (!submissions || submissions.length === 0) {
           setRequests([]);
           return;
@@ -235,6 +260,8 @@ const TrackRequest: React.FC = () => {
                 status,
                 raisedOnRaw: createdAt ?? "",
                 hasConflict: false,
+                hasClarification:
+                  workflowInstanceId != null && clarificationWfInstanceIds.has(workflowInstanceId),
                 expiryDate: addDaysToCreatedOn(createdAt ?? "", TRACK_REQUEST_EXPIRY_DAYS),
                 canWithdraw: status.toLowerCase().includes("awaiting") || status.toLowerCase().includes("pending"),
                 canProvideAdditionalDetails: status.toLowerCase().includes("provide information"),
@@ -394,6 +421,14 @@ const TrackRequest: React.FC = () => {
               ) : (
                 <span className="tabular-nums">{data.id}</span>
               )}
+              {data.hasClarification ? (
+                <span
+                  className="inline-flex shrink-0 items-center justify-center rounded-full border border-amber-400 bg-amber-50 h-4 w-4 text-[10px] font-bold leading-none text-amber-700"
+                  title="Clarification requested"
+                >
+                  C
+                </span>
+              ) : null}
               {data.hasConflict ? (
                 <span
                   className="inline-flex shrink-0 items-center rounded border border-red-400 bg-red-50 px-1 py-0.5 text-[11px] font-normal uppercase leading-none text-red-600"
