@@ -159,11 +159,7 @@ const stepCodeToAction = (code: string | null | undefined): string => {
 };
 
 const getTemplateStepOrder = (step: any): number => {
-  const raw =
-    step?.template_step_id ??
-    step?.templateStepId ??
-    step?.templatestepid ??
-    step?.template_stepid;
+  const raw = step?.id ?? step?.Id ?? step?.ID;
   const num = Number(raw);
   return Number.isFinite(num) ? num : Number.POSITIVE_INFINITY;
 };
