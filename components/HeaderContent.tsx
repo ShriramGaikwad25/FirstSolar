@@ -15,7 +15,7 @@ import CertificationProgress from "./CertificationProgress";
 import UserProgress from "./UserProgress";
 import { navLinks, NavItem } from "./Navi";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCookie, COOKIE_NAMES, getCurrentUser } from "@/lib/auth";
+import { getCookie, COOKIE_NAMES, getCurrentUser, getReviewerId } from "@/lib/auth";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import UserDisplayName from "@/components/UserDisplayName";
 
@@ -486,6 +486,19 @@ const HeaderContent = () => {
   const getNavbarHeading = (): string | null => {
     if (!pathname) return null;
 
+    // My Profile (transient redirector, and the resolved /user/{ownId} it lands on)
+    if (pathname === "/profile") return "My Profile";
+    if (pathname.startsWith("/user/") && pathname !== "/user") {
+      const viewedUserId = decodeURIComponent(pathname.slice("/user/".length).split("/")[0] || "")
+        .trim()
+        .toLowerCase();
+      const ownUserId = (getReviewerId() || "").trim().toLowerCase();
+      if (viewedUserId && ownUserId && viewedUserId === ownUserId) return "My Profile";
+    }
+
+    // Users section
+    if (pathname === "/user" || pathname.startsWith("/user/")) return "User Management";
+
     // Access Management area
     if (pathname.startsWith("/access-request/pending-approvals")) return "My Approvals";
     if (pathname.startsWith("/access-request")) return "Access Management";
@@ -546,9 +559,7 @@ const HeaderContent = () => {
   // Handler for Profile click in dropdown
   const handleProfileClick = () => {
     closeUserMenuRef.current?.();
-    if (userDetails) {
-      router.push(`/profile`);
-    }
+    router.push(`/profile`);
   };
 
   // Handler for Logout click in dropdown

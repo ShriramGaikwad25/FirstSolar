@@ -8,6 +8,7 @@ import {navLinks as allNavLinks, NavItem} from './Navi';
 import { useLeftSidebar } from '@/contexts/LeftSidebarContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { isRestrictedNavUser, RESTRICTED_NAV_ITEM_NAMES } from '@/lib/restricted-nav-users';
+import { getReviewerId } from '@/lib/auth';
 
 export function Navigation() {
   const pathname = usePathname();
@@ -255,10 +256,17 @@ export function Navigation() {
       return { href: '/user', label: 'Back to Users' };
     }
     if (pathname.startsWith('/user/') && pathname !== '/user' && pathname !== '/user/create-group' && pathname !== '/user/create-user') {
+      const viewedUserId = decodeURIComponent(pathname.slice('/user/'.length).split('/')[0] || '').trim().toLowerCase();
+      const ownUserId = (getReviewerId() || '').trim().toLowerCase();
+      // Viewing your own profile — no back link.
+      if (viewedUserId && ownUserId && viewedUserId === ownUserId) {
+        return null;
+      }
       return { href: '/user', label: 'Back to Users' };
     }
     if (pathname === '/profile') {
-      return { href: '/user', label: 'Back to Users' };
+      // Transient redirector to your own profile — no back link.
+      return null;
     }
     // Campaigns
     if (pathname.startsWith('/campaigns/manage-campaigns/')) {

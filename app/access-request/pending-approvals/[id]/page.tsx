@@ -38,6 +38,8 @@ interface InstanceStep {
   sodStatus?: string;
   trainingWarnings?: Array<{ message: string }>;
   trainingNotRequired?: boolean;
+  /** Approver group code (e.g. "GRP_FINANCE_OPS") when this step was routed to a group instead of a single user. */
+  groupCode?: string;
 }
 
 interface RequestLineItem {
@@ -1006,11 +1008,47 @@ const PendingApprovalDetailPage = ({
 
         // Approval-history stepper: same instance_steps shape the requester-facing Track
         // Request detail page consumes.
+        // Each stepper entry's tasks[0].id maps to a full record in dbResponse.tasks[] (the same
+        // array activeTask was picked from) — that's where itemdetails/context_json with the
+        // group-approver info actually live, not on the lightweight instance_steps[].tasks[] entry.
+        const tasksByTaskId = new Map<string, any>();
+        tasks.forEach((t) => {
+          const tid = normalizeId(t?.taskid ?? t?.taskId);
+          if (tid) tasksByTaskId.set(tid, t);
+        });
+
+        // context_json is a running snapshot of every step's resolved approver (not just the
+        // current one), and itemdetails[].catalog.approver_group_code is a static property of the
+        // entitlement itself — both leak the group code onto every step. Only the Owner Approval
+        // step is actually ever group-routed, so gate on that step specifically.
+        const resolveStepGroupCode = (step: any): string | undefined => {
+          const isOwnerApprovalStep = String(step?.step_code ?? "").toUpperCase() === "OWNER_APPROVAL";
+          if (!isOwnerApprovalStep) return undefined;
+
+          const stepTaskId = normalizeId(step?.tasks?.[0]?.id);
+          const fullTask = stepTaskId ? tasksByTaskId.get(stepTaskId) : undefined;
+          if (!fullTask) return undefined;
+
+          const contextLineItemsForTask = toArraySafe(fullTask?.context_json?.lineItems);
+          const fromContext = contextLineItemsForTask
+            .map((li) =>
+              li?.metadata?.approver?.type === "GROUP"
+                ? toStringSafe(li?.metadata?.approver?.groupCode)
+                : "",
+            )
+            .find((code) => code);
+          return fromContext || undefined;
+        };
+
+        const sortedRawSteps = sortStepsByTemplateOrder(toArraySafe(dbResponse.instance_steps));
         const mappedWorkflowSteps = mapInstanceSteps(
-          sortStepsByTemplateOrder(toArraySafe(dbResponse.instance_steps)),
+          sortedRawSteps,
           trainingValidation,
           sodValidation,
-        );
+        ).map((mappedStep, idx) => ({
+          ...mappedStep,
+          groupCode: resolveStepGroupCode(sortedRawSteps[idx]),
+        }));
         const submittedStep: InstanceStep[] = createdOnRaw
           ? [
               {
@@ -1485,7 +1523,7 @@ const PendingApprovalDetailPage = ({
                           </span>
                           {!hideMetaColumns && (
                             <div className="mt-1.5 text-xs leading-snug text-gray-500">
-                              {step.userActor || "—"} · {step.date || "-"}
+                              {step.groupCode || step.userActor || "—"} · {step.date || "-"}
                             </div>
                           )}
                           {!hideMetaColumns && step.sodViolations && step.sodViolations.length > 0 && (
