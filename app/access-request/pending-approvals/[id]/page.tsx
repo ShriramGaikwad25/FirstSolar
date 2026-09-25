@@ -11,6 +11,7 @@ import {
   CircleArrowOutUpRight,
   MessageCircle,
   MessageCircleQuestion,
+  Hand,
   Printer,
   User,
   AtSign,
@@ -679,6 +680,9 @@ const PendingApprovalDetailPage = ({
   const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
   const [releaseLoading, setReleaseLoading] = useState(false);
   const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [showClaimConfirm, setShowClaimConfirm] = useState(false);
+  const [claimLoading, setClaimLoading] = useState(false);
+  const [claimError, setClaimError] = useState<string | null>(null);
   const [baselineLineItemActions, setBaselineLineItemActions] = useState<
     Record<string, "approve" | "reject" | "consulted" | null>
   >({});
@@ -1314,6 +1318,42 @@ const PendingApprovalDetailPage = ({
     }
   };
 
+  const handleClaim = async () => {
+    if (!request || claimLoading) return;
+
+    const reviewerId = getReviewerId();
+    if (!reviewerId) return;
+
+    setClaimLoading(true);
+    setClaimError(null);
+
+    try {
+      const parsedTaskId = Number(request.taskId);
+      const response = await fetch(
+        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/claim/${String(reviewerId).trim()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId: Number.isFinite(parsedTaskId) ? parsedTaskId : request.taskId,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Claim failed (${response.status})`);
+      }
+
+      window.location.reload();
+    } catch (err: any) {
+      console.error("Failed to claim task:", err);
+      setClaimError(err?.message || "Failed to claim task");
+    } finally {
+      setClaimLoading(false);
+      setShowClaimConfirm(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -1511,6 +1551,8 @@ const PendingApprovalDetailPage = ({
             const rejectFilled = selectedAction === "reject";
             const isItemLoading = lineItemLoading[lineItemKey] ?? false;
             const isActionsDisabled = isItemLoading || isLockedByServer;
+            const isClaimableQueueTask =
+              request.assigneeType === "QUEUE" && request.claimable === true;
             const itemError = lineItemError[lineItemKey] ?? null;
             const effectiveComment = lineItemComments[lineItemKey] ?? "";
 
@@ -1696,84 +1738,101 @@ const PendingApprovalDetailPage = ({
                       </div>
                     ) : (
                       <>
-                        <button
-                          type="button"
-                          title={approveFilled ? "Undo Approve" : "Approve"}
-                          aria-label="Approve"
-                          disabled={isActionsDisabled}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLineItemAction(lineItemKey, "approve");
-                          }}
-                          className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                          <div className="relative inline-flex items-center justify-center w-8 h-8">
-                            <CircleCheck
-                              className="cursor-pointer"
-                              color="#1c821cff"
-                              strokeWidth="1"
-                              size="32"
-                              fill={approveFilled ? "#1c821cff" : "none"}
-                            />
-                            {approveFilled && (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                className="absolute pointer-events-none"
-                                style={{
-                                  left: "50%",
-                                  top: "50%",
-                                  transform: "translate(-50%, -50%)",
-                                }}
-                              >
-                                <path
-                                  d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
-                                  fill="#ffffff"
+                        {isClaimableQueueTask ? (
+                          <button
+                            type="button"
+                            title="Claim"
+                            aria-label="Claim"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowClaimConfirm(true);
+                            }}
+                            className="p-1 rounded flex items-center justify-center"
+                          >
+                            <Hand color="#0D9488" strokeWidth={1} size={26} fill="none" />
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              title={approveFilled ? "Undo Approve" : "Approve"}
+                              aria-label="Approve"
+                              disabled={isActionsDisabled}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLineItemAction(lineItemKey, "approve");
+                              }}
+                              className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                              <div className="relative inline-flex items-center justify-center w-8 h-8">
+                                <CircleCheck
+                                  className="cursor-pointer"
+                                  color="#1c821cff"
+                                  strokeWidth="1"
+                                  size="32"
+                                  fill={approveFilled ? "#1c821cff" : "none"}
                                 />
-                              </svg>
-                            )}
-                          </div>
-                        </button>
-                        <button
-                          type="button"
-                          title={rejectFilled ? "Undo Reject" : "Reject"}
-                          aria-label="Reject"
-                          disabled={isActionsDisabled}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleLineItemAction(lineItemKey, "reject");
-                          }}
-                          className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
-                        >
-                          <div className="relative inline-flex items-center justify-center w-8 h-8">
-                            <CircleX
-                              className="cursor-pointer"
-                              color="#FF2D55"
-                              strokeWidth="1"
-                              size="32"
-                              fill={rejectFilled ? "#FF2D55" : "none"}
-                            />
-                            {rejectFilled && (
-                              <svg
-                                width="16"
-                                height="16"
-                                viewBox="0 0 24 24"
-                                className="absolute pointer-events-none"
-                                style={{
-                                  left: "50%",
-                                  top: "50%",
-                                  transform: "translate(-50%, -50%)",
-                                }}
-                              >
-                                <path
-                                  d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
-                                  fill="#ffffff"
+                                {approveFilled && (
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    className="absolute pointer-events-none"
+                                    style={{
+                                      left: "50%",
+                                      top: "50%",
+                                      transform: "translate(-50%, -50%)",
+                                    }}
+                                  >
+                                    <path
+                                      d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"
+                                      fill="#ffffff"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                            </button>
+                            <button
+                              type="button"
+                              title={rejectFilled ? "Undo Reject" : "Reject"}
+                              aria-label="Reject"
+                              disabled={isActionsDisabled}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleLineItemAction(lineItemKey, "reject");
+                              }}
+                              className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                            >
+                              <div className="relative inline-flex items-center justify-center w-8 h-8">
+                                <CircleX
+                                  className="cursor-pointer"
+                                  color="#FF2D55"
+                                  strokeWidth="1"
+                                  size="32"
+                                  fill={rejectFilled ? "#FF2D55" : "none"}
                                 />
-                              </svg>
-                            )}
-                          </div>
-                        </button>
+                                {rejectFilled && (
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    className="absolute pointer-events-none"
+                                    style={{
+                                      left: "50%",
+                                      top: "50%",
+                                      transform: "translate(-50%, -50%)",
+                                    }}
+                                  >
+                                    <path
+                                      d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                                      fill="#ffffff"
+                                    />
+                                  </svg>
+                                )}
+                              </div>
+                            </button>
+                          </>
+                        )}
                         <button
                           type="button"
                           title="Requester comment"
@@ -1796,7 +1855,7 @@ const PendingApprovalDetailPage = ({
                           }}
                           className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
-                          <MessageCircleQuestion color="#2684FF" strokeWidth={1} size={26} fill="none" />
+                          <MessageCircleQuestion color="#F59E0B" strokeWidth={1} size={26} fill="none" />
                         </button>
                         {request.assigneeType === "QUEUE" && request.claimable === false && (
                           <button
@@ -1809,7 +1868,7 @@ const PendingApprovalDetailPage = ({
                             }}
                             className="p-1 rounded flex items-center justify-center"
                           >
-                            <CircleArrowOutUpRight color="#2684FF" strokeWidth={1} size={26} fill="none" />
+                            <CircleArrowOutUpRight color="#8B5CF6" strokeWidth={1} size={26} fill="none" />
                           </button>
                         )}
                       </>
@@ -2304,6 +2363,47 @@ const PendingApprovalDetailPage = ({
                   className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {releaseLoading ? "Releasing..." : "Release"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showClaimConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3"
+            onClick={() => setShowClaimConfirm(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold text-gray-900">Claim this task?</h3>
+              <p className="mt-1.5 text-sm text-gray-600">
+                You&apos;ll be assigned this request and it will no longer be available
+                for other reviewers to claim.
+              </p>
+              {claimError && (
+                <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+                  {claimError}
+                </div>
+              )}
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowClaimConfirm(false)}
+                  disabled={claimLoading}
+                  className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClaim}
+                  disabled={claimLoading}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {claimLoading ? "Claiming..." : "Claim"}
                 </button>
               </div>
             </div>
