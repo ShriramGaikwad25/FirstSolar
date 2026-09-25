@@ -30,9 +30,6 @@ type PendingApproval = {
   taskId: string;
   /** Reviewer (assignee) id the approver-action API call is scoped to. */
   reviewerId: string;
-  /** This item's identifiers for the approver-action payload. */
-  lineItemId: string;
-  catalogId: string;
   requester: string;
   beneficiary: string;
   createdOn: string;
@@ -52,6 +49,13 @@ type PendingApproval = {
 
 // Fallback mock data used only when API returns no records
 const mockDataFallback: PendingApproval[] = [];
+
+const toStringSafe = (value: unknown): string =>
+  value === null || value === undefined ? "" : String(value);
+
+const normalizeId = (value: unknown): string => toStringSafe(value).trim().toLowerCase();
+
+const toArraySafe = (value: unknown): any[] => (Array.isArray(value) ? value : []);
 
 const formatDateToMMDDYY = (value: string): string => {
   if (!value) return "";
@@ -141,9 +145,6 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
     }
   }
 
-  const toStringSafe = (value: unknown) =>
-    value === null || value === undefined ? "" : String(value);
-
   // Tracks workflowInstanceIds already emitted so a duplicate task/item pairing only
   // shows up as a single row.
   const seenWorkflowInstanceIds = new Set<number>();
@@ -176,10 +177,6 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
           subId: workflowInstanceId ?? index + 1,
           taskId,
           reviewerId: trimmedReviewerId,
-          // This endpoint doesn't return catalog/lineItemId identifiers — best available
-          // stand-in until the approver-action call is updated to match.
-          lineItemId: workflowInstanceId != null ? String(workflowInstanceId) : "",
-          catalogId: "",
           requester,
           beneficiary,
           createdOn,
@@ -196,6 +193,58 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
       })
       .filter((row): row is PendingApproval => row !== null);
   });
+}
+
+/**
+ * The list endpoint doesn't return catalog/lineItemId identifiers, so the approver-action
+ * payload needs them resolved from the detail endpoint before submitting. itemdetails[].lineitemid
+ * there is a "business" id, not what /approveraction expects — the internal id lives in
+ * context_json.lineItems[], keyed by catalogId (same mapping the detail page uses).
+ */
+async function resolveApproverActionIds(
+  row: PendingApproval
+): Promise<{ catalogId: string | null; lineItemId: number | string }> {
+  if (!row.requestUuid) {
+    throw new Error("Missing request identifier for this item.");
+  }
+
+  const detailUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/detail/${encodeURIComponent(
+    row.requestUuid
+  )}`;
+  const data = await apiRequestWithAuth<any>(detailUrl, { method: "GET" });
+  const tasks: any[] = toArraySafe(data?.dbResponse?.tasks);
+
+  const matchingTask =
+    tasks.find((t) => normalizeId(t?.taskid ?? t?.taskId) === normalizeId(row.taskId)) ??
+    tasks[tasks.length - 1];
+
+  const itemDetails: any[] = toArraySafe(matchingTask?.itemdetails);
+  const targetName = row.entitlementName.trim().toLowerCase();
+  const matchedItem =
+    itemDetails.find(
+      (item) => toStringSafe(item?.catalog?.name).trim().toLowerCase() === targetName
+    ) ?? itemDetails[0];
+
+  if (!matchedItem) {
+    throw new Error("Could not resolve this item's identifiers.");
+  }
+
+  const catalog = matchedItem?.catalog ?? {};
+  const requestedItemId = toStringSafe(matchedItem?.requested_itemid);
+  const catalogId = toStringSafe(catalog?.catalogid ?? requestedItemId) || null;
+
+  const contextLineItems: any[] = toArraySafe(matchingTask?.context_json?.lineItems);
+  const lineItemIdByCatalogId = new Map<string, number>();
+  contextLineItems.forEach((cli) => {
+    const catId = normalizeId(cli?.catalogId);
+    const lid = Number(cli?.lineItemId);
+    if (catId && Number.isFinite(lid)) lineItemIdByCatalogId.set(catId, lid);
+  });
+
+  const resolvedLineItemId =
+    (catalogId && lineItemIdByCatalogId.get(normalizeId(catalogId))) ?? matchedItem?.lineitemid;
+
+  return { catalogId, lineItemId: resolvedLineItemId };
 }
 
 const PendingApprovalsPage: React.FC = () => {
@@ -236,15 +285,16 @@ const PendingApprovalsPage: React.FC = () => {
       setActionError((prev) => ({ ...prev, [key]: null }));
 
       try {
-        const parsedLineItemId = Number(row.lineItemId);
+        const { catalogId, lineItemId } = await resolveApproverActionIds(row);
+        const parsedLineItemId = Number(lineItemId);
         const payload = {
           taskid: row.taskId,
-          overallAction: "",
+          overallAction: action === "approve" ? "APPROVE" : "REJECT",
           comments: "",
           lineItems: [
             {
-              catalogId: row.catalogId || null,
-              lineItemId: Number.isFinite(parsedLineItemId) ? parsedLineItemId : row.lineItemId,
+              catalogId,
+              lineItemId: Number.isFinite(parsedLineItemId) ? parsedLineItemId : lineItemId,
               ACTION: action === "approve" ? "APPROVE" : "REJECT",
               comments: action === "approve" ? "Approved via UI" : "Revoked via UI",
               entitlementName: null,
