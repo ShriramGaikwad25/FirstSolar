@@ -8,7 +8,9 @@ import {
   ChevronUp,
   CircleCheck,
   CircleX,
-  RotateCcw,
+  CircleArrowOutUpRight,
+  MessageCircle,
+  MessageCircleQuestion,
   Printer,
   User,
   AtSign,
@@ -94,6 +96,9 @@ interface PendingApprovalDetail {
   requesterEmployeeId: string;
   requesterManager: string;
   durationDays?: number;
+  /** "QUEUE" tasks aren't assigned to a specific user — claimable=false means it's already claimed (by this reviewer). */
+  assigneeType?: string;
+  claimable?: boolean;
   details: RequestDetails;
   lineItems: RequestLineItem[];
   instanceSteps: InstanceStep[];
@@ -671,6 +676,9 @@ const PendingApprovalDetailPage = ({
   const [infoRequestLoading, setInfoRequestLoading] = useState(false);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [showReleaseConfirm, setShowReleaseConfirm] = useState(false);
+  const [releaseLoading, setReleaseLoading] = useState(false);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
   const [baselineLineItemActions, setBaselineLineItemActions] = useState<
     Record<string, "approve" | "reject" | "consulted" | null>
   >({});
@@ -711,8 +719,45 @@ const PendingApprovalDetailPage = ({
       String(id).trim(),
     )}`;
 
+    // assigneeType / claimable / claimedBy live on the task-list endpoint's rows, not on this
+    // detail endpoint's tasks[] — fetch it in parallel and match by requestUuid so the Claim /
+    // Release affordances can reflect the same queue-assignment state the list page shows.
+    const listUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/${encodeURIComponent(
+      trimmedReviewerId,
+    )}`;
+    const fetchListPage = (page: number) =>
+      apiRequestWithAuth<any>(`${listUrl}?page=${page}&size=100&status=OPEN`, {
+        method: "GET",
+      });
+    const extractListPageItems = (pageData: any): any[] =>
+      Array.isArray(pageData?.dbResponse?.data) ? pageData.dbResponse.data : [];
+    const findMatchingListTask = async (): Promise<any | undefined> => {
+      try {
+        const routeUuid = normalizeId(id);
+        const firstPage = await fetchListPage(0);
+        const totalPages = Number(firstPage?.dbResponse?.page?.totalPages ?? 1) || 1;
+        let allListTasks = extractListPageItems(firstPage);
+        if (totalPages > 1) {
+          const rest = await Promise.all(
+            Array.from({ length: totalPages - 1 }, (_, i) => fetchListPage(i + 1)),
+          );
+          for (const pageData of rest) {
+            allListTasks = allListTasks.concat(extractListPageItems(pageData));
+          }
+        }
+        return allListTasks.find((t) => {
+          if (normalizeId(t?.requestUuid) === routeUuid) return true;
+          const items = toArraySafe(t?.itemNames);
+          return items.some((it) => normalizeId(it?.requestUuids) === routeUuid);
+        });
+      } catch (err) {
+        console.warn("[PendingApprovalDetail] Failed to look up queue-assignment state:", err);
+        return undefined;
+      }
+    };
+
     apiRequestWithAuth<any>(url, { method: "GET" })
-      .then((data) => {
+      .then(async (data) => {
         console.log("[PendingApprovalDetail] raw response:", data);
         const dbResponse = toObjectSafe((data as any)?.dbResponse ?? data);
         const tasks: any[] = toArraySafe(dbResponse.tasks);
@@ -734,6 +779,11 @@ const PendingApprovalDetailPage = ({
             (t) => String(t?.task_status ?? "").toUpperCase() === "OPEN",
           ) ??
           tasks[tasks.length - 1];
+
+        const matchingListTask =
+          activeTask?.assigneeType != null && activeTask?.claimable != null
+            ? undefined
+            : await findMatchingListTask();
 
         const requesterObj = toObjectSafe(activeTask?.requester);
         const beneficiaryObj = toObjectSafe(activeTask?.beneficiary);
@@ -984,6 +1034,8 @@ const PendingApprovalDetailPage = ({
             String(activeTask?.task_status ?? "").toUpperCase() === "OPEN"
               ? "Pending"
               : normalizeStatus(activeTask?.task_status) || "Pending",
+          assigneeType: toStringSafe(activeTask?.assigneeType ?? matchingListTask?.assigneeType),
+          claimable: Boolean(activeTask?.claimable ?? matchingListTask?.claimable),
           requesterName,
           requesterUsername,
           requesterEmail,
@@ -1224,6 +1276,44 @@ const PendingApprovalDetailPage = ({
     }
   };
 
+  const handleRelease = async () => {
+    if (!request || releaseLoading) return;
+
+    // Release is always performed by the logged-in reviewer, not whoever/whatever the task's
+    // assignee_id currently is (for a QUEUE task that's a group placeholder, not "me").
+    const reviewerId = getReviewerId();
+    if (!reviewerId) return;
+
+    setReleaseLoading(true);
+    setReleaseError(null);
+
+    try {
+      const parsedTaskId = Number(request.taskId);
+      const response = await fetch(
+        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/release/${String(reviewerId).trim()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            taskId: Number.isFinite(parsedTaskId) ? parsedTaskId : request.taskId,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Release failed (${response.status})`);
+      }
+
+      router.push("/access-request/pending-approvals");
+    } catch (err: any) {
+      console.error("Failed to release task:", err);
+      setReleaseError(err?.message || "Failed to release task");
+    } finally {
+      setReleaseLoading(false);
+      setShowReleaseConfirm(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-6">
@@ -1413,8 +1503,6 @@ const PendingApprovalDetailPage = ({
           {request.lineItems.map((lineItem, index) => {
             const lineItemKey = String(index);
             const isItemExpanded = expandedLineItems[lineItemKey] ?? true;
-            const actionBtnClass =
-              "inline-flex h-8 w-8 items-center justify-center rounded-md border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors";
             const selectedAction = lineItemActions[lineItemKey] ?? null;
             const isLockedByServer =
               (baselineLineItemActions[lineItemKey] ?? null) !== null;
@@ -1694,17 +1782,7 @@ const PendingApprovalDetailPage = ({
                           onClick={(e) => openCommentModal(e, lineItemKey)}
                           className={`p-1 rounded flex items-center justify-center ${isItemLoading ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
-                          <svg
-                            width="30"
-                            height="30"
-                            viewBox="0 0 32 32"
-                            className="cursor-pointer hover:opacity-80"
-                          >
-                            <path
-                              d="M0.700195 0V19.5546H3.5802V25.7765C3.57994 25.9525 3.62203 26.1247 3.70113 26.2711C3.78022 26.4176 3.89277 26.5318 4.02449 26.5992C4.15621 26.6666 4.30118 26.6842 4.44101 26.6498C4.58085 26.6153 4.70926 26.5304 4.80996 26.4058C6.65316 24.1232 10.3583 19.5546 10.3583 19.5546H25.1802V0H0.700195ZM2.1402 1.77769H23.7402V17.7769H9.76212L5.0202 23.6308V17.7769H2.1402V1.77769ZM5.0202 5.33307V7.11076H16.5402V5.33307H5.0202ZM26.6202 5.33307V7.11076H28.0602V23.11H25.1802V28.9639L20.4383 23.11H9.34019L7.9002 24.8877H19.8421C19.8421 24.8877 23.5472 29.4563 25.3904 31.7389C25.4911 31.8635 25.6195 31.9484 25.7594 31.9828C25.8992 32.0173 26.0442 31.9997 26.1759 31.9323C26.3076 31.8648 26.4202 31.7507 26.4993 31.6042C26.5784 31.4578 26.6204 31.2856 26.6202 31.1096V24.8877H29.5002V5.33307H26.6202ZM5.0202 8.88845V10.6661H10.7802V8.88845H5.0202ZM5.0202 12.4438V14.2215H19.4202V12.4438H5.0202Z"
-                              fill="#2684FF"
-                            />
-                          </svg>
+                          <MessageCircle color="#2684FF" strokeWidth={1} size={26} fill="none" />
                         </button>
                         <button
                           type="button"
@@ -1716,10 +1794,24 @@ const PendingApprovalDetailPage = ({
                             setInfoRequestItemKey(lineItemKey);
                             setInfoRequestMessage("");
                           }}
-                          className={`${actionBtnClass} ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                          className={`p-1 rounded flex items-center justify-center ${isActionsDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
                         >
-                          <RotateCcw className="h-4 w-4 text-blue-600" />
+                          <MessageCircleQuestion color="#2684FF" strokeWidth={1} size={26} fill="none" />
                         </button>
+                        {request.assigneeType === "QUEUE" && request.claimable === false && (
+                          <button
+                            type="button"
+                            title="Release"
+                            aria-label="Release"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowReleaseConfirm(true);
+                            }}
+                            className="p-1 rounded flex items-center justify-center"
+                          >
+                            <CircleArrowOutUpRight color="#2684FF" strokeWidth={1} size={26} fill="none" />
+                          </button>
+                        )}
                       </>
                     )}
                     <span className="text-gray-500 ml-1" aria-hidden>
@@ -2172,6 +2264,46 @@ const PendingApprovalDetailPage = ({
                   }`}
                 >
                   {infoRequestLoading ? "Sending..." : "Send to Requester"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showReleaseConfirm && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3"
+            onClick={() => setShowReleaseConfirm(false)}
+          >
+            <div
+              className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold text-gray-900">Release this task?</h3>
+              <p className="mt-1.5 text-sm text-gray-600">
+                It will go back to the queue for another reviewer to claim.
+              </p>
+              {releaseError && (
+                <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+                  {releaseError}
+                </div>
+              )}
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowReleaseConfirm(false)}
+                  disabled={releaseLoading}
+                  className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRelease}
+                  disabled={releaseLoading}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {releaseLoading ? "Releasing..." : "Release"}
                 </button>
               </div>
             </div>

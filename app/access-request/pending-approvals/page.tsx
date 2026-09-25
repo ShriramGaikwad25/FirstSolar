@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { ColDef, ICellRendererParams } from "ag-grid-enterprise";
-import { CircleCheck, CircleX } from "lucide-react";
+import { CircleCheck, CircleX, Hand } from "lucide-react";
 import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
 import "@/lib/ag-grid-setup";
 import {
@@ -45,6 +45,9 @@ type PendingApproval = {
   status: PendingApprovalStatus;
   /** True when API / SOD evaluation reports a segregation-of-duties conflict for this request. */
   hasConflict?: boolean;
+  /** "QUEUE" tasks aren't assigned to a specific user yet — a reviewer must claim one before acting on it. */
+  assigneeType?: string;
+  claimable?: boolean;
 };
 
 // Fallback mock data used only when API returns no records
@@ -187,6 +190,8 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
           entitlementName: toStringSafe(item?.lineitem),
           status: normalizeItemStatus(item?.status),
           hasConflict: false,
+          assigneeType: toStringSafe(task?.assigneeType),
+          claimable: Boolean(task?.claimable),
         } as PendingApproval;
       })
       .filter((row): row is PendingApproval => row !== null);
@@ -218,6 +223,7 @@ const PendingApprovalsPage: React.FC = () => {
   const [pageSize, setPageSize] = useState<number | "all">(20);
   const [actionLoadingKey, setActionLoadingKey] = useState<Record<string, boolean>>({});
   const [actionError, setActionError] = useState<Record<string, string | null>>({});
+  const [claimConfirmRow, setClaimConfirmRow] = useState<PendingApproval | null>(null);
 
   const rowKey = (row: PendingApproval) => `${row.id}_${row.subId}`;
 
@@ -264,6 +270,44 @@ const PendingApprovalsPage: React.FC = () => {
         setActionError((prev) => ({
           ...prev,
           [key]: err instanceof Error ? err.message : `Failed to ${action}`,
+        }));
+      } finally {
+        setActionLoadingKey((prev) => ({ ...prev, [key]: false }));
+      }
+    },
+    [actionLoadingKey, queryClient]
+  );
+
+  const handleClaim = useCallback(
+    async (row: PendingApproval) => {
+      const key = rowKey(row);
+      if (actionLoadingKey[key]) return;
+
+      setActionLoadingKey((prev) => ({ ...prev, [key]: true }));
+      setActionError((prev) => ({ ...prev, [key]: null }));
+
+      try {
+        const parsedTaskId = Number(row.taskId);
+        const response = await fetch(
+          `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/claim/${row.reviewerId}`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              taskId: Number.isFinite(parsedTaskId) ? parsedTaskId : row.taskId,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Claim failed (${response.status})`);
+        }
+
+        await queryClient.invalidateQueries({ queryKey: ["pending-approvals"] });
+      } catch (err: unknown) {
+        setActionError((prev) => ({
+          ...prev,
+          [key]: err instanceof Error ? err.message : "Failed to claim",
         }));
       } finally {
         setActionLoadingKey((prev) => ({ ...prev, [key]: false }));
@@ -469,39 +513,60 @@ const PendingApprovalsPage: React.FC = () => {
           const key = rowKey(data);
           const isLoading = actionLoadingKey[key] ?? false;
           const rowError = actionError[key] ?? null;
+          const isClaimable = data.assigneeType === "QUEUE" && data.claimable === true;
           return (
             <div className="flex w-full min-w-0 flex-col justify-center gap-0.5 py-1">
               <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  title="Approve"
-                  aria-label="Approve"
-                  disabled={isLoading}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleQuickAction(data, "approve");
-                  }}
-                  className={`inline-flex items-center justify-center rounded ${
-                    isLoading ? "cursor-not-allowed opacity-60" : ""
-                  }`}
-                >
-                  <CircleCheck color="#1c821cff" strokeWidth={1} size={26} fill="none" />
-                </button>
-                <button
-                  type="button"
-                  title="Revoke"
-                  aria-label="Revoke"
-                  disabled={isLoading}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleQuickAction(data, "reject");
-                  }}
-                  className={`inline-flex items-center justify-center rounded ${
-                    isLoading ? "cursor-not-allowed opacity-60" : ""
-                  }`}
-                >
-                  <CircleX color="#FF2D55" strokeWidth={1} size={26} fill="none" />
-                </button>
+                {isClaimable ? (
+                  <button
+                    type="button"
+                    title="Claim"
+                    aria-label="Claim"
+                    disabled={isLoading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setClaimConfirmRow(data);
+                    }}
+                    className={`inline-flex items-center justify-center rounded ${
+                      isLoading ? "cursor-not-allowed opacity-60" : ""
+                    }`}
+                  >
+                    <Hand color="#2684FF" strokeWidth={1} size={24} fill="none" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      title="Approve"
+                      aria-label="Approve"
+                      disabled={isLoading}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickAction(data, "approve");
+                      }}
+                      className={`inline-flex items-center justify-center rounded ${
+                        isLoading ? "cursor-not-allowed opacity-60" : ""
+                      }`}
+                    >
+                      <CircleCheck color="#1c821cff" strokeWidth={1} size={26} fill="none" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Revoke"
+                      aria-label="Revoke"
+                      disabled={isLoading}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleQuickAction(data, "reject");
+                      }}
+                      className={`inline-flex items-center justify-center rounded ${
+                        isLoading ? "cursor-not-allowed opacity-60" : ""
+                      }`}
+                    >
+                      <CircleX color="#FF2D55" strokeWidth={1} size={26} fill="none" />
+                    </button>
+                  </>
+                )}
               </div>
               {rowError && <div className="text-[10px] text-red-600">{rowError}</div>}
             </div>
@@ -509,7 +574,7 @@ const PendingApprovalsPage: React.FC = () => {
         },
       },
     ],
-    [router, actionLoadingKey, actionError, handleQuickAction]
+    [router, actionLoadingKey, actionError, handleQuickAction, handleClaim]
   );
 
   const fitGrid = useCallback(() => {
@@ -731,6 +796,44 @@ const PendingApprovalsPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {claimConfirmRow && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-3"
+            onClick={() => setClaimConfirmRow(null)}
+          >
+            <div
+              className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="text-base font-semibold text-gray-900">Claim this task?</h3>
+              <p className="mt-1.5 text-sm text-gray-600">
+                You&apos;ll be assigned this request and it will no longer be available
+                for other reviewers to claim.
+              </p>
+              <div className="mt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setClaimConfirmRow(null)}
+                  className="rounded-md border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const row = claimConfirmRow;
+                    setClaimConfirmRow(null);
+                    if (row) handleClaim(row);
+                  }}
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  Claim
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 };
