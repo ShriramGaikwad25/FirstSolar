@@ -1239,22 +1239,35 @@ const PendingApprovalDetailPage = ({
         };
       });
 
-      const allItemsActioned = request.lineItems.every((_, idx) => {
+      const effectiveActions = request.lineItems.map((_, idx) => {
         const key = String(idx);
         const currentAction = selectedActionByKey.get(key);
         const baselineAction = baselineLineItemActions[key] ?? null;
-        return Boolean(currentAction ?? baselineAction);
+        return currentAction ?? baselineAction;
       });
+      const allItemsActioned = effectiveActions.every(Boolean);
+      const allSameAction =
+        allItemsActioned && effectiveActions.every((a) => a === effectiveActions[0]);
+      const overallActionValue = allSameAction
+        ? effectiveActions[0] === "approve"
+          ? "APPROVE"
+          : effectiveActions[0] === "reject"
+            ? "REJECT"
+            : ""
+        : "";
 
       const payload = {
         taskid: request.taskId ?? request.id,
-        overallAction: allItemsActioned ? "APPROVE" : "",
+        overallAction: overallActionValue,
         comments: "",
         lineItems: lineItemsPayload,
       };
 
+      // Actions are submitted as the logged-in reviewer, not whoever/whatever the task's
+      // assignee_id currently is (for a QUEUE task that's a group placeholder, not "me").
+      const submittingReviewerId = getReviewerId();
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${request.reviewerId}`,
+        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -2277,8 +2290,9 @@ const PendingApprovalDetailPage = ({
                         lineItems: lineItemsPayload,
                       };
 
+                      const submittingReviewerId = getReviewerId();
                       const response = await fetch(
-                        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${request.reviewerId}`,
+                        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
                         {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
