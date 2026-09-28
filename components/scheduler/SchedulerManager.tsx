@@ -1144,6 +1144,20 @@ export default function SchedulerManager() {
                 >
                   {selectedSchedule.status}
                 </span>
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    selectedSchedule.isRunning
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${
+                      selectedSchedule.isRunning ? "bg-green-500" : "bg-gray-400"
+                    }`}
+                  />
+                  {selectedSchedule.isRunning ? "Running" : "Not Running"}
+                </span>
                 <button
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-600 transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600"
                   onClick={() => {
@@ -1191,7 +1205,7 @@ export default function SchedulerManager() {
                 return isPaused;
               })() ? (
                 <button
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() =>
                     resumeJob(
                       selectedSchedule.groupName || "",
@@ -1203,18 +1217,18 @@ export default function SchedulerManager() {
                   {isUpdatingJson ? (
                     <>
                       <div className="loading-spinner-small"></div>
-                      Resuming...
+                      Enabling...
                     </>
                   ) : (
                     <>
                       <Play className="h-4 w-4" />
-                      Resume
+                      Enable
                     </>
                   )}
                 </button>
               ) : (
                 <button
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-amber-400 px-4 py-2 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
                   onClick={() =>
                     pauseJob(
                       selectedSchedule.groupName || "",
@@ -1226,12 +1240,12 @@ export default function SchedulerManager() {
                   {isUpdatingJson ? (
                     <>
                       <div className="loading-spinner-small"></div>
-                      Pausing...
+                      Disabling...
                     </>
                   ) : (
                     <>
                       <Pause className="h-4 w-4" />
-                      Pause
+                      Disable
                     </>
                   )}
                 </button>

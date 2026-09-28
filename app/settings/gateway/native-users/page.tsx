@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Plus, Search, Pencil } from "lucide-react";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import ActionCompletedToast from "@/components/ActionCompletedToast";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
@@ -16,14 +16,7 @@ interface NativeUserRow {
   adminRoles?: string[];
 }
 
-const ADMIN_ROLE_OPTIONS = [
-  "Domain Administrator",
-  "Security Administrator",
-  "Application Administrator",
-  "User Administrator",
-  "Help Desk Administrator",
-  "Audit Administrator",
-];
+const ADMIN_ROLE_OPTIONS = ["Domain Administrator", "Help Desk Administrator"];
 
 const ROLE_PILL_CLASSES = [
   "bg-blue-100 text-blue-800",
@@ -227,6 +220,7 @@ export default function GatewayNativeUsersSettings() {
       const [updateSubmitting, setUpdateSubmitting] = useState(false);
       const [showAddRole, setShowAddRole] = useState(false);
       const [selectedRoleToAdd, setSelectedRoleToAdd] = useState("");
+      const [editingRole, setEditingRole] = useState<string | null>(null);
 
       const handleUpdate = async () => {
         if (updateSubmitting) return;
@@ -293,7 +287,11 @@ export default function GatewayNativeUsersSettings() {
             <button
               type="button"
               className={secondaryButtonClass}
-              onClick={() => setShowAddRole((s) => !s)}
+              onClick={() => {
+                setShowAddRole((s) => !s);
+                setEditingRole(null);
+                setSelectedRoleToAdd("");
+              }}
             >
               {showAddRole ? "Cancel" : "Add Role"}
             </button>
@@ -347,7 +345,9 @@ export default function GatewayNativeUsersSettings() {
 
           {showAddRole && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 mb-4">
-              <div className="text-xs font-semibold text-gray-700 mb-2">Add Role</div>
+              <div className="text-xs font-semibold text-gray-700 mb-2">
+                {editingRole ? "Edit Role" : "Add Role"}
+              </div>
               <div className="flex items-end gap-3">
                 <div className="flex-1">
                   <label className={labelClass}>Select Role</label>
@@ -358,8 +358,8 @@ export default function GatewayNativeUsersSettings() {
                   >
                     <option value="">Select role</option>
                     {ADMIN_ROLE_OPTIONS.map((r) => (
-                      <option key={r} value={r} disabled={roles.includes(r)}>
-                        {r}{roles.includes(r) ? " (current)" : ""}
+                      <option key={r} value={r} disabled={roles.includes(r) && r !== editingRole}>
+                        {r}{roles.includes(r) && r !== editingRole ? " (current)" : ""}
                       </option>
                     ))}
                   </select>
@@ -367,15 +367,23 @@ export default function GatewayNativeUsersSettings() {
                 <button
                   type="button"
                   className={primaryButtonClass}
-                  disabled={!selectedRoleToAdd || roles.includes(selectedRoleToAdd)}
+                  disabled={
+                    !selectedRoleToAdd || (roles.includes(selectedRoleToAdd) && selectedRoleToAdd !== editingRole)
+                  }
                   onClick={() => {
-                    if (!selectedRoleToAdd || roles.includes(selectedRoleToAdd)) return;
-                    setRoles((prev) => [...prev, selectedRoleToAdd]);
+                    if (!selectedRoleToAdd) return;
+                    if (editingRole) {
+                      setRoles((prev) => prev.map((x) => (x === editingRole ? selectedRoleToAdd : x)));
+                    } else {
+                      if (roles.includes(selectedRoleToAdd)) return;
+                      setRoles((prev) => [...prev, selectedRoleToAdd]);
+                    }
                     setSelectedRoleToAdd("");
+                    setEditingRole(null);
                     setShowAddRole(false);
                   }}
                 >
-                  Add
+                  {editingRole ? "Save" : "Add"}
                 </button>
               </div>
             </div>
@@ -435,12 +443,16 @@ export default function GatewayNativeUsersSettings() {
                       <td className="px-4 py-2.5">
                         <button
                           type="button"
-                          title="Remove role"
-                          aria-label="Remove role"
-                          className="p-1.5 rounded-md bg-red-50 hover:bg-red-100 text-red-700 hover:text-red-900 border border-red-200 hover:border-red-300 transition-colors"
-                          onClick={() => setRoles((prev) => prev.filter((x) => x !== r))}
+                          title="Edit role"
+                          aria-label="Edit role"
+                          className="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-300 transition-colors"
+                          onClick={() => {
+                            setEditingRole(r);
+                            setSelectedRoleToAdd(r);
+                            setShowAddRole(true);
+                          }}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Pencil className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>

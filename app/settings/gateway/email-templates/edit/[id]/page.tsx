@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Mail, ChevronDown, Bold, Italic, Underline, Strikethrough, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link, Image, Table, Code, Quote, Minus, Maximize2, HelpCircle } from "lucide-react";
+import { ChevronDown, Bold, Italic, Underline, Strikethrough, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link, Image, Table, Code, Quote, Minus, Maximize2, HelpCircle } from "lucide-react";
 
 interface EmailTemplateFormData {
   templateCode: string;
@@ -683,8 +683,8 @@ export default function EditEmailTemplatePage() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#27B973] mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading template...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-sm text-gray-500">Loading template...</p>
         </div>
       </div>
     );
@@ -693,29 +693,19 @@ export default function EditEmailTemplatePage() {
   if (error) {
     return (
       <div className="h-full p-6">
-        <div className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4">
+        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           <p className="font-medium">Error loading template</p>
-          <p className="text-sm">{error}</p>
+          <p className="mt-0.5 text-xs">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full p-6" style={{ overflow: 'visible', paddingRight: '360px' }}>
+    <div className="h-full pt-0 px-6 pb-6" style={{ overflow: 'visible', paddingRight: '360px' }}>
       <div className="flex gap-6 items-start" style={{ position: 'relative' }}>
         {/* Main Section */}
-        <div className="flex-1 bg-white rounded-md shadow overflow-hidden">
-            {/* Green Header Bar */}
-            <div className="flex items-center justify-between px-5 py-3 text-white" style={{ backgroundColor: '#27B973' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-6 h-6 rounded-full flex items-center justify-center" style={{ backgroundColor: 'rgba(39, 185, 115, 0.6)' }}>
-                  <Mail className="w-4 h-4" />
-                </div>
-                <h2 className="font-semibold">Edit Email Template</h2>
-              </div>
-            </div>
-
+        <div className="flex-1 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
             {/* Main Content Area */}
             <div className="p-8">
             {/* Form Fields */}
@@ -1116,7 +1106,7 @@ export default function EditEmailTemplatePage() {
         </div>
 
         {/* Right Section - Parameters List */}
-        <div className="w-80 flex-shrink-0 bg-white rounded-md shadow overflow-hidden flex flex-col" style={{ position: 'fixed', top: '84px', right: '24px', maxHeight: 'calc(100vh - 108px)', zIndex: 1000, width: '320px' }}>
+        <div className="w-80 flex-shrink-0 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden flex flex-col" style={{ position: 'fixed', top: '84px', right: '24px', maxHeight: 'calc(100vh - 108px)', zIndex: 1000, width: '320px' }}>
             <div className="px-5 py-3 bg-gray-50 border-b border-gray-200 flex-shrink-0">
               <h3 className="text-sm font-semibold text-gray-900">Available Attributes</h3>
             </div>

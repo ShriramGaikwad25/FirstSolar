@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Plus, Archive, Search, FileCode2 } from "lucide-react";
+import { Mail, Archive, Search } from "lucide-react";
 import AgGridReact from "@/components/ClientOnlyAgGrid";
 import "@/lib/ag-grid-setup";
-import { ColDef, GridApi, GetRowIdParams, RowClickedEvent } from "ag-grid-enterprise";
+import { ColDef, GridApi, GetRowIdParams } from "ag-grid-enterprise";
 import { defaultColDef } from "@/components/dashboard/columnDefs";
 import { useLoading } from "@/contexts/LoadingContext";
 
@@ -81,12 +81,6 @@ export default function GatewayEmailTemplatesSettings() {
     router.push("/settings/gateway/email-templates/new");
   };
 
-  const handleRowClick = (event: RowClickedEvent<EmailTemplate>) => {
-    if (event.data) {
-      router.push(`/settings/gateway/email-templates/${event.data.id}`);
-    }
-  };
-
   const filteredTemplates = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return templates;
@@ -100,43 +94,53 @@ export default function GatewayEmailTemplatesSettings() {
   // Column definitions for AG Grid
   const columnDefs = useMemo<ColDef[]>(() => [
     {
-      headerName: "Template Code",
-      field: "templateCode",
-      width: 200,
-      sortable: true,
-      filter: true,
-      cellRenderer: (params: any) => (
-        <span className="inline-flex items-center gap-1.5 text-gray-700">
-          <FileCode2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-          <span className="truncate">{params.value}</span>
-        </span>
-      ),
-    },
-    {
       headerName: "Template Name",
       field: "templateName",
-      width: 300,
+      width: 260,
+      minWidth: 260,
+      flex: 0,
       sortable: true,
       filter: true,
       wrapText: true,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
       autoHeight: true,
-      cellClass: "font-medium text-gray-900",
+      cellRenderer: (params: any) =>
+        params.data ? (
+          <button
+            type="button"
+            className="text-left font-medium text-blue-600 hover:underline focus:outline-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              router.push(`/settings/gateway/email-templates/${params.data.id}`);
+            }}
+          >
+            {params.value}
+          </button>
+        ) : null,
     },
     {
       headerName: "Description",
       field: "description",
-      width: 300,
+      flex: 1,
+      minWidth: 250,
       sortable: true,
       filter: true,
       wrapText: true,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
       autoHeight: true,
     },
     {
       headerName: "Template Type",
       field: "templateType",
       width: 160,
+      minWidth: 160,
+      flex: 0,
       sortable: true,
       filter: true,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
       cellRenderer: (params: any) =>
         params.value ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-50 text-purple-700">
@@ -148,8 +152,12 @@ export default function GatewayEmailTemplatesSettings() {
       headerName: "Status",
       field: "active",
       width: 120,
+      minWidth: 120,
+      flex: 0,
       sortable: true,
       filter: true,
+      wrapHeaderText: true,
+      autoHeaderHeight: true,
       cellRenderer: (params: any) => {
         return params.value ? (
           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
@@ -184,16 +192,6 @@ export default function GatewayEmailTemplatesSettings() {
             <Mail className="w-3.5 h-3.5" />
             Templates: <span className="text-blue-900 font-semibold">{filteredTemplates.length}</span>
           </span>
-
-          <div className="ml-auto">
-            <button
-              onClick={handleAddTemplate}
-              className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 text-sm font-medium transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              Add Email Template
-            </button>
-          </div>
         </div>
       </div>
 
@@ -227,7 +225,6 @@ export default function GatewayEmailTemplatesSettings() {
                 columnDefs={columnDefs}
                 defaultColDef={defaultColDef}
                 domLayout="autoHeight"
-                onRowClicked={handleRowClick}
                 rowSelection="single"
                 onGridReady={(params) => {
                   setGridApi(params.api);

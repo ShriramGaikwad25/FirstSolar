@@ -631,8 +631,7 @@ export async function establishAuthenticatedSession(options: {
   /** When true and jwtToken cookie exists, skip generateJWTToken (SSO redirect already set tokens). */
   skipJwtGeneration?: boolean;
 }): Promise<void> {
-  const { accessToken, userUniqueID, userAdminRoles, userid, tenantId, skipJwtGeneration } =
-    options;
+  const { accessToken, userUniqueID, userid, tenantId, skipJwtGeneration } = options;
   const resolvedUserid = userid ?? userUniqueID ?? '';
   const resolvedTenantId = tenantId?.trim() || registeredAppNameOrNull() || '';
 
@@ -645,12 +644,9 @@ export async function establishAuthenticatedSession(options: {
     })
   );
 
-  if (userUniqueID) {
-    setCookie(COOKIE_NAMES.REVIEWER_ID, userUniqueID);
-  }
-  if (userAdminRoles) {
-    setCookie(COOKIE_NAMES.USER_ADMIN_ROLES, userAdminRoles);
-  }
+  // reviewerId and admin roles are no longer written to cookies here — they're decoded
+  // from the JWT's claims on demand (see getReviewerId/getUserAdminRoles) once the JWT below
+  // is issued.
 
   const existingJwt = getCookie(COOKIE_NAMES.JWT_TOKEN);
   if (skipJwtGeneration && existingJwt) {
@@ -1362,12 +1358,69 @@ export function getCurrentUser(): { email?: string; tenantId?: string } | null {
   }
 }
 
-// Get reviewerId (userUniqueID) from cookies
+interface DecodedJwtClaims {
+  userid?: string;
+  adminRoles?: string[] | string;
+  [key: string]: unknown;
+}
+
+// In-memory only — decoded once per token value and never persisted (not to a cookie, not to
+// localStorage), since the backend now embeds reviewerId/adminRoles as JWT claims instead of
+// returning them as separate fields alongside the token.
+let cachedJwtDecode: { token: string; claims: DecodedJwtClaims | null } | null = null;
+
+function base64UrlDecode(segment: string): string {
+  const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+  if (typeof window !== 'undefined' && typeof window.atob === 'function') {
+    const binary = window.atob(padded);
+    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+  }
+  return Buffer.from(padded, 'base64').toString('utf-8');
+}
+
+function decodeJwtClaims(token: string): DecodedJwtClaims | null {
+  if (cachedJwtDecode && cachedJwtDecode.token === token) {
+    return cachedJwtDecode.claims;
+  }
+
+  let claims: DecodedJwtClaims | null = null;
+  try {
+    const payloadSegment = token.split('.')[1];
+    if (payloadSegment) {
+      claims = JSON.parse(base64UrlDecode(payloadSegment));
+    }
+  } catch (error) {
+    console.warn('Failed to decode JWT claims:', error);
+    claims = null;
+  }
+
+  cachedJwtDecode = { token, claims };
+  return claims;
+}
+
+// reviewerId (the user's unique id) now lives in the JWT's "userid" claim. Falls back to the
+// legacy cookie for any session still relying on the old token-response field.
 export function getReviewerId(): string | null {
+  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
+  if (jwtToken) {
+    const fromJwt = decodeJwtClaims(jwtToken)?.userid;
+    if (typeof fromJwt === 'string' && fromJwt.trim()) return fromJwt.trim();
+  }
   return getCookie(COOKIE_NAMES.REVIEWER_ID);
 }
 
-// Get userAdminRoles from cookies
+// User role(s) now live in the JWT's "adminRoles" claim (an array). Falls back to the legacy
+// cookie for any session still relying on the old token-response field.
 export function getUserAdminRoles(): string | null {
+  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
+  if (jwtToken) {
+    const roles = decodeJwtClaims(jwtToken)?.adminRoles;
+    if (Array.isArray(roles) && roles.length > 0) {
+      return roles.filter(Boolean).join(', ');
+    }
+    if (typeof roles === 'string' && roles.trim()) return roles.trim();
+  }
   return getCookie(COOKIE_NAMES.USER_ADMIN_ROLES);
 }
