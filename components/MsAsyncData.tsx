@@ -168,14 +168,15 @@ export const getLogoSrc = (appName: string) => {
 // Load Applications from ISPM API to match Applications component data and logos
 export const loadIspmApps = async (inputValue: string): Promise<App[]> => {
   try {
-    const { getReviewerId } = await import("@/lib/auth");
+    const { getReviewerId, getJwtAuthHeaders, resolveTenantIdForHeader } = await import("@/lib/auth");
     const reviewerId = getReviewerId() || "";
     if (!reviewerId) {
       console.error("Reviewer ID not found");
       return [];
     }
     const response = await fetch(
-      `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getApplications/${reviewerId}`
+      `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getApplications/${reviewerId}`,
+      { headers: getJwtAuthHeaders() }
     );
     if (!response.ok) throw new Error("Failed to fetch applications");
     const data = await response.json();

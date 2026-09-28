@@ -3,6 +3,7 @@
 import { UserPlus, LayoutTemplate, ChevronDown } from "lucide-react";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { useEffect, useState } from "react";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 interface RoleInfo {
   name: string;
@@ -35,9 +36,11 @@ export default function GatewayAdminRolesSettings() {
     const controller = new AbortController();
     const load = async () => {
       try {
+        const tenantId = resolveTenantIdForHeader();
+        const authHeaders = getJwtAuthHeaders();
         const [rolesRes, privRes] = await Promise.all([
-          fetch("https://preview.keyforge.ai/privilegedrole/api/v1/ACMECOM/adminrole", { signal: controller.signal }),
-          fetch("https://preview.keyforge.ai/privilegedrole/api/v1/ACMECOM/roleprivilege", { signal: controller.signal }),
+          fetch(`https://preview.keyforge.ai/privilegedrole/api/v1/${tenantId}/adminrole`, { signal: controller.signal, headers: authHeaders }),
+          fetch(`https://preview.keyforge.ai/privilegedrole/api/v1/${tenantId}/roleprivilege`, { signal: controller.signal, headers: authHeaders }),
         ]);
         if (!rolesRes.ok) throw new Error(`Roles request failed: ${rolesRes.status}`);
         const data: Array<{ adminRole: string; description: string }>= await rolesRes.json();

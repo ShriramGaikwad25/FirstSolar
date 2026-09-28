@@ -7,9 +7,13 @@ import { mergeSupportedObjectsExtensions } from "./supported-objects-extensions"
 import { getActiveTenantId } from "./tenant";
 import { tenantId as defaultTenantId } from "./config";
 
-const BASE_URL = "https://preview.keyforge.ai/certification/api/v1/ACMECOM";
+function BASE_URL(): string {
+  return `https://preview.keyforge.ai/certification/api/v1/${resolveEntitiesTenant()}`;
+}
 
-const BASE_URL2 = "https://preview.keyforge.ai/entities/api/v1/ACMECOM";
+function BASE_URL2(): string {
+  return `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}`;
+}
 
 // Uses apiRequestWithAuth so JWT expire -> refresh via access token -> retry once; access token expire -> logout
 export async function fetchApi<T>(
@@ -72,7 +76,7 @@ export async function getCertifications<T>(
 ): Promise<{ certifications: PaginatedResponse<T>; analytics: CertAnalyticsResponse }> {
   // Call both APIs in parallel for better performance
   const [certifications, analytics] = await Promise.all([
-    fetchApi<PaginatedResponse<T>>(`${BASE_URL}/getCertificationList/${reviewerId}`, pageSize, pageNumber),
+    fetchApi<PaginatedResponse<T>>(`${BASE_URL()}/getCertificationList/${reviewerId}`, pageSize, pageNumber),
     getCertAnalytics(reviewerId)
   ]);
 
@@ -85,7 +89,7 @@ export async function getCertifications<T>(
 export async function getCertAnalytics(
   reviewerId: string
 ): Promise<CertAnalyticsResponse> {
-  const endpoint = `https://preview.keyforge.ai/certification/api/v1/ACMECOM/getCertAnalytics/${reviewerId}`;
+  const endpoint = `${BASE_URL()}/getCertAnalytics/${reviewerId}`;
   return fetchApi(endpoint);
 }
 
@@ -96,7 +100,7 @@ export async function getCertificationDetails<T>(
   pageSize?: number,
   pageNumber?: number
 ): Promise<PaginatedResponse<T>> {
-  const endpoint = `${BASE_URL}/getCertificationDetails/${reviewerId}/${certId}`;
+  const endpoint = `${BASE_URL()}/getCertificationDetails/${reviewerId}/${certId}`;
   return fetchApi(endpoint, pageSize, pageNumber);
 }
 
@@ -114,7 +118,7 @@ export async function getAccessDetails<T>(
     throw new Error("Either taskId or all must be provided");
   }
   const finalPart = all ? "All" : taskId!;
-  let endpoint = `${BASE_URL}/getAccessDetails/${reviewerId}/${certId}/${finalPart}`;
+  let endpoint = `${BASE_URL()}/getAccessDetails/${reviewerId}/${certId}/${finalPart}`;
   
   // Add filter as query parameter if provided
   if (filter) {
@@ -138,7 +142,7 @@ export async function getLineItemDetails(
    */
   filter?: string
 ): Promise<LineItemDetail[]> {
-  const baseEndpoint = `${BASE_URL}/getLineItemDetails/${reviewerId}/${certId}/${taskId}/${lineItemId}`;
+  const baseEndpoint = `${BASE_URL()}/getLineItemDetails/${reviewerId}/${certId}/${taskId}/${lineItemId}`;
   const url = new URL(baseEndpoint);
 
   if (filter) {
@@ -168,7 +172,7 @@ export async function updateAction(
   certId: string,
   payload: UpdateActionPayload
 ): Promise<void> {
-  const endpoint = `${BASE_URL}/updateAction/${reviewerId}/${certId}`;
+  const endpoint = `${BASE_URL()}/updateAction/${reviewerId}/${certId}`;
   await fetchApi(endpoint, undefined, undefined, {
     method: "POST",
     body: JSON.stringify(payload),
@@ -208,7 +212,7 @@ function getCertificationProxyUrl(path: string): string {
   if (typeof window !== "undefined") {
     return `${window.location.origin}/api/certification/${path}`;
   }
-  return `${BASE_URL}/${path}`;
+  return `${BASE_URL()}/${path}`;
 }
 
 export async function modifyAccess(
@@ -266,14 +270,14 @@ export async function getAppOwnerDetails<T>(
   pageSize?: number,
   pageNumber?: number
 ): Promise<PaginatedResponse<T>> {
-  const endpoint = `${BASE_URL}/getAPPOCertificationDetails/${reviewerId}/${certId}`;
+  const endpoint = `${BASE_URL()}/getAPPOCertificationDetails/${reviewerId}/${certId}`;
   return fetchApi(endpoint, pageSize, pageNumber);
 }
 
 export async function getApplications(
 reviewerId: string,
 ):Promise<void>{
-  const endpoint = `${BASE_URL2}/getApplications/${reviewerId}`
+  const endpoint = `${BASE_URL2()}/getApplications/${reviewerId}`
   return fetchApi(endpoint)
 }
   
@@ -287,7 +291,7 @@ export async function getGroupedAppOwnerDetails<T>(
    */
   filter?: string
 ): Promise<PaginatedResponse<T>> {
-  const baseEndpoint = `${BASE_URL}/getAPPOGroupByEntsCertDetails/${reviewerId}/${certId}`;
+  const baseEndpoint = `${BASE_URL()}/getAPPOGroupByEntsCertDetails/${reviewerId}/${certId}`;
   const url = new URL(baseEndpoint);
 
   if (filter) {
@@ -312,7 +316,7 @@ export async function getAppAccounts(
 reviewerId: string,
 applicationinstanceid:string
 ):Promise<void>{
-  const endpoint = `${BASE_URL2}/getAppAccounts/${reviewerId}/${applicationinstanceid}`
+  const endpoint = `${BASE_URL2()}/getAppAccounts/${reviewerId}/${applicationinstanceid}`
   return fetchApi(endpoint)
 }
 
@@ -320,21 +324,21 @@ export async function getAppEntitlement(
 reviewerId: string,
 applicationinstanceid:string
 ):Promise<void>{
-  const endpoint = `${BASE_URL2}/getAppEntitlements/${reviewerId}/${applicationinstanceid}`
+  const endpoint = `${BASE_URL2()}/getAppEntitlements/${reviewerId}/${applicationinstanceid}`
   return fetchApi(endpoint)
 }
 
 export async function getAllRegisteredApps(
   reviewerId: string
 ): Promise<{ items: Array<{ applicationId: string; applicationName: string; scimurl: string; filter: string }>; executionStatus: string }> {
-  const endpoint = `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getAllRegisteredApp/${reviewerId}`;
+  const endpoint = `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}/getAllRegisteredApp/${reviewerId}`;
   return fetchApi(endpoint);
 }
 
 export async function searchUsers(
   payload: { filter: string; applicationId: string; scimurl: string; applicationName: string }
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/entities/api/v1/ACMECOM/search/user`;
+  const endpoint = `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}/search/user`;
   return apiRequestWithAuth<any>(endpoint, {
     method: 'POST',
     headers: {
@@ -352,7 +356,7 @@ export async function getAPPOCertificationDetailsWithFilter<T>(
   pageSize?: number,
   pageNumber?: number
 ): Promise<PaginatedResponse<T>> {
-  const endpoint = `https://preview.keyforge.ai/certification/api/v1/ACMECOM/getAPPOCertificationDetails/${reviewerId}/${certificationId}`;
+  const endpoint = `https://preview.keyforge.ai/certification/api/v1/${resolveEntitiesTenant()}/getAPPOCertificationDetails/${reviewerId}/${certificationId}`;
   
   const url = new URL(endpoint);
   url.searchParams.append("filter", filter);
@@ -375,7 +379,7 @@ export async function getEntitlementDetails(
   appInstanceId: string,
   entitlementId: string
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/catalog/api/v1/ACMECOM/app/${appInstanceId}/entitlement/${entitlementId}`;
+  const endpoint = `https://preview.keyforge.ai/catalog/api/v1/${resolveEntitiesTenant()}/app/${appInstanceId}/entitlement/${entitlementId}`;
   
   // Use apiRequestWithAuth to automatically handle token refresh and authentication
   return apiRequestWithAuth<any>(endpoint, {
@@ -392,7 +396,7 @@ export async function getCatalogEntitlements<T>(
   reviewerId: string,
 
 ): Promise<T> {
-  const endpoint = `https://preview.keyforge.ai/catalog/api/v1/ACMECOM/app/${appInstanceId}/entitlement`;
+  const endpoint = `https://preview.keyforge.ai/catalog/api/v1/${resolveEntitiesTenant()}/app/${appInstanceId}/entitlement`;
   
   const url = new URL(endpoint);
   url.searchParams.append("filter", `appownerid eq ${reviewerId}`);
@@ -500,7 +504,7 @@ export async function updateCampaignSchedule(payload: {
     periodValue: string;
   };
 }): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/kfscheduler/api/v1/ACMECOM/jobs/updateschedule/campaign";
+  const endpoint = `https://preview.keyforge.ai/kfscheduler/api/v1/${resolveEntitiesTenant()}/jobs/updateschedule/campaign`;
   
   // apiRequestWithAuth already handles token expiration and refresh internally
   const result = await apiRequestWithAuth<any>(endpoint, {
@@ -518,19 +522,11 @@ export async function updateCampaignSchedule(payload: {
 
 // Get all supported application types for registration (registerscimapp uses access token)
 export async function getAllSupportedApplicationTypes(): Promise<any> {
-  const endpoint =
-    "https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getAllSupportedObjects";
-  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-  if (!accessToken) {
-    throw new Error("No access token available");
-  }
+  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getAllSupportedObjects`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "X-Requested-With": "XMLHttpRequest",
-    },
+    headers: itAssetAuthHeaders(),
   });
   if (!response.ok) {
     const errorText = await response.text();
@@ -560,22 +556,12 @@ export interface GetAllApplicationsResponse {
 }
 
 export async function getAllApplications(): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getAllApplications";
-  
+  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getAllApplications`;
+
   try {
-    // Get access token for authentication
-    const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-    
-    if (!accessToken) {
-      throw new Error('No access token available');
-    }
-    
     // Use Headers object to ensure accessToken is used (not JWT from global patch)
-    const headers = new Headers();
-    headers.set('Content-Type', 'application/json');
-    headers.set('X-Requested-With', 'XMLHttpRequest');
-    headers.set('Authorization', `Bearer ${accessToken}`);
-    
+    const headers = itAssetAuthHeaders();
+
     // Use original fetch (before JWT patch) to ensure accessToken is used, not JWT
     // This bypasses the global fetch patch that adds JWT tokens
     const fetchFn = typeof window !== 'undefined' ? getOriginalFetch() : fetch;
@@ -622,7 +608,7 @@ export async function registerScimAppNewApp(payload: {
   ApplicationType: string;
   ApplicationDetails: Record<string, string>;
 }): Promise<unknown> {
-  const endpoint = "https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/newApp";
+  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/newApp`;
   const body = {
     ApplicationName: payload.ApplicationName,
     ApplicationType: payload.ApplicationType,
@@ -633,15 +619,7 @@ export async function registerScimAppNewApp(payload: {
     },
   };
 
-  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-  if (!accessToken) {
-    throw new Error("No access token available");
-  }
-
-  const headers = new Headers();
-  headers.set("Content-Type", "application/json");
-  headers.set("X-Requested-With", "XMLHttpRequest");
-  headers.set("Authorization", `Bearer ${accessToken}`);
+  const headers = itAssetAuthHeaders();
 
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
@@ -711,6 +689,20 @@ export function filterIntegrationFieldsForApplicationType(
   return fieldKeys.filter((k) => k.trim().toLowerCase() !== "driver");
 }
 
+/** Shared auth headers for itasset/registerscimapp-style endpoints (master access token, not JWT). */
+function itAssetAuthHeaders(): Headers {
+  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
+  if (!accessToken) {
+    throw new Error("No access token available");
+  }
+  const headers = new Headers();
+  headers.set("Content-Type", "application/json");
+  headers.set("X-Requested-With", "XMLHttpRequest");
+  headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("X-Tenant-Id", resolveEntitiesTenant());
+  return headers;
+}
+
 function connectionTestAuthHeaders(): Headers {
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -720,6 +712,7 @@ function connectionTestAuthHeaders(): Headers {
   headers.set("Content-Type", "application/json");
   headers.set("X-Requested-With", "XMLHttpRequest");
   headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("X-Tenant-Id", resolveEntitiesTenant());
   return headers;
 }
 
@@ -934,8 +927,7 @@ export function attributeMappingsFromFetchSchemaJson(json: unknown): WizardSchem
 
 /** POST gatewayassist schemamapper db fetch-schema (after test-connection session_id). */
 export async function fetchDatabaseSchema(payload: DatabaseFetchSchemaPayload): Promise<unknown> {
-  const endpoint =
-    "https://preview.keyforge.ai/gatewayassist/api/v1/KEYFORGE/schemamapper/db/fetch-schema";
+  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/fetch-schema`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1617,8 +1609,7 @@ export function attributeMappingsFromSuggestMappingJson(
 export async function fetchDatabaseSuggestMapping(
   payload: DatabaseSuggestMappingPayload
 ): Promise<unknown> {
-  const endpoint =
-    "https://preview.keyforge.ai/gatewayassist/api/v1/KEYFORGE/schemamapper/db/suggest-mapping";
+  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/suggest-mapping`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1726,8 +1717,7 @@ export function buildDatabaseConfirmMappingDecisions(
 export async function confirmDatabaseMapping(
   payload: DatabaseConfirmMappingPayload
 ): Promise<unknown> {
-  const endpoint =
-    "https://preview.keyforge.ai/gatewayassist/api/v1/KEYFORGE/schemamapper/db/confirm-mapping";
+  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/confirm-mapping`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1908,8 +1898,7 @@ export function isDatabaseTestConnectionPayloadComplete(
 export async function testDatabaseConnection(
   payload: DatabaseTestConnectionPayload
 ): Promise<unknown> {
-  const endpoint =
-    "https://preview.keyforge.ai/gatewayassist/api/v1/KEYFORGE/schemamapper/db/test-connection";
+  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/test-connection`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1939,8 +1928,7 @@ export async function testDatabaseConnection(
 export async function testScreenScrappingConnection(
   payload: Record<string, string>
 ): Promise<unknown> {
-  const endpoint =
-    "https://preview.keyforge.ai/aiagentcontroller/api/v1/ACMECOM/screenagent/testconnection";
+  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/screenagent/testconnection`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1970,8 +1958,7 @@ export async function testScreenScrappingConnection(
 export async function testRestServiceConnection(
   payload: Record<string, string>
 ): Promise<unknown> {
-  const endpoint =
-    "https://preview.keyforge.ai/aiagentcontroller/api/v1/ACMECOM/restagent/testconnection";
+  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/restagent/testconnection`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -2067,6 +2054,7 @@ export async function getMappedSchema(tenantId: string, applicationId: string): 
     headers: {
       "Content-Type": "application/json",
       "X-Requested-With": "XMLHttpRequest",
+      "X-Tenant-Id": tenantId,
     },
   });
   if (!response.ok) {
@@ -2204,6 +2192,7 @@ export async function mapSchemaFields(
     headers: {
       "Content-Type": "application/json",
       "X-Requested-With": "XMLHttpRequest",
+      "X-Tenant-Id": tenantId,
     },
     body: JSON.stringify(payload),
   });
@@ -2235,7 +2224,7 @@ export function extractApplicationIdFromRegisterNewAppResponse(data: unknown): s
     try {
       const url = new URL(scimUrl);
       const parts = url.pathname.split("/").filter(Boolean);
-      const tenant = String(o.TenantID ?? o.tenantID ?? "ACMECOM").trim();
+      const tenant = String(o.TenantID ?? o.tenantID ?? resolveEntitiesTenant()).trim();
       const tenantIdx = parts.findIndex((p) => p.toLowerCase() === tenant.toLowerCase());
       if (tenantIdx >= 0 && parts[tenantIdx + 1]) {
         const id = parts[tenantIdx + 1].trim();
@@ -2244,7 +2233,9 @@ export function extractApplicationIdFromRegisterNewAppResponse(data: unknown): s
       const m = scimUrl.match(/\/scim\/v2\/[^/]+\/([^/?#]+)/i);
       if (m?.[1]) return m[1].trim();
     } catch {
-      const m = scimUrl.match(/\/scim\/v2\/[^/]+\/([^/?#]+)/i) ?? scimUrl.match(/\/ACMECOM\/([^/?#]+)/i);
+      const m =
+        scimUrl.match(/\/scim\/v2\/[^/]+\/([^/?#]+)/i) ??
+        scimUrl.match(new RegExp(`/${resolveEntitiesTenant()}/([^/?#]+)`, "i"));
       if (m?.[1]) return m[1].trim();
     }
   }
@@ -2718,7 +2709,7 @@ export function parseSchemaMappingFromItAssetSubmitRequestResponse(
 
 /** Fetches applications that are In Progress from the IT Asset API. Returns null on failure so the main app list still loads. */
 export async function getInProgressApplications(loginremote_user: string = "ACMEADMIN"): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/itasset/ACMECOM/getallapp";
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getallapp`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2730,6 +2721,7 @@ export async function getInProgressApplications(loginremote_user: string = "ACME
     headers.set("Content-Type", "application/json");
     headers.set("X-Requested-With", "XMLHttpRequest");
     headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("X-Tenant-Id", resolveEntitiesTenant());
     headers.set("loginremote_user", loginremote_user);
 
     const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -2769,7 +2761,7 @@ export async function getInProgressApplications(loginremote_user: string = "ACME
 
 /** Fetches flatfile app metadata users - getappmetadata/ACME_FlatfileLoad/users. Used on Flatfile File Upload step. */
 export async function getFlatfileAppMetadataUsers(loginremote_user: string = "ACMEADMIN"): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/itasset/ACMECOM/getappmetadata/ACME_FlatfileLoad/users";
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getappmetadata/ACME_FlatfileLoad/users`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2781,6 +2773,7 @@ export async function getFlatfileAppMetadataUsers(loginremote_user: string = "AC
     headers.set("Content-Type", "application/json");
     headers.set("X-Requested-With", "XMLHttpRequest");
     headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("X-Tenant-Id", resolveEntitiesTenant());
     headers.set("loginremote_user", loginremote_user);
 
     const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -2820,7 +2813,7 @@ export async function getAppMetadataUsers(
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
   const encodedApp = encodeURIComponent(applicationName);
-  const endpoint = `https://preview.keyforge.ai/itasset/ACMECOM/getappmetadata/${encodedApp}/users`;
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getappmetadata/${encodedApp}/users`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2832,6 +2825,7 @@ export async function getAppMetadataUsers(
     headers.set("Content-Type", "application/json");
     headers.set("X-Requested-With", "XMLHttpRequest");
     headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("X-Tenant-Id", resolveEntitiesTenant());
     headers.set("loginremote_user", loginremote_user);
 
     const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -2871,7 +2865,7 @@ export async function uploadAndGetSchemaUsers(
   basicDefinition: { tenantId: string; applicationName: string; fieldDelimiter: string; multivalueDelimiter: string },
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/itasset/ACMECOM/uploadandgetschema/users";
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/uploadandgetschema/users`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2883,6 +2877,7 @@ export async function uploadAndGetSchemaUsers(
     // Let browser set multipart boundary; do not set Content-Type explicitly
     headers.set("X-Requested-With", "XMLHttpRequest");
     headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("X-Tenant-Id", resolveEntitiesTenant());
     headers.set("loginremote_user", loginremote_user);
 
     const formData = new FormData();
@@ -2927,7 +2922,7 @@ export async function uploadAndGetSchemaForField(
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
   const encodedField = encodeURIComponent(fieldName);
-  const endpoint = `https://preview.keyforge.ai/itasset/ACMECOM/uploadandgetschema/${encodedField}`;
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/uploadandgetschema/${encodedField}`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2938,6 +2933,7 @@ export async function uploadAndGetSchemaForField(
     const headers = new Headers();
     headers.set("X-Requested-With", "XMLHttpRequest");
     headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("X-Tenant-Id", resolveEntitiesTenant());
     headers.set("loginremote_user", loginremote_user);
 
     const formData = new FormData();
@@ -2979,7 +2975,7 @@ export async function saveBaseMetadataUsers(
   payload: any,
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/itasset/ACMECOM/savebasemetadata/users";
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/savebasemetadata/users`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -2990,6 +2986,7 @@ export async function saveBaseMetadataUsers(
   headers.set("Content-Type", "application/json");
   headers.set("X-Requested-With", "XMLHttpRequest");
   headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("X-Tenant-Id", resolveEntitiesTenant());
   headers.set("loginremote_user", loginremote_user);
 
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -3022,7 +3019,7 @@ export async function saveBaseMetadataUsers(
 /** Fetches a single application by id/name from IT Asset getapp. Used in Edit mode to show application details. */
 export async function getItAssetApp(appIdOrName: string, loginremote_user: string = "ACMEADMIN"): Promise<any> {
   const encoded = encodeURIComponent(appIdOrName);
-  const endpoint = `https://preview.keyforge.ai/itasset/ACMECOM/getapp/${encoded}`;
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getapp/${encoded}`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -3034,6 +3031,7 @@ export async function getItAssetApp(appIdOrName: string, loginremote_user: strin
     headers.set("Content-Type", "application/json");
     headers.set("X-Requested-With", "XMLHttpRequest");
     headers.set("Authorization", `Bearer ${accessToken}`);
+    headers.set("X-Tenant-Id", resolveEntitiesTenant());
     headers.set("loginremote_user", loginremote_user);
 
     const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -3074,7 +3072,7 @@ export async function saveBaseMetadataForField(
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
   const encodedField = encodeURIComponent(fieldName);
-  const endpoint = `https://preview.keyforge.ai/itasset/ACMECOM/savebasemetadata/${encodedField}`;
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/savebasemetadata/${encodedField}`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3085,6 +3083,7 @@ export async function saveBaseMetadataForField(
   headers.set("Content-Type", "application/json");
   headers.set("X-Requested-With", "XMLHttpRequest");
   headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("X-Tenant-Id", resolveEntitiesTenant());
   headers.set("loginremote_user", loginremote_user);
 
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -3125,7 +3124,7 @@ export async function saveAppDetails(payload: {
   connectionDetails?: Record<string, unknown>;
   [key: string]: unknown;
 }): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/itasset/ACMECOM/saveappdetails";
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/saveappdetails`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3136,6 +3135,7 @@ export async function saveAppDetails(payload: {
   headers.set("Content-Type", "application/json");
   headers.set("X-Requested-With", "XMLHttpRequest");
   headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("X-Tenant-Id", resolveEntitiesTenant());
   headers.set("loginremote_user", "ACMEADMIN");
 
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -3167,7 +3167,7 @@ export async function saveAppDetails(payload: {
 
 /** Onboards application (edit mode) - IT Asset onboardapp. */
 export async function onboardApp(payload: { tenantId?: string; appid?: string; [key: string]: unknown }): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/itasset/ACMECOM/onboardapp";
+  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/onboardapp`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3178,6 +3178,7 @@ export async function onboardApp(payload: { tenantId?: string; appid?: string; [
   headers.set("Content-Type", "application/json");
   headers.set("X-Requested-With", "XMLHttpRequest");
   headers.set("Authorization", `Bearer ${accessToken}`);
+  headers.set("X-Tenant-Id", resolveEntitiesTenant());
   headers.set("loginremote_user", "ACMEADMIN");
 
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
@@ -3208,17 +3209,9 @@ export async function onboardApp(payload: { tenantId?: string; appid?: string; [
 }
 
 export async function regenerateApiToken(oldApiToken: string, applicationId: string): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/regenerateToken/${applicationId}`;
+  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/regenerateToken/${applicationId}`;
 
-  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-  if (!accessToken) {
-    throw new Error("No access token available");
-  }
-
-  const headers = new Headers();
-  headers.set("Content-Type", "application/json");
-  headers.set("X-Requested-With", "XMLHttpRequest");
-  headers.set("Authorization", `Bearer ${accessToken}`);
+  const headers = itAssetAuthHeaders();
 
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
@@ -3252,17 +3245,9 @@ export async function getApplicationDetails(
   apiToken: string,
   applicationName?: string
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getApp/${applicationId}`;
+  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getApp/${applicationId}`;
 
-  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-  if (!accessToken) {
-    throw new Error("No access token available");
-  }
-
-  const headers = new Headers();
-  headers.set("Content-Type", "application/json");
-  headers.set("X-Requested-With", "XMLHttpRequest");
-  headers.set("Authorization", `Bearer ${accessToken}`);
+  const headers = itAssetAuthHeaders();
 
   const body: { APIToken: string; ApplicationName: string } = {
     APIToken: apiToken || "",
@@ -3302,17 +3287,9 @@ export async function updateAppConfig(
   oldApiToken: string,
   applicationConfig: Record<string, unknown>
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/updateApp/${applicationId}`;
+  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/updateApp/${applicationId}`;
 
-  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-  if (!accessToken) {
-    throw new Error("No access token available");
-  }
-
-  const headers = new Headers();
-  headers.set("Content-Type", "application/json");
-  headers.set("X-Requested-With", "XMLHttpRequest");
-  headers.set("Authorization", `Bearer ${accessToken}`);
+  const headers = itAssetAuthHeaders();
 
   const body = JSON.stringify({
     OldAPIToken: oldApiToken,
@@ -3349,7 +3326,7 @@ export async function updateAppConfig(
 // Get all applications for a user (AI Assist) - requires JWT in Authorization header
 export async function getAllAppsForUserWithAI(loginId: string): Promise<any> {
   const encoded = encodeURIComponent(loginId);
-  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/ACMECOM/getallapps/${encoded}`;
+  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/${resolveEntitiesTenant()}/getallapps/${encoded}`;
   // Use authenticated request to include JWT token
   return apiRequestWithAuth<any>(endpoint, { method: 'GET' });
 }
@@ -4001,14 +3978,15 @@ export function describeAdvancedSettingSlotValue(val: unknown): string {
 
 // Validate password for sign-off
 export async function validatePassword(userName: string, password: string): Promise<boolean> {
-  const endpoint = "https://preview.keyforge.ai/nativeusers/api/v1/ACMECOM/validatepassword";
-  
+  const endpoint = `https://preview.keyforge.ai/nativeusers/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/validatepassword`;
+
   try {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "X-Requested-With": "XMLHttpRequest",
+        "X-Tenant-Id": resolveEntitiesTenant(),
       },
       body: JSON.stringify({
         userName,
@@ -4050,7 +4028,7 @@ export async function signOffCertification(
   certId: string,
   comments: string
 ): Promise<void> {
-  const endpoint = `${BASE_URL}/signoff/${reviewerId}/${certId}`;
+  const endpoint = `${BASE_URL()}/signoff/${reviewerId}/${certId}`;
   
   return apiRequestWithAuth<void>(endpoint, {
     method: "POST",
@@ -4076,7 +4054,7 @@ export async function scheduleCampaign(payload: {
     periodValue: string;
   };
 }): Promise<any> {
-  const endpoint = "https://preview.keyforge.ai/kfscheduler/api/v1/ACMECOM/jobs/schedule/campaign";
+  const endpoint = `https://preview.keyforge.ai/kfscheduler/api/v1/${resolveEntitiesTenant()}/jobs/schedule/campaign`;
   
   // apiRequestWithAuth already handles token expiration and refresh internally
   const result = await apiRequestWithAuth<any>(endpoint, {

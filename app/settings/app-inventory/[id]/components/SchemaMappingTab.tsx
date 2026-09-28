@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Edit, Trash2, Info, ChevronDown, X, Search, Key, ArrowLeftRight, Plus } from "lucide-react";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { executeQuery, getApplicationDetails } from "@/lib/api";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 type MappingRow = {
   id: string;
@@ -114,12 +115,13 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
             : "";
 
         const [scimRes, mappedRes, configRes, appDetails] = await Promise.all([
-          fetch("https://preview.keyforge.ai/schemamapper/getscim/ACMECOM", {
+          fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
             method: "GET",
-            headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+            headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           }),
           fetch(
-            `https://preview.keyforge.ai/schemamapper/getmappedschema/ACMECOM/${encodeURIComponent(applicationId)}`
+            `https://preview.keyforge.ai/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}`,
+            { headers: { ...getJwtAuthHeaders() } }
           ),
           executeQuery<{ errorMessage?: string; resultSet?: Array<{ configuration?: Record<string, string> }> }>(
             "select configuration from applicationinstance where appid = ?",
@@ -275,14 +277,14 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
     setHelpModalLoading(true);
     try {
       const [scimResp, schemasResp] = await Promise.all([
-        fetch("https://preview.keyforge.ai/schemamapper/getscim/ACMECOM", {
+        fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
           method: "GET",
-          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+          headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         }),
         applicationId
-          ? fetch(`https://preview.keyforge.ai/scim/v2/ACMECOM/${encodeURIComponent(applicationId)}/Schemas`, {
+          ? fetch(`https://preview.keyforge.ai/scim/v2/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}/Schemas`, {
               method: "GET",
-              headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+              headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
             })
           : Promise.resolve(null),
       ]);
@@ -513,10 +515,10 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
                     provisioningAttrMap,
                     reconcilliationAttrMap: {},
                   };
-                  const url = `https://preview.keyforge.ai/schemamapper/mapfields/ACMECOM/${encodeURIComponent(applicationId)}`;
+                  const url = `https://preview.keyforge.ai/schemamapper/mapfields/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}`;
                   const resp = await fetch(url, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
                     body: JSON.stringify(payload),
                   });
                   if (!resp.ok) {

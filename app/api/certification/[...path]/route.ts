@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJwtTokenFromRequest, withAuthHeader } from "@/lib/serverAuth";
-
-const KEYFORGE_CERT_BASE =
-  "https://preview.keyforge.ai/certification/api/v1/ACMECOM";
+import { getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from "@/lib/serverAuth";
 
 export async function POST(
   request: NextRequest,
@@ -26,7 +23,7 @@ export async function POST(
       );
     }
 
-    const url = `${KEYFORGE_CERT_BASE}/${path}`;
+    const url = `https://preview.keyforge.ai/certification/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/${path}`;
     let body: string | undefined;
     try {
       body = await request.text();
@@ -34,12 +31,15 @@ export async function POST(
       body = undefined;
     }
 
-    const headers = withAuthHeader(
-      {
-        "Content-Type": "application/json",
-        "X-Requested-With": "XMLHttpRequest",
-      },
-      jwtToken
+    const headers = withTenantHeader(
+      withAuthHeader(
+        {
+          "Content-Type": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        jwtToken
+      ),
+      request
     ) as Record<string, string>;
 
     const response = await fetch(url, {

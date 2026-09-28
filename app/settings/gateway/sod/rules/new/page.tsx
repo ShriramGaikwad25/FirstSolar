@@ -7,6 +7,7 @@ import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import { useCart } from "@/contexts/CartContext";
 import { executeQuery } from "@/lib/api";
 import { useSearchParams } from "next/navigation";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 type BusinessProcess = {
   id: string;
@@ -387,10 +388,10 @@ export default function SodRulesNewPage() {
   // Fetch Application Instances list for dropdown when on step 2
   useEffect(() => {
     if (currentStep !== 2) return;
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
     fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         query:
           "SELECT appinstanceid, name FROM vw_catalog WHERE type = 'ApplicationInstance' ORDER BY name",
@@ -465,9 +466,9 @@ export default function SodRulesNewPage() {
             parameters: [limit, offset],
           };
 
-    fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+    fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     })
       .then((res) => {

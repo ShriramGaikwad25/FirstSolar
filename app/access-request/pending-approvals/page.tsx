@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { ColDef, ICellRendererParams } from "ag-grid-enterprise";
 import { CircleCheck, CircleX, Hand } from "lucide-react";
-import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth, getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 import "@/lib/ag-grid-setup";
 import {
   type MyApprovalsStatusFilter,
@@ -424,10 +424,10 @@ const PendingApprovalsPage: React.FC = () => {
         };
 
         const response = await fetch(
-          `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${row.reviewerId}`,
+          `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${row.reviewerId}`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify(payload),
           }
         );
@@ -460,10 +460,10 @@ const PendingApprovalsPage: React.FC = () => {
       try {
         const parsedTaskId = Number(row.taskId);
         const response = await fetch(
-          `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/claim/${row.reviewerId}`,
+          `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/claim/${row.reviewerId}`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({
               taskId: Number.isFinite(parsedTaskId) ? parsedTaskId : row.taskId,
             }),
@@ -515,10 +515,10 @@ const PendingApprovalsPage: React.FC = () => {
           };
 
           const response = await fetch(
-            `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${row.reviewerId}`,
+            `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${row.reviewerId}`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify(payload),
             }
           );

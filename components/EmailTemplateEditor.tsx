@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { InfoIcon, ArrowLeft } from "lucide-react";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface EmailTemplate {
   id: number;
@@ -88,7 +89,8 @@ const EmailTemplateEditor: React.FC<EmailTemplateEditorProps> = ({
         setError(null);
 
         const response = await fetch(
-          "https://preview.keyforge.ai/kfmailserver/templates/api/v1/ACMECOM/getall"
+          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
+          { headers: getJwtAuthHeaders() }
         );
 
         if (!response.ok) {

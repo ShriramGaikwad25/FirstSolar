@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Info, FileCode2, FileText, Tag, Code, Check, Hash } from "lucide-react";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface EmailTemplateFormData {
   templateCode: string;
@@ -369,12 +370,12 @@ export default function NewEmailTemplatePage() {
 
       // Call API to create template
       const response = await fetch(
-        "https://preview.keyforge.ai/kfmailserver/templates/api/v1/ACMECOM/create",
+        `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/create`,
         {
           method: "POST",
-          headers: {
+          headers: getJwtAuthHeaders({
             "Content-Type": "application/json",
-          },
+          }),
           body: JSON.stringify(payload),
         }
       );
@@ -404,7 +405,8 @@ export default function NewEmailTemplatePage() {
         setAttributesError(null);
         
         const response = await fetch(
-          "https://preview.keyforge.ai/kfmailserver/templates/api/v1/ACMECOM/getallattributes"
+          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getallattributes`,
+          { headers: getJwtAuthHeaders() }
         );
 
         if (!response.ok) {

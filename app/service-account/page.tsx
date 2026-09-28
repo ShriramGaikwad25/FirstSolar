@@ -23,6 +23,7 @@ import Accordion from "@/components/Accordion";
 import Exports from "@/components/agTable/Exports";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface DataItem {
   label: string;
@@ -598,7 +599,8 @@ export default function ServiceAccountPage() {
       try {
         // You can replace this with your actual API endpoint for service accounts
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getAppAccounts/430ea9e6-3cff-449c-a24e-59c057f81e3d/service-accounts`
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppAccounts/430ea9e6-3cff-449c-a24e-59c057f81e3d/service-accounts`,
+          { headers: { ...getJwtAuthHeaders() } }
         );
         const data = await response.json();
         console.log(data);

@@ -5,6 +5,7 @@ import { Plus, Search, Pencil } from "lucide-react";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import ActionCompletedToast from "@/components/ActionCompletedToast";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface NativeUserRow {
   id: string;
@@ -56,7 +57,7 @@ export default function GatewayNativeUsersSettings() {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch("https://preview.keyforge.ai/nativeusers/api/v1/ACMECOM/getalluser", { signal: controller.signal });
+        const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/getalluser`, { signal: controller.signal, headers: getJwtAuthHeaders() });
         if (!res.ok) throw new Error(`Request failed: ${res.status}`);
         const data: Array<{ id: string; userName: string; firstName: string; lastName: string; email: string; displayName?: string; adminRoles?: string[]; }> = await res.json();
         setRows(data.map(u => ({ id: u.id, userName: u.userName, firstName: u.firstName, lastName: u.lastName, email: u.email, displayName: u.displayName, adminRoles: u.adminRoles })));
@@ -118,9 +119,9 @@ export default function GatewayNativeUsersSettings() {
             adminRoles: [adminRole],
           };
 
-          const res = await fetch("https://preview.keyforge.ai/nativeusers/api/v1/ACMECOM/createuser", {
+          const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/createuser`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify(payload),
           });
           if (!res.ok) throw new Error(`Request failed (${res.status})`);
@@ -236,9 +237,9 @@ export default function GatewayNativeUsersSettings() {
             email: email.trim(),
             adminRoles: roles,
           };
-          const res = await fetch("https://preview.keyforge.ai/nativeusers/api/v1/ACMECOM/updateuser", {
+          const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/updateuser`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify(payload),
           });
           if (!res.ok) throw new Error(`Request failed (${res.status})`);
@@ -257,9 +258,9 @@ export default function GatewayNativeUsersSettings() {
         setResetError(null);
         try {
           setResetSubmitting(true);
-          const res = await fetch("https://preview.keyforge.ai/nativeusers/api/v1/ACMECOM/changepassword", {
+          const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/changepassword`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ userName: row.userName, password: newPassword }),
           });
           if (!res.ok) throw new Error(`Request failed (${res.status})`);

@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
   try {
     const response = await fetch(`${AUTH_BASE_URL}/applicationType`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': registeredAppName },
       body: JSON.stringify({ registeredAppName }),
       cache: 'no-store',
     });

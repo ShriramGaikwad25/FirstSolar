@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJwtTokenFromRequest, withAuthHeader } from "@/lib/serverAuth";
-
-const BASE_URL =
-  "https://preview.keyforge.ai/lookup/api/v1/ACMECOM/conditionRules";
+import { getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from "@/lib/serverAuth";
 
 export async function PUT(
   request: NextRequest,
@@ -11,18 +8,21 @@ export async function PUT(
   try {
     const jwtToken = getJwtTokenFromRequest(request);
     const body = await request.json();
-    const url = `${BASE_URL}/${encodeURIComponent(params.id)}`;
+    const url = `https://preview.keyforge.ai/lookup/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/conditionRules/${encodeURIComponent(params.id)}`;
 
     const response = await fetch(url, {
       method: "PUT",
-      headers: withAuthHeader(
-        {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          "User-Agent": "ISPM-App/1.0",
-          Accept: "application/json",
-        },
-        jwtToken,
+      headers: withTenantHeader(
+        withAuthHeader(
+          {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "User-Agent": "ISPM-App/1.0",
+            Accept: "application/json",
+          },
+          jwtToken,
+        ),
+        request,
       ),
       body: JSON.stringify(body),
       cache: "no-store",

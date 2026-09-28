@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Mail, Calendar, User, FileText, Edit } from "lucide-react";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface EmailTemplate {
   id: number;
@@ -64,7 +65,8 @@ export default function EmailTemplateDetailPage() {
         setError(null);
 
         const response = await fetch(
-          "https://preview.keyforge.ai/kfmailserver/templates/api/v1/ACMECOM/getall"
+          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
+          { headers: getJwtAuthHeaders() }
         );
 
         if (!response.ok) {

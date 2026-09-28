@@ -1,22 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJwtTokenFromRequest, withAuthHeader } from "@/lib/serverAuth";
+import { getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from "@/lib/serverAuth";
 
-const EXTERNAL_URL =
-  "https://preview.keyforge.ai/lookup/api/v1/ACMECOM/conditionRules";
+function externalUrl(request: NextRequest): string {
+  return `https://preview.keyforge.ai/lookup/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/conditionRules`;
+}
 
 export async function GET(request: NextRequest) {
   try {
     const jwtToken = getJwtTokenFromRequest(request);
-    const response = await fetch(EXTERNAL_URL, {
+    const response = await fetch(externalUrl(request), {
       method: "GET",
-      headers: withAuthHeader(
-        {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          "User-Agent": "ISPM-App/1.0",
-          Accept: "application/json",
-        },
-        jwtToken,
+      headers: withTenantHeader(
+        withAuthHeader(
+          {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "User-Agent": "ISPM-App/1.0",
+            Accept: "application/json",
+          },
+          jwtToken,
+        ),
+        request,
       ),
       cache: "no-store",
     });
@@ -59,16 +63,19 @@ export async function POST(request: NextRequest) {
     const jwtToken = getJwtTokenFromRequest(request);
     const body = await request.json();
 
-    const response = await fetch(EXTERNAL_URL, {
+    const response = await fetch(externalUrl(request), {
       method: "POST",
-      headers: withAuthHeader(
-        {
-          "Content-Type": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          "User-Agent": "ISPM-App/1.0",
-          Accept: "application/json",
-        },
-        jwtToken,
+      headers: withTenantHeader(
+        withAuthHeader(
+          {
+            "Content-Type": "application/json",
+            "X-Requested-With": "XMLHttpRequest",
+            "User-Agent": "ISPM-App/1.0",
+            Accept: "application/json",
+          },
+          jwtToken,
+        ),
+        request,
       ),
       body: JSON.stringify(body),
       cache: "no-store",

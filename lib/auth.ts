@@ -7,6 +7,7 @@ import {
   redirectToTenantLogin,
 } from '@/lib/tenant';
 import { clearJitAccessHistoryStore } from '@/lib/jitAccessHistoryStorage';
+import { tenantId as defaultTenantId } from '@/lib/config';
 
 /** Best-effort message from KeyForge / gateway / PG JSON error bodies. */
 function pickHttpErrorBodyMessage(errorJson: unknown, fallback: string): string {
@@ -1053,13 +1054,43 @@ export async function refreshJWTToken(): Promise<boolean> {
 // - On 401/403 or response body "Token Expired" -> try refresh JWT using access token
 // - On refresh success -> retry request once
 // - On refresh failure (access token expired) -> forceLogout
+/** Resolves the current tenant id (path segment -> stored user -> config default). Use this instead of hardcoding a tenant literal. */
+export function resolveTenantIdForHeader(): string {
+  return (
+    getActiveTenantId()?.trim() ||
+    getCurrentUser()?.tenantId?.trim() ||
+    defaultTenantId?.trim() ||
+    'ACMECOM'
+  );
+}
+
+/** Auth + tenant headers for call sites that use raw fetch() instead of apiRequestWithAuth (e.g. non-JSON responses). */
+export function getJwtAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
+  return {
+    ...(jwtToken ? { Authorization: `Bearer ${jwtToken}` } : {}),
+    'X-Tenant-Id': resolveTenantIdForHeader(),
+    ...extra,
+  };
+}
+
+/** Same as getJwtAuthHeaders but authorizes with the master access token (registerscimapp/schemamapper-style APIs). */
+export function getAccessTokenAuthHeaders(extra?: Record<string, string>): Record<string, string> {
+  const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
+  return {
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+    'X-Tenant-Id': resolveTenantIdForHeader(),
+    ...extra,
+  };
+}
+
 export async function apiRequestWithAuth<T>(
   url: string,
   options: RequestInit = {},
   internalRetry = false
 ): Promise<T> {
   const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
-  
+
   if (!jwtToken) {
     forceLogout('No JWT token available');
     throw new Error('No JWT token available');
@@ -1069,6 +1100,7 @@ export async function apiRequestWithAuth<T>(
   const isGetRequest = (options.method || 'GET').toUpperCase() === 'GET';
   const headers: Record<string, string> = {
     'Authorization': `Bearer ${jwtToken}`,
+    'X-Tenant-Id': resolveTenantIdForHeader(),
     ...(options.headers as Record<string, string>),
   };
 

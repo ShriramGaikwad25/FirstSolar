@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ToggleSwitch from "@/components/ToggleSwitch";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 import {
   getAllSupportedApplicationTypesViaProxy,
   executeQuery,
@@ -1299,9 +1300,10 @@ export default function AddApplicationPage() {
   const fetchScimAttributes = async () => {
     setIsLoadingAttributes(true);
     try {
-      const response = await fetch("https://preview.keyforge.ai/schemamapper/getscim/ACMECOM", {
+      const response = await fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
         method: "GET",
         headers: {
+          ...getJwtAuthHeaders(),
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
         },

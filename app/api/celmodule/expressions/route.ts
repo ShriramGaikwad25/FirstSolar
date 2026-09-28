@@ -1,8 +1,12 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getTenantIdFromRequest, withTenantHeader } from "@/lib/serverAuth";
 
-const UPSTREAM =
-  process.env.CELMODULE_EXPRESSIONS_URL ??
-  "https://preview.keyforge.ai/celmodule/api/v1/ACMECOM/expressions";
+function upstreamUrl(request: NextRequest): string {
+  return (
+    process.env.CELMODULE_EXPRESSIONS_URL ??
+    `https://preview.keyforge.ai/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/expressions`
+  );
+}
 
 type CreateExpressionBody = {
   name?: unknown;
@@ -24,7 +28,7 @@ function upstreamErrorDetail(data: unknown, text: string): string {
   return text.slice(0, 500).trim();
 }
 
-function commonUpstreamHeaders(): Record<string, string> {
+function commonUpstreamHeaders(request: NextRequest): Record<string, string> {
   const h: Record<string, string> = {
     Accept: "application/json",
     "User-Agent": "ISPM-App/1.0",
@@ -33,17 +37,17 @@ function commonUpstreamHeaders(): Record<string, string> {
   if (auth) {
     h.Authorization = auth;
   }
-  return h;
+  return withTenantHeader(h, request) as Record<string, string>;
 }
 
-function postJsonHeaders(): Record<string, string> {
+function postJsonHeaders(request: NextRequest): Record<string, string> {
   return {
-    ...commonUpstreamHeaders(),
+    ...commonUpstreamHeaders(request),
     "Content-Type": "application/json",
   };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     let body: CreateExpressionBody;
     try {
@@ -105,9 +109,9 @@ export async function POST(req: Request) {
       payload.variables = variables;
     }
 
-    const res = await fetch(UPSTREAM, {
+    const res = await fetch(upstreamUrl(req), {
       method: "POST",
-      headers: postJsonHeaders(),
+      headers: postJsonHeaders(req),
       body: JSON.stringify(payload as Record<string, unknown>),
     });
 
@@ -142,17 +146,17 @@ export async function POST(req: Request) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const upstreamUrl = new URL(UPSTREAM);
+    const upstream = new URL(upstreamUrl(req));
     for (const category of searchParams.getAll("category")) {
       const trimmed = category.trim();
-      if (trimmed) upstreamUrl.searchParams.append("category", trimmed);
+      if (trimmed) upstream.searchParams.append("category", trimmed);
     }
 
-    const res = await fetch(upstreamUrl.toString(), {
-      headers: commonUpstreamHeaders(),
+    const res = await fetch(upstream.toString(), {
+      headers: commonUpstreamHeaders(req),
       cache: "no-store",
     });
 

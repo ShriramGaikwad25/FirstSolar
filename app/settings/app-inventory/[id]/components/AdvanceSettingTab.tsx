@@ -18,6 +18,7 @@ import {
   type ApplicationTypeIntegrationFieldGroup,
 } from "@/lib/api";
 import IntegrationAdvancedSettingGroups from "./IntegrationAdvancedSettingGroups";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 type EventTabId = "pre-process" | "post-process";
 
@@ -274,7 +275,9 @@ function parseSavedApplicationConfig(app: Record<string, unknown>): {
 
 const CEL_EXPRESSIONS_BASE = "/api/celmodule/expressions";
 /** Same endpoint as Schema Mapping Source Attribute list. */
-const SCIM_ATTRIBUTES_URL = "https://preview.keyforge.ai/schemamapper/getscim/ACMECOM";
+function buildScimAttributesUrl(): string {
+  return `https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`;
+}
 
 type CelExpressionOption = { id: number; name: string };
 
@@ -559,6 +562,7 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
       setInboundOptionsError(null);
       try {
         const scimHeaders = {
+          ...getJwtAuthHeaders(),
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
         };
@@ -593,7 +597,7 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
 
         const [exprRes, scimRes, mappedData] = await Promise.all([
           expressionsPromise,
-          fetch(SCIM_ATTRIBUTES_URL, {
+          fetch(buildScimAttributesUrl(), {
             method: "GET",
             headers: scimHeaders,
             signal: controller.signal,

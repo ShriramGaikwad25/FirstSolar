@@ -8,6 +8,7 @@ import "@/lib/ag-grid-setup";
 import { ColDef, GridApi, GetRowIdParams } from "ag-grid-enterprise";
 import { defaultColDef } from "@/components/dashboard/columnDefs";
 import { useLoading } from "@/contexts/LoadingContext";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface EmailTemplate {
   id: number;
@@ -51,7 +52,8 @@ export default function GatewayEmailTemplatesSettings() {
         showApiLoader?.(true, "Loading email templates...");
 
         const response = await fetch(
-          "https://preview.keyforge.ai/kfmailserver/templates/api/v1/ACMECOM/getall"
+          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
+          { headers: getJwtAuthHeaders() }
         );
 
         if (!response.ok) {

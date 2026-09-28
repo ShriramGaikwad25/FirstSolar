@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     });
     const response = await fetch(`${AUTH_BASE_URL}/oauth/callback?${params.toString()}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', 'X-Tenant-Id': registeredAppName },
       cache: 'no-store',
     });
 

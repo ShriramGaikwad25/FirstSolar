@@ -25,6 +25,7 @@ import Filters from "@/components/agTable/Filters";
 import ActionButtons from "@/components/agTable/ActionButtons";
 import { useCertificationDetails, fetchAccessDetails } from "@/hooks/useApi";
 import { getLineItemDetails, getAccessDetails, executeQuery } from "@/lib/api";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 import { CertAnalytics } from "@/types/api";
 import { EntitlementInfo } from "@/types/lineItem";
 import { UserRowData } from "@/types/certification";
@@ -3947,12 +3948,12 @@ const TreeClient: React.FC<TreeClientProps> = ({
 
             // Make the API call
             const response = await fetch(
-              `https://preview.keyforge.ai/certification/api/v1/ACMECOM/reassign/${reviewerId}/${certId}`,
+              `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/reassign/${reviewerId}/${certId}`,
               {
                 method: "POST",
-                headers: {
+                headers: getJwtAuthHeaders({
                   "Content-Type": "application/json",
-                },
+                }),
                 body: JSON.stringify(payload),
               }
             );

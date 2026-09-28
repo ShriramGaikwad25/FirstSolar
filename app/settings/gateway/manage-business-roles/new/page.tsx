@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import { useCart } from "@/contexts/CartContext";
 import SelectAccessTab from "@/app/access-request/SelectAccessTab";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 const BUSINESS_ROLE_VIEW_STORAGE_KEY = "businessRoleViewDraft";
 
@@ -68,10 +69,10 @@ export default function NewBusinessRoleWizard() {
       try {
         setIsOwnersLoading(true);
         const res = await fetch(
-          "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery",
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             signal: controller.signal,
             body: JSON.stringify({
               query:
@@ -285,10 +286,10 @@ export default function NewBusinessRoleWizard() {
       };
 
       const response = await fetch(
-        "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery",
+        `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             query: "SELECT kf_br_upsert_role_with_accesses(p_payload => ?::jsonb)",
             parameters: [payload],
@@ -413,10 +414,10 @@ export default function NewBusinessRoleWizard() {
   // Load application instances when on step 2
   useEffect(() => {
     if (currentStep !== 2) return;
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
     fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         query:
           "SELECT appinstanceid, name FROM vw_catalog WHERE type = 'ApplicationInstance' ORDER BY name",
@@ -488,9 +489,9 @@ export default function NewBusinessRoleWizard() {
                 parameters: [limit, offset],
               };
 
-    fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+    fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     })
       .then((res) => {

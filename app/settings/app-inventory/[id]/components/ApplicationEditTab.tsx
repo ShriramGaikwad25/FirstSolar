@@ -14,6 +14,7 @@ import {
 import { Check, ChevronDown, ChevronUp, Edit, Settings2, KeyRound } from "lucide-react";
 import AdvancedIntegrationOperationTabs from "../../components/AdvancedIntegrationOperationTabs";
 import ToggleSwitch from "@/components/ToggleSwitch";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 export type ApplicationEditTabHandle = {
   submit: () => Promise<void>;
@@ -856,11 +857,11 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
         payload.OldAPIToken = oldToken;
       }
 
-      const url = `https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/updateApp/${encodeURIComponent(appId)}`;
+      const url = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/updateApp/${encodeURIComponent(appId)}`;
 
       const resp = await fetch(url, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
@@ -914,10 +915,10 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
         return;
       }
 
-      const url = `https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/regenerateClientSecret/${encodeURIComponent(appId)}`;
+      const url = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/regenerateClientSecret/${encodeURIComponent(appId)}`;
       const resp = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ clientID }),
       });
 

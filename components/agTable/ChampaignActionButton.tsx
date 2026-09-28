@@ -8,6 +8,7 @@ import ProxyActionModal from "../ProxyActionModal";
 import { useLoading } from "@/contexts/LoadingContext";
 import ActionCompletedToast from "../ActionCompletedToast";
 import { useRouter } from "next/navigation";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface ChampaignActionButtonProps {
   reviewerId?: string;
@@ -178,12 +179,12 @@ const ChampaignActionButton: React.FC<ChampaignActionButtonProps> = ({
       };
 
       const response = await fetch(
-        `https://preview.keyforge.ai/certification/api/v1/ACMECOM/reassign/${reviewerId}/${certId}`,
+        `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/reassign/${reviewerId}/${certId}`,
         {
           method: "POST",
-          headers: {
+          headers: getJwtAuthHeaders({
             "Content-Type": "application/json",
-          },
+          }),
           body: JSON.stringify(payload),
         }
       );
@@ -196,7 +197,7 @@ const ChampaignActionButton: React.FC<ChampaignActionButtonProps> = ({
       setIsActionLoading(false);
       hideApiLoader?.();
       setShowCompletionToast(true);
-      
+
       console.log("Claimed and reassigned to admin", { reviewerId, certId });
     } catch (error) {
       console.error("Error claiming:", error);
@@ -421,12 +422,12 @@ const ChampaignActionButton: React.FC<ChampaignActionButtonProps> = ({
 
                   // Make the API call
                   const response = await fetch(
-                    `https://preview.keyforge.ai/certification/api/v1/ACMECOM/reassign/${reviewerId}/${certId}`,
+                    `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/reassign/${reviewerId}/${certId}`,
                     {
                       method: "POST",
-                      headers: {
+                      headers: getJwtAuthHeaders({
                         "Content-Type": "application/json",
-                      },
+                      }),
                       body: JSON.stringify(payload),
                     }
                   );

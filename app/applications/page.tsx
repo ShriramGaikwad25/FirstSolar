@@ -11,7 +11,13 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 import { formatDateMMDDYY } from "../access-review/page";
 import CustomPagination from "@/components/agTable/CustomPagination";
-import { getCookie, COOKIE_NAMES } from "@/lib/auth";
+import {
+  getCookie,
+  COOKIE_NAMES,
+  getReviewerId,
+  resolveTenantIdForHeader,
+  getJwtAuthHeaders,
+} from "@/lib/auth";
 import { getOriginalFetch } from "@/lib/authFetch";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -46,18 +52,25 @@ export default function Application() {
     setMounted(true);
     const fetchData = async () => {
       try {
-        const response = await fetch(`https://preview.keyforge.ai/entities/api/v1/ACMECOM/getApplications/430ea9e6-3cff-449c-a24e-59c057f81e3d?page=1&page_size=1000`);
+        const reviewerID = getReviewerId() || "";
+        const response = await fetch(
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getApplications/${reviewerID}?page=1&page_size=1000`,
+          { headers: getJwtAuthHeaders() }
+        );
         // Fire parallel background requests alongside getApplications
         const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
         if (accessToken) {
           const headers = new Headers();
           headers.set('Authorization', `Bearer ${accessToken}`);
+          headers.set('X-Tenant-Id', resolveTenantIdForHeader());
           const originalFetch = typeof window !== 'undefined' ? getOriginalFetch() : fetch;
-          void originalFetch("https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getAllApplications", {
+          void originalFetch(`https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`, {
             headers: headers,
           }).catch(() => null);
         }
-        void fetch("https://preview.keyforge.ai/schemamapper/getmappedschema/ACMECOM/16APLDOY").catch(() => null);
+        void fetch(`https://preview.keyforge.ai/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/16APLDOY`, {
+          headers: getJwtAuthHeaders(),
+        }).catch(() => null);
         const data = await response.json();
         if (data.executionStatus === "success") {
           const items = Array.isArray(data.items) ? data.items : [];
@@ -237,9 +250,10 @@ export default function Application() {
       try {
         const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
         if (!accessToken) return;
-        const keyforgeAllUrl = "https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getAllApplications";
+        const keyforgeAllUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`;
         const headers = new Headers();
         headers.set('Authorization', `Bearer ${accessToken}`);
+        headers.set('X-Tenant-Id', resolveTenantIdForHeader());
         const originalFetch = typeof window !== 'undefined' ? getOriginalFetch() : fetch;
         const allResp = await originalFetch(keyforgeAllUrl, {
           headers: headers,
@@ -253,8 +267,8 @@ export default function Application() {
         const applicationID = match?.ApplicationID;
         if (!applicationID) return;
         try { localStorage.setItem("keyforgeApplicationID", applicationID); } catch {}
-        const keyforgeGetAppUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getApp/${encodeURIComponent(applicationID)}`;
-        void fetch(keyforgeGetAppUrl, { method: "GET", keepalive: true }).catch(() => null);
+        const keyforgeGetAppUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getApp/${encodeURIComponent(applicationID)}`;
+        void fetch(keyforgeGetAppUrl, { method: "GET", keepalive: true, headers }).catch(() => null);
       } catch {
         // ignore background errors
       }

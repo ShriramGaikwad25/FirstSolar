@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { X, AlertTriangle, ChevronDown, ChevronRight, Edit3 } from "lucide-react";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 interface EntitlementRiskSidebarProps {
   isOpen: boolean;
@@ -86,7 +87,8 @@ const EntitlementRiskSidebar: React.FC<EntitlementRiskSidebarProps> = ({
       const entitlementId = entitlementData?.entitlementId;
       if (entitlementId) {
         const resp = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/ACMECOM/policyrisk/entitlement/${encodeURIComponent(entitlementId)}`
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/policyrisk/entitlement/${encodeURIComponent(entitlementId)}`,
+          { headers: getJwtAuthHeaders() }
         );
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const json = await resp.json();

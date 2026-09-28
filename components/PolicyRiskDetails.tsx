@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Edit3 } from "lucide-react";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 export interface PolicyRiskEntitlementData {
   name: string;
@@ -79,7 +80,8 @@ const PolicyRiskDetails: React.FC<PolicyRiskDetailsProps> = ({ entitlementData }
       const entitlementId = entitlementData?.entitlementId;
       if (entitlementId) {
         const resp = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/ACMECOM/policyrisk/entitlement/${encodeURIComponent(entitlementId)}`
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/policyrisk/entitlement/${encodeURIComponent(entitlementId)}`,
+          { headers: getJwtAuthHeaders() }
         );
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         const json = await resp.json();

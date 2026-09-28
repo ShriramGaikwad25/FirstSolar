@@ -25,6 +25,7 @@ import SelectAccessTab from "@/app/access-request/SelectAccessTab";
 import { executeQuery } from "@/lib/api";
 import { ACCESS_POLICY_VIEW_STORAGE_KEY } from "@/lib/access-policy-view-storage";
 import { useCart } from "@/contexts/CartContext";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 const ENTITLEMENT_UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -389,10 +390,10 @@ export default function CreateAccessPolicyPage() {
   // Load application instances when Select Access is shown (wizard step 3 or single-page edit-from-view)
   useEffect(() => {
     if (!shouldLoadSelectAccess) return;
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
     fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         query:
           "SELECT appinstanceid, name FROM vw_catalog WHERE type = 'ApplicationInstance' ORDER BY name",
@@ -464,9 +465,9 @@ export default function CreateAccessPolicyPage() {
                 parameters: [limit, offset],
               };
 
-    fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+    fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(body),
     })
       .then((res) => {

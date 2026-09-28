@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getJwtTokenFromRequest, withAuthHeader } from '@/lib/serverAuth';
+import { getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from '@/lib/serverAuth';
 
 export async function GET(
   request: NextRequest,
@@ -8,18 +8,21 @@ export async function GET(
   try {
     const jwtToken = getJwtTokenFromRequest(request);
     const { jobName } = params;
-    
+
     // Decode URL-encoded parameter
     const decodedJobName = decodeURIComponent(jobName);
-    
+
     const response = await fetch(
-      `https://preview.keyforge.ai/kfscheduler/api/v1/ACMECOM/jobs/campaign/${decodedJobName}`,
+      `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/jobs/campaign/${decodedJobName}`,
       {
         method: 'GET',
-        headers: withAuthHeader({
-          'Content-Type': 'application/json',
-          'User-Agent': 'ISPM-Scheduler/1.0',
-        }, jwtToken),
+        headers: withTenantHeader(
+          withAuthHeader({
+            'Content-Type': 'application/json',
+            'User-Agent': 'ISPM-Scheduler/1.0',
+          }, jwtToken),
+          request
+        ),
       }
     );
 

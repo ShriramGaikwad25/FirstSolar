@@ -11,6 +11,7 @@ import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import AddDetailsSidebarContent, { getRiskColor, type Role } from "./AddDetailsSidebarContent";
 import { getLogoSrc } from "@/components/MsAsyncData";
 import "@/lib/ag-grid-setup";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 // Dynamically import AgGridReact with SSR disabled
 const AgGridReact = dynamic(() => import("ag-grid-react").then((mod) => mod.AgGridReact), {
@@ -1173,11 +1174,12 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
         const query = `SELECT firstname, lastname, email, username, employeeid, department, title FROM usr`;
 
         const response = await fetch(
-          "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery",
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              ...getJwtAuthHeaders(),
             },
             body: JSON.stringify({
               query: query,

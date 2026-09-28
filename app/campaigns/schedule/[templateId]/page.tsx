@@ -12,7 +12,7 @@ import ToggleSwitch from "@/components/ToggleSwitch";
 import FileDropzone from "@/components/FileDropzone";
 import DateInput from "@/components/DatePicker";
 import { executeQuery, scheduleCampaign, updateCampaignSchedule } from "@/lib/api";
-import { apiRequestWithAuth, getCookie, COOKIE_NAMES } from "@/lib/auth";
+import { apiRequestWithAuth, getCookie, COOKIE_NAMES, resolveTenantIdForHeader } from "@/lib/auth";
 
 // Common timezones list
 const COMMON_TIMEZONES = [
@@ -516,7 +516,7 @@ const SchedulePage: React.FC = () => {
     }
 
     const transformedName = transformTemplateName(templateNameToUse);
-    const endpoint = `https://preview.keyforge.ai/kfscheduler/api/v1/ACMECOM/jobs/campaign/${transformedName}/trigger`;
+    const endpoint = `https://preview.keyforge.ai/kfscheduler/api/v1/${resolveTenantIdForHeader()}/jobs/campaign/${transformedName}/trigger`;
 
     setIsStartingCampaign(true);
 
@@ -534,6 +534,7 @@ const SchedulePage: React.FC = () => {
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
           "User-Agent": "ISPM-Scheduler/1.0",
+          "X-Tenant-Id": resolveTenantIdForHeader(),
           ...(jwtToken ? { "Authorization": `Bearer ${jwtToken}` } : {}),
         },
       });

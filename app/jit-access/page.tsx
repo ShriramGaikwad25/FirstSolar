@@ -12,7 +12,7 @@ import { useSelectedUsers } from "@/contexts/SelectedUsersContext";
 import { useCart } from "@/contexts/CartContext";
 import { useItemDetails } from "@/contexts/ItemDetailsContext";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
-import { getReviewerId } from "@/lib/auth";
+import { getReviewerId, resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 function clearJitAccessSelections(
   clearCart: () => void,
@@ -464,10 +464,10 @@ const JitAccess: React.FC = () => {
 
     try {
       const res = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/submitrequest/${reviewerId}`,
+        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/submitrequest/${reviewerId}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
           body: JSON.stringify(apiPayload),
         }
       );
@@ -540,10 +540,10 @@ const JitAccess: React.FC = () => {
 
   React.useEffect(() => {
     if (currentStep !== 2) return;
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
     fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
       body: JSON.stringify({
         query: "SELECT appinstanceid, name FROM vw_catalog WHERE type = 'ApplicationInstance' ORDER BY name",
         parameters: [],
@@ -589,9 +589,9 @@ const JitAccess: React.FC = () => {
               ? { query: "SELECT * FROM vw_catalog WHERE type = 'Entitlement' AND appinstanceid = ?::uuid ORDER BY appinstanceid", parameters: [selectedAppInstanceId!.trim()] }
               : { query: "SELECT * FROM vw_catalog ORDER BY appinstanceid", parameters: [] };
 
-    fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+    fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
       body: JSON.stringify(body),
     })
       .then((res) => { if (!res.ok) throw new Error(`Request failed: ${res.status}`); return res.json(); })

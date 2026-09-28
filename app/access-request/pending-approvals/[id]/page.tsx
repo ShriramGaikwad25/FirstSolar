@@ -22,7 +22,7 @@ import {
   UserCog,
   type LucideIcon,
 } from "lucide-react";
-import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth, getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 
@@ -1320,10 +1320,10 @@ const PendingApprovalDetailPage = ({
       // assignee_id currently is (for a QUEUE task that's a group placeholder, not "me").
       const submittingReviewerId = getReviewerId();
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
+        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload),
         },
       );
@@ -1360,10 +1360,10 @@ const PendingApprovalDetailPage = ({
     try {
       const parsedTaskId = Number(request.taskId);
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/release/${String(reviewerId).trim()}`,
+        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/release/${String(reviewerId).trim()}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             taskId: Number.isFinite(parsedTaskId) ? parsedTaskId : request.taskId,
           }),
@@ -1396,10 +1396,10 @@ const PendingApprovalDetailPage = ({
     try {
       const parsedTaskId = Number(request.taskId);
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/claim/${String(reviewerId).trim()}`,
+        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/claim/${String(reviewerId).trim()}`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify({
             taskId: Number.isFinite(parsedTaskId) ? parsedTaskId : request.taskId,
           }),
@@ -2066,10 +2066,10 @@ const PendingApprovalDetailPage = ({
                     setAnswerError(null);
                     try {
                       const response = await fetch(
-                        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/clarification/provide/${String(submittingReviewerId).trim()}`,
+                        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/provide/${String(submittingReviewerId).trim()}`,
                         {
                           method: "POST",
-                          headers: { "Content-Type": "application/json" },
+                          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
                           body: JSON.stringify({
                             clarificationTaskId: String(clarificationTaskId),
                             answer,
@@ -2383,10 +2383,10 @@ const PendingApprovalDetailPage = ({
 
                       const submittingReviewerId = getReviewerId();
                       const response = await fetch(
-                        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/clarification/request/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
+                        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/request/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
                         {
                           method: "POST",
-                          headers: { "Content-Type": "application/json" },
+                          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
                           body: JSON.stringify(payload),
                         },
                       );

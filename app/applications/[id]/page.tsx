@@ -47,7 +47,13 @@ import CustomPagination from "@/components/agTable/CustomPagination";
 import EditReassignButtons from "@/components/agTable/EditReassignButtons";
 import ActionButtons from "@/components/agTable/ActionButtons";
 import { getAllRegisteredApps, searchUsers } from "@/lib/api";
-import { getReviewerId, getCookie, COOKIE_NAMES } from "@/lib/auth";
+import {
+  getReviewerId,
+  getCookie,
+  COOKIE_NAMES,
+  resolveTenantIdForHeader,
+  getJwtAuthHeaders,
+} from "@/lib/auth";
 import { getOriginalFetch } from "@/lib/authFetch";
 import Link from "next/link";
 import Tabs from "@/components/tabs";
@@ -601,12 +607,12 @@ export default function ApplicationDetailPage() {
     try {
       const applicationID = localStorage.getItem("keyforgeApplicationID");
       if (!applicationID) return;
-      const url = `https://preview.keyforge.ai/schemamapper/getmappedschema/ACMECOM/${encodeURIComponent(
+      const url = `https://preview.keyforge.ai/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/${encodeURIComponent(
         applicationID
       )}`;
       (async () => {
         try {
-          const resp = await fetch(url);
+          const resp = await fetch(url, { headers: getJwtAuthHeaders() });
           if (!resp.ok) return;
           const json = await resp.json();
           const provisioningMap = json?.provisioningAttrMap?.scimTargetMap || {};
@@ -1058,10 +1064,10 @@ export default function ApplicationDetailPage() {
           setAssociatedLoading(true);
           setAssociatedError(null);
           try {
-            const url = `https://preview.keyforge.ai/catalog/api/v1/ACMECOM/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
+            const url = `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
               catalogId
             )}`;
-            const res = await fetch(url);
+            const res = await fetch(url, { headers: getJwtAuthHeaders() });
             const json = await res.json().catch(() => null);
             if (!res.ok) {
               const msg =
@@ -1122,10 +1128,10 @@ export default function ApplicationDetailPage() {
           setAssignmentError(null);
           try {
             const res = await fetch(
-              "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery",
+              `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
               {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
                 body: JSON.stringify({
                   query: `select * from public.kf_entitlement_assignment_v where entitlementid='${entId}'::uuid`,
                   parameters: [],
@@ -1326,12 +1332,13 @@ export default function ApplicationDetailPage() {
       const callMappingRemoveApi = async (contextCatalogId: string, mappingId: string) => {
         const removedBy =
           pickString(reviewerId) || "f558e3b2-348b-4ff3-be4c-a3c5dc8b5a91";
-        const url = `https://preview.keyforge.ai/catalog/api/v1/ACMECOM/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
+        const url = `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
           contextCatalogId
         )}/remove`;
         const res = await fetch(url, {
           method: "DELETE",
           headers: {
+            ...getJwtAuthHeaders(),
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
           },
@@ -1405,10 +1412,10 @@ export default function ApplicationDetailPage() {
         try {
           const entReviewerId =
             reviewerId?.trim() || "ec527a50-0944-4b31-b239-05518c87a743";
-          const url = `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getAppEntitlements/${encodeURIComponent(
+          const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppEntitlements/${encodeURIComponent(
             entReviewerId
           )}/${encodeURIComponent(id)}`;
-          const res = await fetch(url);
+          const res = await fetch(url, { headers: getJwtAuthHeaders() });
           const data = (await res.json().catch(() => null)) as {
             executionStatus?: string;
             errorMessage?: string;
@@ -1517,12 +1524,13 @@ export default function ApplicationDetailPage() {
           }
           mappings.push(entry);
         }
-        const url = `https://preview.keyforge.ai/catalog/api/v1/ACMECOM/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
+        const url = `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
           contextCatalogId
         )}/add`;
         const res = await fetch(url, {
           method: "POST",
           headers: {
+            ...getJwtAuthHeaders(),
             "Content-Type": "application/json",
             "X-Requested-With": "XMLHttpRequest",
           },
@@ -2348,10 +2356,11 @@ export default function ApplicationDetailPage() {
 
     try {
       const response = await fetch(
-        `https://preview.keyforge.ai/certification/api/v1/ACMECOM/updateAction/${reviewerId}/CERT_ID`,
+        `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/updateAction/${reviewerId}/CERT_ID`,
         {
           method: "POST",
           headers: {
+            ...getJwtAuthHeaders(),
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
@@ -2517,7 +2526,8 @@ export default function ApplicationDetailPage() {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getAppAccounts/430ea9e6-3cff-449c-a24e-59c057f81e3d/${id}`
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppAccounts/${reviewerId || "430ea9e6-3cff-449c-a24e-59c057f81e3d"}/${id}`,
+          { headers: getJwtAuthHeaders() }
         );
         const data = await response.json();
         console.log(data);
@@ -2629,9 +2639,10 @@ export default function ApplicationDetailPage() {
         const entReviewerId =
           reviewerId?.trim() || "ec527a50-0944-4b31-b239-05518c87a743";
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getAppEntitlements/${encodeURIComponent(
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppEntitlements/${encodeURIComponent(
             entReviewerId
-          )}/${encodeURIComponent(id)}`
+          )}/${encodeURIComponent(id)}`,
+          { headers: getJwtAuthHeaders() }
         );
         const data = await response.json();
         console.log("Entitlements data:", data);
@@ -4219,12 +4230,13 @@ export default function ApplicationDetailPage() {
               setLoading(true);
               setError(null);
               const keyforgeUrl =
-                "https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getAllApplications";
+                `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`;
 
               const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
               const headers = accessToken ? new Headers() : null;
               if (headers && accessToken) {
                 headers.set('Authorization', `Bearer ${accessToken}`);
+                headers.set('X-Tenant-Id', resolveTenantIdForHeader());
               }
               const [ownResp, keyforgeResp] = await Promise.all([
                 getAllRegisteredApps(reviewerID),

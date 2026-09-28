@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Check, ChevronDown, Edit, Trash2, Info } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { getAllSupportedApplicationTypesViaProxy, parseSupportedObjectsApplicationTypeItem, describeAdvancedSettingSlotValue, normalizeSupportedObjectsFieldArray, type SupportedAppTypeAdvancedParts } from "@/lib/api";
-import { getCookie, COOKIE_NAMES, forceLogout, getCurrentUser } from "@/lib/auth";
+import { getCookie, COOKIE_NAMES, forceLogout, getCurrentUser, resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface FormData {
   step1: {
@@ -244,12 +244,13 @@ export default function AIAssistAppPage() {
       
       // Make API call
       const response = await fetch(
-        `https://preview.keyforge.ai/aiagentcontroller/api/v1/ACMECOM/startaiagent/${loginId}`,
+        `https://preview.keyforge.ai/aiagentcontroller/api/v1/${resolveTenantIdForHeader()}/startaiagent/${loginId}`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`
+            'Authorization': `Bearer ${jwtToken}`,
+            'X-Tenant-Id': resolveTenantIdForHeader()
           },
           body: JSON.stringify(payload)
         }
@@ -334,12 +335,13 @@ export default function AIAssistAppPage() {
       
       // Make API call
       const response = await fetch(
-        'https://preview.keyforge.ai/aiagentcontroller/api/v1/ACMECOM/dbagent/testconnection',
+        `https://preview.keyforge.ai/aiagentcontroller/api/v1/${resolveTenantIdForHeader()}/dbagent/testconnection`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${jwtToken}`
+            'Authorization': `Bearer ${jwtToken}`,
+            'X-Tenant-Id': resolveTenantIdForHeader()
           },
           body: JSON.stringify(payload)
         }
@@ -472,9 +474,10 @@ export default function AIAssistAppPage() {
   const fetchScimAttributes = async () => {
     setIsLoadingAttributes(true);
     try {
-      const response = await fetch("https://preview.keyforge.ai/schemamapper/getscim/ACMECOM", {
+      const response = await fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
         method: "GET",
         headers: {
+          ...getJwtAuthHeaders(),
           "Content-Type": "application/json",
           "X-Requested-With": "XMLHttpRequest",
         },

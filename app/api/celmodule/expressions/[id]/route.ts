@@ -1,8 +1,5 @@
-import { NextResponse } from "next/server";
-
-const COLLECTION_UPSTREAM =
-  process.env.CELMODULE_EXPRESSIONS_URL ??
-  "https://preview.keyforge.ai/celmodule/api/v1/ACMECOM/expressions";
+import { NextRequest, NextResponse } from "next/server";
+import { getTenantIdFromRequest, withTenantHeader } from "@/lib/serverAuth";
 
 type UpdateExpressionBody = {
   name?: unknown;
@@ -13,8 +10,11 @@ type UpdateExpressionBody = {
   variables?: unknown;
 };
 
-function itemUpstream(id: string): string {
-  return `${COLLECTION_UPSTREAM.replace(/\/$/, "")}/${encodeURIComponent(id)}`;
+function itemUpstream(id: string, request: NextRequest): string {
+  const collectionUpstream =
+    process.env.CELMODULE_EXPRESSIONS_URL ??
+    `https://preview.keyforge.ai/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/expressions`;
+  return `${collectionUpstream.replace(/\/$/, "")}/${encodeURIComponent(id)}`;
 }
 
 function upstreamErrorDetail(data: unknown, text: string): string {
@@ -28,7 +28,7 @@ function upstreamErrorDetail(data: unknown, text: string): string {
   return text.slice(0, 500).trim();
 }
 
-function commonUpstreamHeaders(): Record<string, string> {
+function commonUpstreamHeaders(request: NextRequest): Record<string, string> {
   const h: Record<string, string> = {
     Accept: "application/json",
     "User-Agent": "ISPM-App/1.0",
@@ -37,18 +37,18 @@ function commonUpstreamHeaders(): Record<string, string> {
   if (auth) {
     h.Authorization = auth;
   }
-  return h;
+  return withTenantHeader(h, request) as Record<string, string>;
 }
 
-function putJsonHeaders(): Record<string, string> {
+function putJsonHeaders(request: NextRequest): Record<string, string> {
   return {
-    ...commonUpstreamHeaders(),
+    ...commonUpstreamHeaders(request),
     "Content-Type": "application/json",
   };
 }
 
 export async function PUT(
-  req: Request,
+  req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -116,9 +116,9 @@ export async function PUT(
       payload.variables = variables;
     }
 
-    const res = await fetch(itemUpstream(idParam), {
+    const res = await fetch(itemUpstream(idParam, req), {
       method: "PUT",
-      headers: putJsonHeaders(),
+      headers: putJsonHeaders(req),
       body: JSON.stringify(payload as Record<string, unknown>),
     });
 

@@ -17,7 +17,7 @@ import {
   MessageCircleQuestion,
   type LucideIcon,
 } from "lucide-react";
-import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth, getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 
@@ -1396,10 +1396,10 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                   setAnswerError(null);
                   try {
                     const response = await fetch(
-                      `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/clarification/provide/${String(reviewerId).trim()}`,
+                      `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/provide/${String(reviewerId).trim()}`,
                       {
                         method: "POST",
-                        headers: { "Content-Type": "application/json" },
+                        headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
                         body: JSON.stringify({
                           clarificationTaskId: String(clarificationTaskId),
                           answer,

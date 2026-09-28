@@ -5,6 +5,7 @@ import { Plus, Pencil, Trash2, Droplet } from "lucide-react";
 import ClientOnlyAgGrid from "@/components/ClientOnlyAgGrid";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
+import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 
 interface CustomSchemaRow {
   id: string;
@@ -29,8 +30,8 @@ export default function GatewayCustomSchemaSettings() {
         setIsLoading(true);
         setError(null);
         const res = await fetch(
-          "https://preview.keyforge.ai/scimattribute/ACMECOM/customfield",
-          { signal: controller.signal }
+          `https://preview.keyforge.ai/scimattribute/${resolveTenantIdForHeader()}/customfield`,
+          { signal: controller.signal, headers: getJwtAuthHeaders() }
         );
         if (!res.ok) {
           throw new Error(`Request failed: ${res.status}`);
@@ -85,10 +86,10 @@ export default function GatewayCustomSchemaSettings() {
         try {
           setSubmitting(true);
           const res = await fetch(
-            "https://preview.keyforge.ai/scimattribute/ACMECOM/customfield",
+            `https://preview.keyforge.ai/scimattribute/${resolveTenantIdForHeader()}/customfield`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
               body: JSON.stringify(payload),
             }
           );
@@ -242,10 +243,10 @@ export default function GatewayCustomSchemaSettings() {
 
     try {
       const res = await fetch(
-        "https://preview.keyforge.ai/scimattribute/ACMECOM/customfield",
+        `https://preview.keyforge.ai/scimattribute/${resolveTenantIdForHeader()}/customfield`,
         {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
           body: JSON.stringify(payload),
         }
       );

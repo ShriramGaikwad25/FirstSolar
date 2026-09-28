@@ -18,6 +18,7 @@ import ChampaignActionButton from "@/components/agTable/ChampaignActionButton";
 import AuditorsCorner from "../AuditorsCorner";
 import Revocations from "./Revocations";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 type CampaignReviewer = {
   reviewerId: string;
@@ -214,8 +215,8 @@ export default function ManageCampaigns() {
         setIsLoading(true);
         setError(null);
         const res = await fetch(
-          "https://preview.keyforge.ai/certification/api/v1/ACMECOM/getCampaignAnalytics",
-          { cache: "no-store", signal: controller.signal }
+          `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/getCampaignAnalytics`,
+          { cache: "no-store", signal: controller.signal, headers: getJwtAuthHeaders() }
         );
         if (!res.ok) {
           throw new Error(`Failed to load campaign data (${res.status})`);

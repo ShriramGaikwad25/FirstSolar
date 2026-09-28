@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Check } from "lucide-react";
 import { useSelectedUsers, User } from "@/contexts/SelectedUsersContext";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 interface UserSearchTabProps {
   /** Remove Access flow: only one user may be selected at a time */
@@ -58,11 +59,12 @@ const UserSearchTab: React.FC<UserSearchTabProps> = ({ singleSelect = false }) =
       const query = `SELECT firstname, lastname, email, username, employeeid, department, title,userid FROM usr`;
 
       const response = await fetch(
-        "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery",
+        `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...getJwtAuthHeaders(),
           },
           body: JSON.stringify({
             query: query,

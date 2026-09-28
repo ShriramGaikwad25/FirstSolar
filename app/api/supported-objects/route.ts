@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAccessTokenFromRequest, withRegisterScimAuthHeader } from '@/lib/serverAuth';
+import { getAccessTokenFromRequest, getTenantIdFromRequest, withRegisterScimAuthHeader, withTenantHeader } from '@/lib/serverAuth';
 import { mergeSupportedObjectsExtensions } from '@/lib/supported-objects-extensions';
-
-const SUPPORTED_OBJECTS_URL =
-  'https://preview.keyforge.ai/registerscimapp/registerfortenant/ACMECOM/getAllSupportedObjects';
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,13 +12,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(SUPPORTED_OBJECTS_URL, {
+    const supportedObjectsUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(getTenantIdFromRequest(request))}/getAllSupportedObjects`;
+
+    const response = await fetch(supportedObjectsUrl, {
       method: 'GET',
-      headers: withRegisterScimAuthHeader(
-        {
-          'X-Requested-With': 'XMLHttpRequest',
-          'User-Agent': 'ISPM-App/1.0',
-        },
+      headers: withTenantHeader(
+        withRegisterScimAuthHeader(
+          {
+            'X-Requested-With': 'XMLHttpRequest',
+            'User-Agent': 'ISPM-App/1.0',
+          },
+          request
+        ),
         request
       ),
     });

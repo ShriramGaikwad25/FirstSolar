@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getJwtTokenFromRequest, withAuthHeader } from '@/lib/serverAuth';
+import { getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from '@/lib/serverAuth';
 
 export async function POST(request: NextRequest) {
   try {
     const jwtToken = getJwtTokenFromRequest(request);
     const body = await request.json();
-    
+
     // Log the payload for debugging
     console.log('=== SCHEDULE CAMPAIGN API CALL ===');
     console.log('Payload being sent:', JSON.stringify(body, null, 2));
     console.log('JWT Token present:', !!jwtToken);
-    
+
     const response = await fetch(
-      'https://preview.keyforge.ai/kfscheduler/api/v1/ACMECOM/jobs/schedule/campaign',
+      `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/jobs/schedule/campaign`,
       {
         method: 'POST',
-        headers: withAuthHeader({
-          'Content-Type': 'application/json',
-          'User-Agent': 'ISPM-Scheduler/1.0',
-        }, jwtToken),
+        headers: withTenantHeader(
+          withAuthHeader({
+            'Content-Type': 'application/json',
+            'User-Agent': 'ISPM-Scheduler/1.0',
+          }, jwtToken),
+          request
+        ),
         body: JSON.stringify(body)
       }
     );

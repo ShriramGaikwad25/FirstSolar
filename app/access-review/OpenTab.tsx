@@ -38,7 +38,7 @@ import { ModuleRegistry, themeQuartz } from "ag-grid-community";
 import HorizontalProgressBar from "@/components/HorizontalProgressBar";
 import { useLoading } from "@/contexts/LoadingContext";
 import ActionCompletedToast from "@/components/ActionCompletedToast";
-import { getReviewerId, getCookie, COOKIE_NAMES } from "@/lib/auth";
+import { getReviewerId, getCookie, COOKIE_NAMES, resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 import { useAuth } from "@/contexts/AuthContext";
 import ProxyActionModal from "@/components/ProxyActionModal";
 import SignOffModal from "@/components/SignOffModal";
@@ -990,7 +990,8 @@ const OpenTab: React.FC = () => {
           showApiLoader?.(true, "Loading entitlement owner details...");
 
           const response = await fetch(
-            `https://preview.keyforge.ai/certification/api/v1/ACMECOM/getCatalogCertificationDetails/${clickedReviewerId}/${clickedCertificationId}`
+            `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/getCatalogCertificationDetails/${clickedReviewerId}/${clickedCertificationId}`,
+            { headers: getJwtAuthHeaders() }
           );
 
           if (!response.ok) {
@@ -1270,12 +1271,12 @@ const OpenTab: React.FC = () => {
 
             // Make the API call
             const response = await fetch(
-              `https://preview.keyforge.ai/certification/api/v1/ACMECOM/reassign/${selectedCertificationRow.reviewerId}/${selectedCertificationRow.certificationId}`,
+              `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/reassign/${selectedCertificationRow.reviewerId}/${selectedCertificationRow.certificationId}`,
               {
                 method: "POST",
-                headers: {
+                headers: getJwtAuthHeaders({
                   "Content-Type": "application/json",
-                },
+                }),
                 body: JSON.stringify(payload),
               }
             );

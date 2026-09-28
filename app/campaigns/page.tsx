@@ -32,6 +32,7 @@ import "./Champaign.css";
 import TemplateTab from "./TemplateTab";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
+import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 // Register AG Grid Enterprise modules
 ModuleRegistry.registerModules([MasterDetailModule]);
@@ -179,8 +180,8 @@ export default function Campaigns() {
         setIsLoading(true);
         setError(null);
         const res = await fetch(
-          "https://preview.keyforge.ai/certification/api/v1/ACMECOM/getCampaignAnalytics",
-          { cache: "no-store", signal: controller.signal }
+          `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/getCampaignAnalytics`,
+          { cache: "no-store", signal: controller.signal, headers: getJwtAuthHeaders() }
         );
         if (!res.ok) {
           throw new Error(`Failed to load campaigns (${res.status})`);

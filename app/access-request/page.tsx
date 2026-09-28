@@ -10,7 +10,7 @@ import { useSelectedUsers } from "@/contexts/SelectedUsersContext";
 import { useCart } from "@/contexts/CartContext";
 import { useItemDetails } from "@/contexts/ItemDetailsContext";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
-import { getCurrentUser, getReviewerId } from "@/lib/auth";
+import { getCurrentUser, getReviewerId, resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 function clearAccessRequestSelections(
   clearCart: () => void,
@@ -639,11 +639,12 @@ const AccessRequest: React.FC = () => {
 
     try {
       const res = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/submitrequest/splitmode/${reviewerId}`,
+        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/submitrequest/splitmode/${reviewerId}`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            ...getJwtAuthHeaders(),
           },
           body: JSON.stringify(apiPayload),
         }
@@ -741,10 +742,10 @@ const AccessRequest: React.FC = () => {
   // Fetch Application Instances list for dropdown when on step 2
   React.useEffect(() => {
     if (currentStep !== 2) return;
-    const url = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+    const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
     fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
       body: JSON.stringify({
         query:
           "SELECT appinstanceid, name FROM vw_catalog WHERE type = 'ApplicationInstance' ORDER BY name",
@@ -812,9 +813,9 @@ const AccessRequest: React.FC = () => {
 
       Promise.all(
         targetUserIds.map((userId) =>
-          fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+          fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
             body: JSON.stringify({
               query:
                 "select * from vw_user_with_applications_entitlements where userid = ?::uuid",
@@ -914,9 +915,9 @@ const AccessRequest: React.FC = () => {
                   parameters: [],
                 };
 
-    fetch("https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery", {
+    fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
       body: JSON.stringify(body),
     })
       .then((res) => {

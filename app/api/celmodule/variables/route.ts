@@ -1,16 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { getTenantIdFromRequest, withTenantHeader } from "@/lib/serverAuth";
 
-const UPSTREAM =
-  process.env.CELMODULE_VARIABLES_URL ??
-  "https://preview.keyforge.ai/celmodule/api/v1/ACMECOM/variables";
+function upstreamUrl(request: NextRequest): string {
+  return (
+    process.env.CELMODULE_VARIABLES_URL ??
+    `https://preview.keyforge.ai/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/variables`
+  );
+}
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const res = await fetch(UPSTREAM, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "ISPM-App/1.0",
-      },
+    const res = await fetch(upstreamUrl(request), {
+      headers: withTenantHeader(
+        {
+          Accept: "application/json",
+          "User-Agent": "ISPM-App/1.0",
+        },
+        request
+      ),
       cache: "no-store",
     });
 
