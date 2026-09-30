@@ -27,10 +27,12 @@ const FileDropzone: React.FC<FileDropzoneProps> = ({ name, control, onChange: ex
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: handleDrop,
+    // List extensions too: browsers (notably on Windows) often report CSV files with an empty or
+    // Excel MIME type, and react-dropzone 18+ no longer infers the type from the extension.
     accept: {
-      "text/csv": [],
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [],
-      "application/vnd.ms-excel": [],
+      "text/csv": [".csv"],
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+      "application/vnd.ms-excel": [".xls", ".csv"],
     },
     multiple: false,
   });
