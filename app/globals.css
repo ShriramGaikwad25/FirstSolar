@@ -119,10 +119,18 @@ body::-webkit-scrollbar {
 .ag-header {
   @apply !bg-[#fff];
   border: 1.5px solid #16a34a !important;
+  /* AG Grid 36 no longer clips the header, so the header row would paint over the bottom border */
+  overflow: hidden;
 }
 
 div[role="row"]:not(.ag-header-row) {
   @apply !bg-[#fff] !border-0;
+}
+/* AG Grid 36 draws the row separator on the row's cell containers instead of the row */
+div[role="row"]:not(.ag-header-row) > .ag-grid-scrolling-cells,
+div[role="row"]:not(.ag-header-row) > .ag-grid-pinned-left-cells,
+div[role="row"]:not(.ag-header-row) > .ag-grid-pinned-right-cells {
+  @apply !border-0;
 }
 
 /* Header cells: no green column borders; optional subtle separator */
