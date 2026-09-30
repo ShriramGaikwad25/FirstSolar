@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { notFound, useParams, useRouter } from 'next/navigation';
 import { LoggedOutView } from '@/components/LoggedOutView';
 import { TenantLoginForm } from '@/components/TenantLoginForm';
 import { isReservedPathSegment, setActiveTenantId } from '@/lib/tenant';
@@ -34,12 +34,10 @@ export default function TenantAuthPage() {
     return <LoggedOutView />;
   }
 
+  // Real routes always win over [tenantId], so a reserved segment that lands here has no page
+  // (e.g. a bookmark to a removed section) — show the 404 instead of treating it as a tenant.
   if (isReservedPathSegment(tenantId)) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-      </div>
-    );
+    notFound();
   }
 
   return <TenantLoginForm tenantId={tenantId} />;
