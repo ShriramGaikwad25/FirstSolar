@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantIdFromRequest, withTenantHeader } from "@/lib/serverAuth";
+import { getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
 
 function upstreamUrl(request: NextRequest): string {
   return (
@@ -9,6 +9,9 @@ function upstreamUrl(request: NextRequest): string {
 }
 
 export async function GET(request: NextRequest) {
+  const unauthorized = requireSession(request);
+  if (unauthorized) return unauthorized;
+
   try {
     const res = await fetch(upstreamUrl(request), {
       headers: withTenantHeader(

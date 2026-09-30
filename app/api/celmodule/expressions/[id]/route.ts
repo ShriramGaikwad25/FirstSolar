@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantIdFromRequest, withTenantHeader } from "@/lib/serverAuth";
+import { getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
 
 type UpdateExpressionBody = {
   name?: unknown;
@@ -51,6 +51,9 @@ export async function PUT(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
+  const unauthorized = requireSession(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const { id: idParam } = await ctx.params;
     if (!idParam || !/^\d+$/.test(idParam)) {

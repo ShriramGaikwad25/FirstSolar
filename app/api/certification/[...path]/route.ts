@@ -7,7 +7,15 @@ export async function POST(
 ) {
   try {
     const { path: pathSegments } = await params;
-    const path = pathSegments?.join("/") ?? "";
+    // Reject dot segments and re-encode each segment so callers cannot climb out of the
+    // certification API prefix on the upstream host.
+    if (pathSegments?.some((seg) => !seg || seg === "." || seg === "..")) {
+      return NextResponse.json(
+        { error: "Invalid path", message: "Certification path is invalid" },
+        { status: 400 }
+      );
+    }
+    const path = pathSegments?.map(encodeURIComponent).join("/") ?? "";
     if (!path) {
       return NextResponse.json(
         { error: "Missing path", message: "Certification path is required" },
@@ -57,8 +65,7 @@ export async function POST(
         errorData = { message: text };
       }
       return NextResponse.json(errorData, {
-        status: response.status,
-        headers: corsHeaders(),
+        status: response.status
       });
     }
 
@@ -71,31 +78,14 @@ export async function POST(
 
     return NextResponse.json(data, {
       status: response.status,
-      headers: corsHeaders(),
     });
   } catch (error) {
     console.error("Certification proxy error:", error);
     return NextResponse.json(
       {
         error: "Proxy failed",
-        message: error instanceof Error ? error.message : "Unknown error",
       },
-      { status: 500, headers: corsHeaders() }
+      { status: 500 }
     );
   }
-}
-
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 204,
-    headers: corsHeaders(),
-  });
-}
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  };
 }

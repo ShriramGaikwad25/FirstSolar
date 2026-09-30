@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Info, FileCode2, FileText, Tag, Code, Check, Hash } from "lucide-react";
 import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 interface EmailTemplateFormData {
   templateCode: string;
@@ -467,7 +468,7 @@ export default function NewEmailTemplatePage() {
       // Switching from HTML view to visual editor
       if (htmlSourceRef.current && editorRef.current) {
         const htmlContent = htmlSourceRef.current.value;
-        editorRef.current.innerHTML = htmlContent;
+        editorRef.current.innerHTML = sanitizeHtml(htmlContent);
         handleFieldChange("body", htmlContent);
       }
     } else {

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Mail, Calendar, User, FileText, Edit } from "lucide-react";
 import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 interface EmailTemplate {
   id: number;
@@ -207,7 +208,7 @@ export default function EmailTemplateDetailPage() {
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 max-h-[600px] overflow-y-auto">
                   {template.body ? (
                     <div
-                      dangerouslySetInnerHTML={{ __html: template.body }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(template.body) }}
                       className="prose prose-sm max-w-none"
                     />
                   ) : (

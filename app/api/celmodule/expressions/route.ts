@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantIdFromRequest, withTenantHeader } from "@/lib/serverAuth";
+import { getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
 
 function upstreamUrl(request: NextRequest): string {
   return (
@@ -48,6 +48,9 @@ function postJsonHeaders(request: NextRequest): Record<string, string> {
 }
 
 export async function POST(req: NextRequest) {
+  const unauthorized = requireSession(req);
+  if (unauthorized) return unauthorized;
+
   try {
     let body: CreateExpressionBody;
     try {
@@ -147,6 +150,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  const unauthorized = requireSession(req);
+  if (unauthorized) return unauthorized;
+
   try {
     const { searchParams } = new URL(req.url);
     const upstream = new URL(upstreamUrl(req));

@@ -17,13 +17,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  images: {
-    remotePatterns: [
+  // All images are served from /public; no remote hosts are allowed through the optimizer.
+  async headers() {
+    return [
       {
-        protocol: "https",
-        hostname: "**",
+        source: "/:path*",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=31536000" },
+        ],
       },
-    ],
+    ];
   },
   // ESLint during build: configure via eslint.config.mjs and run `npm run lint` separately (Next.js 16+).
   typescript: {

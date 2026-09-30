@@ -9,6 +9,10 @@ var vaults = [
 ];
 
 
+function escapeHtml(value){
+  return String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 function badge(value){
   const v = String(value).toLowerCase();
   let cls='neutral';
@@ -64,10 +68,10 @@ function addDomain(){
     window.location.href='/settings/app-inventory/add-application?appType='+encodeURIComponent('Active Directory Domain');
     return;
   }
-  const domain=document.getElementById('newDomainName').value||'new.domain.local';
-  const admin=document.getElementById('newAdminName').value||'Assigned Administrator';
-  const country=document.getElementById('newCountry').value||'Unassigned';
-  domains.push({domain,connectorName:domain,forest:'Pending',admin,email:document.getElementById('newAdminEmail').value||'pending@company.com',country,status:'Invitation Sent',health:'Pending',vault:'Not Registered',vaultStatus:'Missing',version:'—',latest:'4.8.2',lastSync:'—',heartbeat:'—',lastRecon:'—',lastProv:'—',errors:0,progress:10});
+  const domain=escapeHtml(document.getElementById('newDomainName').value||'new.domain.local');
+  const admin=escapeHtml(document.getElementById('newAdminName').value||'Assigned Administrator');
+  const country=escapeHtml(document.getElementById('newCountry').value||'Unassigned');
+  domains.push({domain,connectorName:domain,forest:'Pending',admin,email:escapeHtml(document.getElementById('newAdminEmail').value||'pending@company.com'),country,status:'Invitation Sent',health:'Pending',vault:'Not Registered',vaultStatus:'Missing',version:'—',latest:'4.8.2',lastSync:'—',heartbeat:'—',lastRecon:'—',lastProv:'—',errors:0,progress:10});
   renderAll(); closeModal('addDomainModal'); toast('Domain added and invitation prepared');
 }
 
@@ -84,7 +88,7 @@ function sendBulkInvites(){
   const result = document.getElementById('bulkInviteResult');
   result.style.display = 'block';
   result.innerHTML = file
-    ? `<strong>Invitations sent.</strong><br>Bulk invitations were queued from <strong>${file.name}</strong>.`
+    ? `<strong>Invitations sent.</strong><br>Bulk invitations were queued from <strong>${escapeHtml(file.name)}</strong>.`
     : `<strong>No file uploaded.</strong><br>Choose a filled invitation file before sending.`;
 }
 

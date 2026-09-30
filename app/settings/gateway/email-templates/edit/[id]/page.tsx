@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ChevronDown, Bold, Italic, Underline, Strikethrough, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link, Image, Table, Code, Quote, Minus, Maximize2, HelpCircle } from "lucide-react";
 import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 interface EmailTemplateFormData {
   templateCode: string;
@@ -400,7 +401,7 @@ export default function EditEmailTemplatePage() {
                 htmlSourceRef.current.value = foundTemplate.body || DEFAULT_EMAIL_TEMPLATE_BODY;
               }
               if (editorRef.current) {
-                editorRef.current.innerHTML = foundTemplate.body || DEFAULT_EMAIL_TEMPLATE_BODY;
+                editorRef.current.innerHTML = sanitizeHtml(foundTemplate.body || DEFAULT_EMAIL_TEMPLATE_BODY);
               }
             } else {
               setIsHtmlView(false);
@@ -530,7 +531,7 @@ export default function EditEmailTemplatePage() {
   useEffect(() => {
     if (formData.templateType === "HTML" && formData.body) {
       if (editorRef.current) {
-        editorRef.current.innerHTML = formData.body;
+        editorRef.current.innerHTML = sanitizeHtml(formData.body);
       }
       if (htmlSourceRef.current) {
         htmlSourceRef.current.value = formData.body;
@@ -552,7 +553,7 @@ export default function EditEmailTemplatePage() {
       // Switching from HTML view to visual editor
       if (htmlSourceRef.current && editorRef.current) {
         const htmlContent = htmlSourceRef.current.value;
-        editorRef.current.innerHTML = htmlContent;
+        editorRef.current.innerHTML = sanitizeHtml(htmlContent);
         handleFieldChange("body", htmlContent);
       }
     } else {

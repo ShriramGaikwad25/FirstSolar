@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAMES } from "@/lib/auth";
 import { REGISTERED_APP_COOKIE } from "@/lib/tenant";
 import { tenantId as defaultTenantId } from "@/lib/config";
@@ -9,6 +9,15 @@ export function getJwtTokenFromRequest(request: NextRequest): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Returns a 401 response when the caller has no session JWT, otherwise null.
+ * Use at the top of route handlers that act with server-held credentials.
+ */
+export function requireSession(request: NextRequest): NextResponse | null {
+  if (getJwtTokenFromRequest(request)) return null;
+  return NextResponse.json({ error: "Unauthorized", message: "Sign in required" }, { status: 401 });
 }
 
 /** Master access token used by registerscimapp / schemamapper endpoints (not JWT). */

@@ -1133,8 +1133,8 @@ export default function ApplicationDetailPage() {
                 method: "POST",
                 headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  query: `select * from public.kf_entitlement_assignment_v where entitlementid='${entId}'::uuid`,
-                  parameters: [],
+                  query: "select * from public.kf_entitlement_assignment_v where entitlementid = ?::uuid",
+                  parameters: [entId],
                 }),
               }
             );

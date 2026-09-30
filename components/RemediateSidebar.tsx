@@ -160,8 +160,8 @@ const RemediateSidebar: React.FC<RemediateSidebarProps> = ({
 
       try {
         // Use the application name from the selected row
-        const query = `select name from catalog where type = 'Entitlement' AND applicationname = '${applicationName}'`;
-        const parameters: string[] = [];
+        const query = "select name from catalog where type = 'Entitlement' AND applicationname = ?";
+        const parameters: string[] = [applicationName];
         
         const response = await executeQuery<any>(query, parameters);
         
