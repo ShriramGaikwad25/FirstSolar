@@ -209,58 +209,6 @@ div[role="row"]:not(.ag-header-row) {
   @apply !hidden;
 }
 
-/* Disable scrollbar for manage campaign table with autoHeight */
-.manage-campaign-table .ag-body-viewport {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.manage-campaign-table .ag-body-viewport-wrapper {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.manage-campaign-table .ag-center-cols-viewport {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.manage-campaign-table .ag-root-wrapper {
-  height: auto !important;
-  max-height: none !important;
-}
-
-.manage-campaign-table .ag-body {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-/* Disable scrollbar for campaigns table with autoHeight */
-.campaigns-table .ag-body-viewport {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.campaigns-table .ag-body-viewport-wrapper {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.campaigns-table .ag-center-cols-viewport {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
-.campaigns-table .ag-root-wrapper {
-  height: auto !important;
-  max-height: none !important;
-}
-
-.campaigns-table .ag-body {
-  overflow: visible !important;
-  max-height: none !important;
-}
-
 /* Custom scrollbar for dropdown lists */
 .scrollbar-thin::-webkit-scrollbar {
   width: 8px;

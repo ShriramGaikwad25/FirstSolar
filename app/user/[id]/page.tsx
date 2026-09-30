@@ -1128,7 +1128,8 @@ export default function UserDetailPage() {
           container.style.height = 'auto';
           container.style.maxHeight = 'none';
         }
-        const viewport = container.querySelector('.ag-body-viewport');
+        // AG Grid 36 scrolls rows in a single container (was .ag-body-viewport)
+        const viewport = container.querySelector('.ag-grid-scrolling-container');
         if (viewport && viewport.style) {
           viewport.style.height = 'auto';
           viewport.style.maxHeight = 'none';
@@ -1176,25 +1177,19 @@ export default function UserDetailPage() {
           height: auto !important;
           display: block !important;
         }
-        .ag-body-viewport {
+        .ag-grid-scrolling-container {
           overflow: visible !important;
           height: auto !important;
           max-height: none !important;
           position: relative !important;
         }
-        .ag-center-cols-container {
+        .ag-grid-scrolling-cells {
           height: auto !important;
           min-height: auto !important;
           position: relative !important;
         }
-        .ag-center-cols-viewport {
-          overflow: visible !important;
-          height: auto !important;
-          position: relative !important;
-        }
         .ag-body-horizontal-scroll,
-        .ag-body-vertical-scroll,
-        .ag-horizontal-scroll {
+        .ag-body-vertical-scroll {
           display: none !important;
         }
         .ag-header {
