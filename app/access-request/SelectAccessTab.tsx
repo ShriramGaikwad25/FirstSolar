@@ -315,6 +315,9 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
     selectedUser: User | null;
     userAccess: Role[];
     selectedAccessIds: Set<string>;
+    isRetrieving: boolean;
+    retrieveError: string | null;
+    hasRetrieved: boolean;
   }>(() => {
     // Load from localStorage on mount
     if (typeof window !== 'undefined') {
@@ -322,10 +325,15 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
         const saved = localStorage.getItem('mirrorAccessState');
         if (saved) {
           const parsed = JSON.parse(saved);
+          // Only restore access that came from a real retrieval (older saves held mock data).
+          const hasRetrieved = parsed.hasRetrieved === true;
           return {
             selectedUser: parsed.selectedUser,
-            userAccess: parsed.userAccess || [],
-            selectedAccessIds: new Set(parsed.selectedAccessIds || []),
+            userAccess: hasRetrieved ? parsed.userAccess || [] : [],
+            selectedAccessIds: new Set(hasRetrieved ? parsed.selectedAccessIds || [] : []),
+            isRetrieving: false,
+            retrieveError: null,
+            hasRetrieved,
           };
         }
       } catch (e) {
@@ -336,10 +344,16 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
       selectedUser: null,
       userAccess: [],
       selectedAccessIds: new Set(),
+      isRetrieving: false,
+      retrieveError: null,
+      hasRetrieved: false,
     };
   });
   
-  // Initialize activeTab - default to Mirror Access (2) if user is selected, otherwise 0
+  // Mirror Access shifts left by one when the Recommended tab is hidden.
+  const mirrorTabIndex = hideRecommendedTab ? 1 : 2;
+
+  // Initialize activeTab - default to Mirror Access if user is selected, otherwise 0
   const [activeTab, setActiveTab] = useState(() => {
     // In edit mode (preselectedAccessIds present), always start on "All" tab
     if (preselectedAccessIds && preselectedAccessIds.length > 0) {
@@ -349,14 +363,15 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
       try {
         const saved = localStorage.getItem("selectAccessActiveTab");
         if (saved !== null) {
-          return parseInt(saved, 10);
+          const idx = parseInt(saved, 10);
+          return Number.isFinite(idx) && idx >= 0 && idx <= mirrorTabIndex ? idx : 0;
         }
         // Check if Mirror Access has a selected user
         const mirrorState = localStorage.getItem("mirrorAccessState");
         if (mirrorState) {
           const parsed = JSON.parse(mirrorState);
           if (parsed.selectedUser) {
-            return 2; // Mirror Access tab
+            return mirrorTabIndex;
           }
         }
       } catch (e) {
@@ -381,6 +396,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
           selectedUser: mirrorAccessState.selectedUser,
           userAccess: mirrorAccessState.userAccess,
           selectedAccessIds: Array.from(mirrorAccessState.selectedAccessIds),
+          hasRetrieved: mirrorAccessState.hasRetrieved,
         }));
       } catch (e) {
         // Ignore save errors
@@ -1113,15 +1129,21 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
     const [searchValue, setSearchValue] = useState("");
     const [searchResults, setSearchResults] = useState<User[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [isRetrieving, setIsRetrieving] = useState(false);
     const [searchError, setSearchError] = useState<string | null>(null);
     const [hasSearched, setHasSearched] = useState(false);
     
     // Use state from parent component
-    const { selectedUser, userAccess, selectedAccessIds } = mirrorAccessState;
+    const { selectedUser, userAccess, selectedAccessIds, isRetrieving, retrieveError, hasRetrieved } =
+      mirrorAccessState;
     
     const setSelectedUser = (user: User | null) => {
-      setMirrorAccessState(prev => ({ ...prev, selectedUser: user }));
+      setMirrorAccessState(prev => ({
+        ...prev,
+        selectedUser: user,
+        isRetrieving: false,
+        retrieveError: null,
+        hasRetrieved: false,
+      }));
     };
     
     const setUserAccess = (access: Role[]) => {
@@ -1138,7 +1160,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
     const handleAddSelectedToCart = () => {
       if (!userAccess.length || !selectedAccessIds.size) return;
       userAccess.forEach((access) => {
-        if (selectedAccessIds.has(access.id) && !isInCart(access.id)) {
+        if (selectedAccessIds.has(access.id) && isRequestable(access) && !isInCart(access.id)) {
           addToCart({ id: access.id, name: access.name, risk: access.risk });
         }
       });
@@ -1153,11 +1175,46 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
       });
     };
 
-    // Mock function to retrieve user access
-    const mockRetrieveAccess = (userId: string): Role[] => {
-      // Return some roles as user's access (for demo purposes)
-      return roles.slice(0, 3);
+    // Map the mirrored user's entitlements onto catalog items (matched by entitlement name and,
+    // when both sides have one, application name) so they can be carted and submitted with the
+    // catalog id. Entitlements with no catalog match are still listed but cannot be requested.
+    const toMirroredRoles = (rows: any[]): Role[] => {
+      const norm = (v: unknown) => String(v ?? "").trim().toLowerCase();
+      const seen = new Set<string>();
+      const result: Role[] = [];
+      rows.forEach((row, idx) => {
+        const entName = String(row.entitlementname ?? "").trim();
+        if (!entName) return;
+        const application = String(row.application ?? "").trim();
+        const match = roles.find((r) => {
+          if (norm(r.name) !== norm(entName)) return false;
+          const catalogApp = getApplicationName(r);
+          return !application || !catalogApp || norm(catalogApp) === norm(application);
+        });
+        if (match) {
+          const id = getRoleId(match);
+          if (seen.has(id)) return;
+          seen.add(id);
+          result.push(match);
+          return;
+        }
+        const id = `mirror::${application}::${entName}`;
+        if (seen.has(id)) return;
+        seen.add(id);
+        result.push({
+          id,
+          name: entName,
+          risk: "Medium",
+          description:
+            row.description || [row.entitlementType, row.accountname].filter(Boolean).join(" • "),
+          type: "entitlement",
+          catalogRow: { ...row, applicationname: application, type: "entitlement", notInCatalog: true },
+        });
+      });
+      return result;
     };
+
+    const isRequestable = (access: Role) => !(access.catalogRow as any)?.notInCatalog;
 
     // API call to search users
     const handleSearch = async () => {
@@ -1172,7 +1229,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
 
       try {
         // Build query to get all users with specified fields
-        const query = `SELECT firstname, lastname, email, username, employeeid, department, title FROM usr`;
+        const query = `SELECT firstname, lastname, email, username, employeeid, department, title, userid FROM usr`;
 
         const response = await fetch(
           `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
@@ -1228,6 +1285,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
             }
             
             return {
+              userid: (user.userid || "").toString(),
               name: nameValue,
               email: emailValue,
               username: user.username || "",
@@ -1240,7 +1298,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
 
         // Convert to User format expected by the component
         const normalizedUsers: User[] = usersData.map((user, index) => ({
-          id: `user-${index}-${user.username || user.email || index}`,
+          id: user.userid || `user-${index}-${user.username || user.email || index}`,
           name: user.name || user.username || "",
           email: user.email,
           username: user.username,
@@ -1275,19 +1333,76 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
     };
 
     const handleUserSelect = (user: User) => {
-      setSelectedUser(user);
-      setUserAccess([]);
-      setSelectedAccessIds(new Set());
+      setMirrorAccessState(prev => ({
+        ...prev,
+        selectedUser: user,
+        userAccess: [],
+        selectedAccessIds: new Set(),
+        isRetrieving: false,
+        retrieveError: null,
+        hasRetrieved: false,
+      }));
     };
 
-    const handleRetrieveAccess = () => {
-      if (selectedUser) {
-        setIsRetrieving(true);
-        setTimeout(() => {
-          const access = mockRetrieveAccess(selectedUser.id);
-          setUserAccess(access);
-          setIsRetrieving(false);
-        }, 500);
+    // Fetch the selected user's assigned entitlements (same view used on the Users page).
+    const handleRetrieveAccess = async () => {
+      if (!selectedUser || isRetrieving) return;
+      const userId = String(selectedUser.id || "").trim();
+      if (!/^[0-9a-f-]{36}$/i.test(userId)) {
+        setMirrorAccessState(prev => ({
+          ...prev,
+          retrieveError: "This user has no user id; search again and reselect the user.",
+        }));
+        return;
+      }
+      setMirrorAccessState(prev => ({ ...prev, isRetrieving: true, retrieveError: null }));
+      try {
+        const response = await fetch(
+          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
+            body: JSON.stringify({
+              query: "select * from vw_user_with_applications_entitlements where userid = ?::uuid",
+              parameters: [userId],
+            }),
+          }
+        );
+        if (!response.ok) throw new Error(`Request failed: ${response.status}`);
+        const data = await response.json();
+        const flatRows: any[] = [];
+        const resultSet = Array.isArray(data?.resultSet) ? data.resultSet : [];
+        resultSet.forEach((user: any) => {
+          const apps = Array.isArray(user?.applications) ? user.applications : [];
+          apps.forEach((app: any) => {
+            const ents = Array.isArray(app?.entitlements) ? app.entitlements : [];
+            ents.forEach((ent: any) => {
+              flatRows.push({
+                entitlementname: ent?.entitlementname,
+                entitlementType: ent?.entitlementType,
+                description:
+                  ent?.entitlementDescription ?? ent?.entitlementdescription ?? ent?.description ?? "",
+                application: app?.application,
+                accountname: app?.accountname,
+              });
+            });
+          });
+        });
+        const access = toMirroredRoles(flatRows);
+        setMirrorAccessState(prev => ({
+          ...prev,
+          userAccess: access,
+          selectedAccessIds: new Set(),
+          isRetrieving: false,
+          hasRetrieved: true,
+        }));
+      } catch (error) {
+        console.error("Error retrieving user access:", error);
+        setMirrorAccessState(prev => ({
+          ...prev,
+          isRetrieving: false,
+          retrieveError: error instanceof Error ? error.message : "Failed to retrieve access",
+        }));
       }
     };
 
@@ -1303,12 +1418,14 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
       });
     };
 
+    const requestableAccess = userAccess.filter(isRequestable);
+
     const handleSelectAllAccess = () => {
       setSelectedAccessIds((prev) => {
-        if (prev.size === userAccess.length) {
+        if (prev.size === requestableAccess.length) {
           return new Set();
         } else {
-          return new Set(userAccess.map((a) => a.id));
+          return new Set(requestableAccess.map((a) => a.id));
         }
       });
     };
@@ -1318,7 +1435,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
       const selectedIds = Array.from(selectedAccessIds);
       selectedIds.forEach((accessId) => {
         const access = userAccess.find((a) => a.id === accessId);
-        if (access && !isInCart(access.id)) {
+        if (access && isRequestable(access) && !isInCart(access.id)) {
           addToCart({ id: access.id, name: access.name, risk: access.risk });
         }
       });
@@ -1479,7 +1596,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
         )}
 
         {/* Retrieve Access Button */}
-        {selectedUser && userAccess.length === 0 && (
+        {selectedUser && !hasRetrieved && (
           <div className="mb-6">
             <button
               onClick={handleRetrieveAccess}
@@ -1502,23 +1619,38 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
           </div>
         )}
 
+        {!isRetrieving && retrieveError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-md">
+            <p className="text-sm text-red-600">Error: {retrieveError}</p>
+          </div>
+        )}
+
+        {selectedUser && hasRetrieved && !isRetrieving && userAccess.length === 0 && (
+          <div className="mb-6 p-4 text-center text-gray-500">
+            No entitlements found for {selectedUser.name || "this user"}.
+          </div>
+        )}
+
         {userAccess.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-700">
                 User Access ({userAccess.length})
               </h3>
-              <button
-                onClick={handleSelectAllAccess}
-                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                {selectedAccessIds.size === userAccess.length ? "Deselect All" : "Select All"}
-              </button>
+              {requestableAccess.length > 0 && (
+                <button
+                  onClick={handleSelectAllAccess}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                >
+                  {selectedAccessIds.size === requestableAccess.length ? "Deselect All" : "Select All"}
+                </button>
+              )}
             </div>
             <div className="space-y-3">
               {userAccess.map((access) => {
                 const isSelected = selectedAccessIds.has(access.id);
                 const inCart = isInCart(access.id);
+                const requestable = isRequestable(access);
                 return (
                   <div
                     key={access.id}
@@ -1530,12 +1662,14 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                       <div
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleAccessToggle(access.id);
+                          if (requestable) handleAccessToggle(access.id);
                         }}
-                        className={`w-5 h-5 rounded border-2 flex items-center justify-center cursor-pointer ${
-                          isSelected
-                            ? "bg-blue-600 border-blue-600"
-                            : "border-gray-300"
+                        className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          !requestable
+                            ? "border-gray-200 bg-gray-50 cursor-not-allowed"
+                            : isSelected
+                            ? "bg-blue-600 border-blue-600 cursor-pointer"
+                            : "border-gray-300 cursor-pointer"
                         }`}
                       >
                         {isSelected && <Check className="w-3 h-3 text-white" />}
@@ -1553,6 +1687,11 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                           >
                             {access.risk} Risk
                           </span>
+                          {!requestable && (
+                            <span className="px-2 py-1 rounded text-xs font-medium border text-gray-600 bg-gray-50 border-gray-200">
+                              Not in catalog
+                            </span>
+                          )}
                           {getApplicationName(access) && (
                             <span className="px-2 py-1 rounded text-xs font-medium border text-blue-700 bg-blue-50 border-blue-200">
                               {getApplicationName(access)}
@@ -1564,6 +1703,8 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                     </div>
                     <div className="flex items-center gap-3">
                       <button
+                        disabled={!requestable}
+                        title={requestable ? undefined : "This entitlement is not in the access catalog"}
                         onClick={() => {
                           if (inCart) {
                             removeFromCart(access.id);
@@ -1572,7 +1713,9 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                           }
                         }}
                         className={`inline-flex items-center gap-2 px-4 py-2 rounded-md font-medium transition-colors ${
-                          inCart
+                          !requestable
+                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                            : inCart
                             ? "bg-red-600 hover:bg-red-700 text-white"
                             : "bg-blue-600 hover:bg-blue-700 text-white"
                         }`}
@@ -1601,8 +1744,8 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
         )}
 
         {/* Floating Add to Cart when Select All is active */}
-        {userAccess.length > 0 &&
-          selectedAccessIds.size === userAccess.length &&
+        {requestableAccess.length > 0 &&
+          selectedAccessIds.size === requestableAccess.length &&
           selectedAccessIds.size > 0 && (() => {
             const hasSelectedNotInCart = userAccess.some(
               (access) => selectedAccessIds.has(access.id) && !isInCart(access.id)

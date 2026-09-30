@@ -76,22 +76,6 @@ function pickString(...vals: Array<unknown | undefined | null>): string | undefi
   return undefined;
 }
 
-/** Entitlement display name for client-side filtering (API shapes vary). */
-function getEntitlementNameForFilter(row: any): string {
-  if (!row || typeof row !== "object") return "";
-  const c = row.catalogDetails;
-  return (
-    pickString(
-      row.entitlementName,
-      row.name,
-      row["Ent Name"],
-      c?.name,
-      c?.entitlementName,
-      c?.entitlement_name
-    ) ?? ""
-  );
-}
-
 /** Resolve catalog id from an entitlement row (API shapes vary by endpoint). */
 function resolveCatalogIdFromEntitlementRow(row: any): string | undefined {
   if (!row || typeof row !== "object") return undefined;
@@ -115,6 +99,75 @@ function resolveCatalogIdFromEntitlementRow(row: any): string | undefined {
     c?.entitlementid,
     c?.entitlementId
   );
+}
+
+/**
+ * Sidebar display key -> catalog API keys it can come from (same order as mapApiDataToNodeData).
+ * Used to write sidebar edits back into the catalog record for the update API; the first key is
+ * used when the record doesn't already have any of them.
+ */
+const CATALOG_EDITABLE_FIELD_KEYS: Record<string, string[]> = {
+  "Ent Name": ["name", "entitlementName", "entitlement_name"],
+  "Ent Description": ["description", "entitlementDescription", "entitlement_description"],
+  "Ent Type": ["type", "entitlementType", "entitlement_type"],
+  "App Name": ["applicationName", "applicationname", "appName", "application_name"],
+  "App Instance": ["appInstanceId", "appinstanceid", "applicationInstanceId"],
+  "App Owner": ["applicationOwner", "applicationowner", "app_owner"],
+  "Ent Owner": ["entitlementOwner", "entitlementowner", "entitlement_owner"],
+  "Business Objective": ["businessObjective", "business_objective"],
+  "Business Unit": ["businessUnit", "businessunit_department", "business_unit"],
+  "Compliance Type": ["complianceType", "regulatory_scope", "compliance_type"],
+  "Data Classification": ["dataClassification", "data_classification"],
+  "Cost Center": ["costCenter", "cost_center"],
+  "Created On": ["createdOn", "created_on"],
+  "Last Sync": ["lastSync", "last_sync"],
+  "Last Reviewed on": ["lastReviewed", "lastReviewedOn", "last_reviewed_on"],
+  "Logical Application": ["logicalApplication", "logical_application", "logicalApp"],
+  "Application Category": ["applicationCategory", "application_category", "appCategory"],
+  Hierarchy: ["hierarchy"],
+  "MFA Status": ["mfaStatus", "mfa_status"],
+  "License Type": ["licenseType", "license_type"],
+  Risk: ["risk", "riskLevel"],
+  Certifiable: ["certifiable"],
+  "Revoke on Disable": ["revokeOnDisable", "revoke_on_disable"],
+  "Shared Pwd": ["sharedPassword", "shared_pwd"],
+  "SOD Check": ["sodCheck", "toxic_combination"],
+  "Access Scope": ["accessScope", "access_scope"],
+  "Review Schedule": ["reviewSchedule", "review_schedule"],
+  Privileged: ["privileged"],
+  "Non Persistent Access": ["nonPersistentAccess", "non_persistent_access"],
+  "Audit Comments": ["auditComments", "audit_comments"],
+  "Account Type Restriction": ["accountTypeRestriction", "account_type_restriction"],
+  Requestable: ["requestable"],
+  "Pre- Requisite": ["prerequisite"],
+  "Pre-Requisite Details": ["prerequisiteDetails", "prerequisite_details"],
+  "Auto Assign Access Policy": ["autoAssignAccessPolicy", "auto_assign_access_policy"],
+  "Provisioner Group": ["provisionerGroup", "provisioner_group"],
+  "Provisioning Steps": ["provisioningSteps", "provisioning_steps"],
+  "Provisioning Mechanism": ["provisioningMechanism", "provisioning_mechanism"],
+  "Action on Native Change": ["actionOnNativeChange", "action_on_native_change"],
+  "Total Assignments": ["totalAssignments", "total_assignments"],
+  "Dynamic Tag": ["tags", "dynamicTag"],
+};
+
+/** Top-level keys of a catalog record; everything else lives under `fields`. */
+const CATALOG_TOP_LEVEL_KEYS = new Set(["name", "type", "applicationName", "lastReviewed", "description"]);
+
+/** Apply changed sidebar values onto a copy of the catalog record, keeping its existing key names. */
+function buildCatalogUpdatePayload(record: any, original: any, edited: any): any {
+  const payload = JSON.parse(JSON.stringify(record || {}));
+  if (!payload.fields || typeof payload.fields !== "object") payload.fields = {};
+  for (const [displayKey, apiKeys] of Object.entries(CATALOG_EDITABLE_FIELD_KEYS)) {
+    const next = edited?.[displayKey];
+    if (next === undefined || String(next ?? "") === String(original?.[displayKey] ?? "")) continue;
+    const topKey = apiKeys.find((k) => k in payload && k !== "fields");
+    const fieldKey = apiKeys.find((k) => k in payload.fields);
+    if (topKey) payload[topKey] = next;
+    else if (fieldKey) payload.fields[fieldKey] = next;
+    else if (CATALOG_TOP_LEVEL_KEYS.has(apiKeys[0])) payload[apiKeys[0]] = next;
+    else payload.fields[apiKeys[0]] = next;
+  }
+  return payload;
 }
 
 /** Entitlement id for `kf_entitlement_assignment_v` (may differ from catalog id). */
@@ -672,18 +725,12 @@ export default function ApplicationDetailPage() {
   const [entTotalItems, setEntTotalItems] = useState(0);
   const [entTotalPages, setEntTotalPages] = useState(0);
 
-  const filteredEntRowData = useMemo(() => {
-    const q = entitlementsSearchQuery.trim().toLowerCase();
-    const base = !q
-      ? entRowData
-      : entRowData.filter((row: any) => {
-          const name = getEntitlementNameForFilter(row);
-          return name.toLowerCase().includes(q);
-        });
-    return [...base].sort((a: any, b: any) =>
-      String(b?.["Ent Owner"] ?? "").localeCompare(String(a?.["Ent Owner"] ?? ""))
-    );
-  }, [entRowData, entitlementsSearchQuery]);
+  // Search is sent to the catalog API when the Search button (or Enter) is pressed
+  const [appliedEntSearch, setAppliedEntSearch] = useState("");
+  const applyEntitlementsSearch = () =>
+    setAppliedEntSearch(entitlementsSearchQuery.trim());
+
+  const filteredEntRowData = entRowData;
 
   // Build separate row for description under each entitlement row (for Entitlements tab)
   const entRowsWithDesc = useMemo(() => {
@@ -696,26 +743,8 @@ export default function ApplicationDetailPage() {
     return rows;
   }, [filteredEntRowData]);
 
-  // Paginated data for Entitlement tab tables
-  const entPaginatedData = useMemo(() => {
-    // Since entRowsWithDesc is structured as [record1, desc1, record2, desc2, ...]
-    // We need to slice by pairs: each record has its description right after it
-
-    // Calculate the start and end indices for the entRowsWithDesc array
-    // Each "page" contains entPageSize records, which means entPageSize * 2 rows total
-    const startIndex = (entCurrentPage - 1) * entPageSize * 2;
-    const endIndex = startIndex + entPageSize * 2;
-
-    return entRowsWithDesc.slice(startIndex, endIndex);
-  }, [entRowsWithDesc, entCurrentPage, entPageSize]);
-
-  // Update total items and pages when entRowsWithDesc changes
-  useEffect(() => {
-    // Only count actual data rows, not description rows
-    const actualDataRows = entRowsWithDesc.filter((row) => !row.__isDescRow);
-    setEntTotalItems(actualDataRows.length);
-    setEntTotalPages(Math.ceil(actualDataRows.length / entPageSize));
-  }, [entRowsWithDesc, entPageSize]);
+  // Entitlements are paged server-side, so entRowData already holds just the current page
+  const entPaginatedData = entRowsWithDesc;
 
   // Reset pagination when switching between entitlement tabs
   useEffect(() => {
@@ -724,7 +753,7 @@ export default function ApplicationDetailPage() {
 
   useEffect(() => {
     setEntCurrentPage(1);
-  }, [entitlementsSearchQuery]);
+  }, [appliedEntSearch]);
 
   useEffect(() => {
     if (isEntitlementsSearchFocused && entitlementsSearchInputRef.current) {
@@ -983,6 +1012,29 @@ export default function ApplicationDetailPage() {
     };
   };
 
+  // Convert a catalog API item ({ id, name, type, applicationName, lastReviewed, fields }) into a grid/sidebar row
+  const mapCatalogItemToRow = (item: any, base: any = {}) => {
+    const fields = item?.fields || {};
+    const catalogDetails = {
+      ...item,
+      ...fields,
+      name: item?.name,
+      type: item?.type,
+      appName: item?.applicationName,
+      lastReviewedOn: item?.lastReviewed,
+    };
+    return mapApiDataToNodeData(catalogDetails, {
+      ...base,
+      ...fields,
+      ...item,
+      catalogDetails,
+      entitlementId: item?.id ?? base.entitlementId,
+      entitlementName: item?.name ?? base.entitlementName,
+      risk: fields.risk ?? base.risk,
+      appInstanceId: id,
+    });
+  };
+
   // Client-side pagination logic
   const totalItems = accountsRowData.length;
   const totalPages = Math.ceil(totalItems / pageSize);
@@ -1004,13 +1056,13 @@ export default function ApplicationDetailPage() {
     console.log("Row data structure:", data);
     console.log("Available keys in row data:", Object.keys(data || {}));
 
-    let finalData = data;
+    let baseData = data;
     if (catalogDetails) {
       console.log("Using catalogDetails:", catalogDetails);
       setEntitlementDetails(catalogDetails);
       // Update nodeData with mapped catalog data
-      finalData = mapApiDataToNodeData(catalogDetails, data);
-      console.log("Mapped Data from catalogDetails:", finalData);
+      baseData = mapApiDataToNodeData(catalogDetails, data);
+      console.log("Mapped Data from catalogDetails:", baseData);
     } else {
       console.warn("No catalogDetails found in row data");
       console.log("Available data fields:", Object.keys(data || {}));
@@ -1019,10 +1071,117 @@ export default function ApplicationDetailPage() {
       setEntitlementDetails(data);
     }
 
-    setNodeData(finalData);
+    setNodeData(baseData);
 
     // Create the entitlement details sidebar component
     const EntitlementDetailsSidebarContent = () => {
+      // Full catalog record from GET /catalog/.../get/{catalogid}; row data is shown until it arrives
+      const [catalogItem, setCatalogItem] = useState<any>(null);
+      const [catalogItemLoading, setCatalogItemLoading] = useState(true);
+      const [catalogItemError, setCatalogItemError] = useState<string | null>(null);
+      const [saveInProgress, setSaveInProgress] = useState(false);
+      const [saveError, setSaveError] = useState<string | null>(null);
+      const finalData = useMemo(
+        () => (catalogItem ? mapCatalogItemToRow(catalogItem, baseData) : baseData),
+        [catalogItem]
+      );
+
+      // PUT the edited entitlement to the catalog update API, then refresh the sidebar and grid row
+      const saveEntitlementEdits = async () => {
+        const catalogId = resolveCatalogIdFromEntitlementRow(baseData);
+        if (!catalogId) {
+          setSaveError("Catalog id is not available for this entitlement.");
+          return;
+        }
+        const record = catalogItem ?? {
+          id: catalogId,
+          name: baseData?.name ?? baseData?.entitlementName,
+          type: baseData?.type,
+          applicationName: baseData?.applicationName,
+          lastReviewed: baseData?.lastReviewed,
+          fields: baseData?.fields ?? {},
+        };
+        const payload = buildCatalogUpdatePayload(record, finalData, localEditableData);
+        setSaveInProgress(true);
+        setSaveError(null);
+        try {
+          const res = await fetch(
+            `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/update/${encodeURIComponent(
+              catalogId
+            )}`,
+            {
+              method: "PUT",
+              headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
+              body: JSON.stringify(payload),
+            }
+          );
+          const json = await res.json().catch(() => null);
+          if (!res.ok) {
+            throw new Error(
+              pickString(json?.errorMessage, json?.message) || `Update failed (${res.status})`
+            );
+          }
+          const returned = json?.item ?? json?.data ?? json;
+          const updated =
+            returned && typeof returned === "object" && ("name" in returned || "fields" in returned)
+              ? returned
+              : payload;
+          setCatalogItem(updated);
+          setEntRowData((prev) =>
+            prev.map((row: any) =>
+              resolveCatalogIdFromEntitlementRow(row) === catalogId
+                ? mapCatalogItemToRow(updated, row)
+                : row
+            )
+          );
+          setLocalEditMode(false);
+          setLocalEditableData(null);
+        } catch (e) {
+          setSaveError(e instanceof Error ? e.message : "Failed to update entitlement");
+        } finally {
+          setSaveInProgress(false);
+        }
+      };
+
+      useEffect(() => {
+        const catalogId = resolveCatalogIdFromEntitlementRow(baseData);
+        if (!catalogId) {
+          setCatalogItemLoading(false);
+          return;
+        }
+        let cancelled = false;
+        (async () => {
+          try {
+            const res = await fetch(
+              `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/get/${encodeURIComponent(
+                catalogId
+              )}`,
+              { headers: getJwtAuthHeaders() }
+            );
+            const json = await res.json().catch(() => null);
+            if (!res.ok) {
+              throw new Error(
+                pickString(json?.errorMessage, json?.message) ||
+                  `Request failed (${res.status})`
+              );
+            }
+            const item = json?.item ?? json?.data ?? json;
+            if (!cancelled && item && typeof item === "object") setCatalogItem(item);
+          } catch (e) {
+            if (!cancelled) {
+              setCatalogItemError(
+                e instanceof Error ? e.message : "Failed to load entitlement details"
+              );
+            }
+          } finally {
+            if (!cancelled) setCatalogItemLoading(false);
+          }
+        })();
+        return () => {
+          cancelled = true;
+        };
+      }, []);
+
       const [localEditMode, setLocalEditMode] = useState(false);
       const [localEditableData, setLocalEditableData] = useState<any>(null);
       const [localExpandedFrames, setLocalExpandedFrames] = useState({
@@ -1670,6 +1829,46 @@ export default function ApplicationDetailPage() {
         <>
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto hide-scrollbar space-y-4">
+            {catalogItemLoading && (
+              <div className="text-xs text-gray-500">Loading entitlement details…</div>
+            )}
+            {catalogItemError && (
+              <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5">
+                Could not load full details: {catalogItemError}
+              </div>
+            )}
+            {localEditMode && (
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-2 bg-white border-b border-gray-200 py-2">
+                <span className="text-sm font-semibold text-gray-800">Editing entitlement</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLocalEditMode(false);
+                      setLocalEditableData(null);
+                      setSaveError(null);
+                    }}
+                    disabled={saveInProgress}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void saveEntitlementEdits()}
+                    disabled={saveInProgress}
+                    className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {saveInProgress ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </div>
+            )}
+            {localEditMode && saveError && (
+              <div className="text-xs text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1.5">
+                {saveError}
+              </div>
+            )}
             {entitlementDetailsError ? (
               <div className="p-3 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-600">{entitlementDetailsError}</p>
@@ -1697,10 +1896,10 @@ export default function ApplicationDetailPage() {
                 <div className={`bg-gray-50 border border-gray-200 rounded-lg p-3 ${localEditMode ? "mt-2" : ""}`}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Description</span>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (!localEditMode) {
+                    {!localEditMode && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setLocalEditableData({ ...finalData });
                           setLocalExpandedFrames({
                             general: true,
@@ -1710,20 +1909,13 @@ export default function ApplicationDetailPage() {
                             lifecycle: true,
                           });
                           setLocalEditMode(true);
-                        } else {
-                          setLocalEditMode(false);
-                          setLocalEditableData(null);
-                        }
-                      }}
-                      className={`w-7 h-7 flex items-center justify-center rounded-md border transition-colors flex-shrink-0 ${
-                        localEditMode
-                          ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700"
-                          : "border-gray-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
-                      }`}
-                      title={localEditMode ? "Save changes" : "Edit entitlement"}
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
+                        }}
+                        className="w-7 h-7 flex items-center justify-center rounded-md border transition-colors flex-shrink-0 border-gray-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                        title="Edit entitlement"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                   {localEditMode ? (
                     <textarea
@@ -2307,7 +2499,7 @@ export default function ApplicationDetailPage() {
 
     // Use the global sidebar instead of local state
     const entitlementName =
-      finalData?.["Ent Name"] || (finalData as any)?.entitlementName || "Entitlement Details";
+      baseData?.["Ent Name"] || (baseData as any)?.entitlementName || "Entitlement Details";
     openSidebar(<EntitlementDetailsSidebarContent />, { widthPx: 500, title: entitlementName });
   };
 
@@ -2637,48 +2829,56 @@ export default function ApplicationDetailPage() {
   }, [filteredAccountsRowData, isSearchInputFocused]);
 
   useEffect(() => {
+    let cancelled = false;
     const fetchEntitlementsData = async () => {
       try {
-        const entReviewerId =
-          reviewerId?.trim() || "ec527a50-0944-4b31-b239-05518c87a743";
+        let applicationName = "";
+        try {
+          const stored = localStorage.getItem("applicationDetails");
+          const parsed = stored ? JSON.parse(stored) : null;
+          if (parsed?.applicationName && parsed.applicationName !== "N/A") {
+            applicationName = String(parsed.applicationName);
+          }
+        } catch {}
+
+        // Fetch only the page currently shown (API pages are 0-based)
+        const params = new URLSearchParams({
+          page: String(Math.max(0, entCurrentPage - 1)),
+          size: String(entPageSize),
+          sort: "name,asc",
+        });
+        if (applicationName) params.set("applicationName", applicationName);
+        if (appliedEntSearch) params.set("search", appliedEntSearch);
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppEntitlements/${encodeURIComponent(
-            entReviewerId
-          )}/${encodeURIComponent(id)}`,
+          `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/list?${params.toString()}`,
           { headers: getJwtAuthHeaders() }
         );
-        const data = await response.json();
-        console.log("Entitlements data:", data);
-        if (data.executionStatus === "success") {
-          console.log("Entitlements items:", data.items);
-          if (data.items && data.items.length > 0) {
-            console.log("First entitlement item:", data.items[0]);
-            console.log(
-              "Available fields in first item:",
-              Object.keys(data.items[0])
-            );
-
-            // Apply mapping to each entitlement item to map catalogDetails.risk
-            const mappedItems = data.items.map((item: any) => {
-              if (item.catalogDetails) {
-                return mapApiDataToNodeData(item.catalogDetails, item);
-              }
-              return item;
-            });
-            setEntRowData(mappedItems);
-          } else {
-            setEntRowData([]);
-          }
+        if (!response.ok) {
+          throw new Error(`Entitlement list failed: ${response.status}`);
         }
+        const data = await response.json();
+        if (cancelled) return;
+        const content = Array.isArray(data?.content) ? data.content : [];
+        setEntTotalItems(Number(data?.totalElements) || 0);
+        setEntTotalPages(Number(data?.totalPages) || 0);
+
+        setEntRowData(content.map((item: any) => mapCatalogItemToRow(item)));
       } catch (error) {
+        if (cancelled) return;
         console.error("Error fetching entitlements data:", error);
+        setEntRowData([]);
+        setEntTotalItems(0);
+        setEntTotalPages(0);
       }
     };
     if (tabIndex === 2) {
       // Only fetch entitlements when on the Entitlements tab
       fetchEntitlementsData();
     }
-  }, [id, tabIndex, reviewerId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, tabIndex, entCurrentPage, entPageSize, appliedEntSearch]);
 
   //   {
   //     "Ent ID": "ENT201",
@@ -3950,28 +4150,53 @@ export default function ApplicationDetailPage() {
   entitlementsTabRenderRef.current = () => {
     return (
       <div style={{ width: "100%" }}>
-        <div className="relative mb-3 pt-4 flex flex-col gap-2">
+        <div className="relative mb-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="relative max-w-md w-full">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
+            <div className="flex items-center gap-2 max-w-lg w-full">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  ref={entitlementsSearchInputRef}
+                  type="text"
+                  placeholder="Search by entitlement name..."
+                  value={entitlementsSearchQuery}
+                  onChange={(e) => setEntitlementsSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") applyEntitlementsSearch();
+                  }}
+                  onFocus={() => setIsEntitlementsSearchFocused(true)}
+                  onBlur={() => setIsEntitlementsSearchFocused(false)}
+                  className="w-full pl-10 pr-9 py-2 border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+                {(entitlementsSearchQuery !== "" || appliedEntSearch !== "") && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEntitlementsSearchQuery("");
+                      setAppliedEntSearch("");
+                    }}
+                    title="Clear search"
+                    aria-label="Clear search"
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
               </div>
-              <input
-                ref={entitlementsSearchInputRef}
-                type="text"
-                placeholder="Search by entitlement name..."
-                value={entitlementsSearchQuery}
-                onChange={(e) => setEntitlementsSearchQuery(e.target.value)}
-                onFocus={() => setIsEntitlementsSearchFocused(true)}
-                onBlur={() => setIsEntitlementsSearchFocused(false)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl bg-white shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-              />
+              <button
+                type="button"
+                onClick={applyEntitlementsSearch}
+                className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-medium shadow-sm hover:bg-blue-700 transition-colors"
+              >
+                Search
+              </button>
             </div>
             <div className="flex items-center gap-4">
-              {entitlementsSearchQuery.trim() !== "" && (
+              {appliedEntSearch !== "" && (
                 <p className="text-sm text-gray-600 whitespace-nowrap shrink-0">
-                  Showing {filteredEntRowData.length} of {entRowData.length}{" "}
-                  entitlements
+                  {entTotalItems} matching entitlements
                 </p>
               )}
               <Exports gridApi={gridApiRef.current} />
@@ -4006,7 +4231,7 @@ export default function ApplicationDetailPage() {
 
     return (
       <div style={{ width: "100%" }}>
-        <div className="mb-3 pt-4">
+        <div className="mb-3">
           <div className="flex items-center justify-between mb-3">
             {/* Search Bar */}
             <div className="relative max-w-md w-full">
@@ -4407,7 +4632,7 @@ export default function ApplicationDetailPage() {
                 <Printer className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex items-center justify-center gap-3 mt-10 mb-6">
+            <div className="flex items-center justify-center gap-3 mt-2 mb-6">
               {/* User Name Input */}
               <div className="relative w-72">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />

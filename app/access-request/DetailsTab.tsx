@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
 import { useItemDetails } from "@/contexts/ItemDetailsContext";
-import { Calendar, Edit, Save, X, Paperclip, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Edit, Save, X, ChevronDown, ChevronUp } from "lucide-react";
 
 const getTodayDateString = () => new Date().toISOString().split("T")[0];
 const getTomorrowDateString = () => {
@@ -34,15 +34,12 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
     getItemDetail, 
     globalSettings, 
     setGlobalSettings,
-    attachmentFileByItem,
-    setAttachmentFile,
     requestType,
     setRequestType,
   } = useItemDetails();
   const [itemDates, setItemDates] = useState<ItemDates>({});
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [globalEffectiveMode, setGlobalEffectiveMode] = useState<"today" | "future">("today");
-  const fileInputRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
   const initializedItemsRef = React.useRef<Set<string>>(new Set());
   const prevGlobalSettingsRef = React.useRef(globalSettings);
 
@@ -264,7 +261,9 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
   if (items.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
-        No items selected. Please go back to step 2 to select access roles.
+        {isRemove
+          ? "No access selected. Please go back to step 2 to select the access to remove."
+          : "No items selected. Please go back to step 2 to select access roles."}
       </div>
     );
   }
@@ -275,7 +274,9 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
     <div className="w-full">
       {/* Global Access Duration and Comments Section */}
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Access Duration & Comments</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">
+          {isRemove ? "Removal Date & Comments" : "Access Duration & Comments"}
+        </h3>
         
         <div className="space-y-4">
           {/* Access Type, Request Type, Start Date, End Date - all in one row, same height */}
@@ -393,7 +394,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
             {isRemove && globalEffectiveMode === "future" && (
               <div className="relative flex flex-col min-h-[72px]">
                 <label className="block text-sm font-medium text-gray-700 mb-2 shrink-0">
-                  Select Date
+                  Removal Date
                 </label>
                 <div className="flex-1 min-h-[42px] flex items-center">
                   <div className="relative w-full">
@@ -439,7 +440,11 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
             <textarea
               value={globalSettings.comment}
               onChange={(e) => handleGlobalCommentChange(e.target.value)}
-              placeholder="Enter comments that will apply to all access items..."
+              placeholder={
+                isRemove
+                  ? "Enter comments for this access removal..."
+                  : "Enter comments that will apply to all access items..."
+              }
               rows={3}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none bg-white"
             />
@@ -449,7 +454,9 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
 
       {/* Items with Date Fields */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Access Items</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">
+          {isRemove ? "Access to be Removed" : "Access Items"}
+        </h3>
         {items.map((item) => {
           const dates = itemDates[item.id] || {
             startDate: globalSettings.startDate,
@@ -711,8 +718,7 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4 w-full min-w-0">
-                    {/* Half row: Comment */}
+                  <div className="w-full min-w-0">
                     <div className="min-w-0 flex items-center gap-2">
                       <div className="flex-1 min-w-0 min-h-[52px] px-3 py-2 text-sm border border-gray-300 rounded-md bg-gray-50">
                         {dates.comment ? (
@@ -728,61 +734,6 @@ const DetailsTab: React.FC<DetailsTabProps> = ({ requestAction = "request" }) =>
                         <Edit className="w-3 h-3" />
                         Edit
                       </button>
-                    </div>
-                    {/* Half row: Attachment */}
-                    <div className="min-w-0 flex flex-wrap items-center gap-2">
-                      <div className="relative shrink-0 flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const input = fileInputRefs.current[item.id];
-                            if (input) {
-                              input.value = "";
-                              input.click();
-                            }
-                          }}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-indigo-100 text-indigo-700 border border-indigo-200 hover:bg-indigo-200 hover:text-indigo-800 hover:border-indigo-300 transition-colors text-sm font-medium"
-                          title="Attach file (XLS, PDF, JPEG/PNG)"
-                          aria-label="Attach file"
-                        >
-                          <Paperclip className="w-4 h-4" />
-                          <span>Attachment</span>
-                        </button>
-                        {!attachmentFileByItem[item.id] && (
-                          <span className="text-xs text-gray-500">
-                            File types supported - XLS, PDF, JPEG/PNG. Max file size of 2 MB
-                          </span>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        ref={(el) => {
-                          if (el) fileInputRefs.current[item.id] = el;
-                        }}
-                        className="hidden"
-                        accept=".xls,.xlsx,.pdf,.jpg,.jpeg,.png"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) setAttachmentFile(item.id, file.name);
-                        }}
-                      />
-                      {attachmentFileByItem[item.id] && (
-                        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                          <span className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-md max-w-full min-w-0">
-                            <span className="truncate" title={attachmentFileByItem[item.id]}>
-                              File: {attachmentFileByItem[item.id]}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setAttachmentFile(item.id, "")}
-                              className="p-0.5 rounded hover:bg-emerald-100 text-emerald-600 shrink-0"
-                              aria-label="Remove file"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}

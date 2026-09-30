@@ -654,6 +654,12 @@ const PendingApprovalDetailPage = ({
   const { openSidebar } = useRightSidebar();
   const [request, setRequest] = useState<PendingApprovalDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  // Req Id / Sub Id as shown in the My Approvals grid (passed as query params when opened from it).
+  const [gridIds, setGridIds] = useState<{ reqId: string; subId: string }>({ reqId: "", subId: "" });
+  useEffect(() => {
+    const qs = new URLSearchParams(window.location.search);
+    setGridIds({ reqId: (qs.get("reqId") ?? "").trim(), subId: (qs.get("subId") ?? "").trim() });
+  }, [id]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("history");
   const [clarificationAnswer, setClarificationAnswer] = useState("");
@@ -1487,8 +1493,9 @@ const PendingApprovalDetailPage = ({
               {request.status}
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <HeaderField label="Request Id" value={request.id} />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <HeaderField label="Request Id" value={gridIds.reqId || request.id} />
+            <HeaderField label="Sub Id" value={gridIds.subId || "-"} />
             <HeaderField label="Requester" value={request.requesterName || "-"} accent />
             <HeaderField label="Beneficiary" value={request.beneficiaryName || "-"} accent />
             <HeaderField

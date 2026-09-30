@@ -291,8 +291,13 @@ const ReqIdCellRenderer: React.FC<ICellRendererParams> = (params) => {
           className="tabular-nums text-blue-600 hover:underline focus:outline-none"
           onClick={(e) => {
             e.stopPropagation();
+            // Pass the grid's Req Id / Sub Id so the details header shows the same ids.
+            const qs = new URLSearchParams({
+              reqId: String(data.id ?? ""),
+              subId: String(data.subId ?? ""),
+            });
             params.context?.router?.push(
-              `/access-request/pending-approvals/${encodeURIComponent(String(detailRouteId))}`
+              `/access-request/pending-approvals/${encodeURIComponent(String(detailRouteId))}?${qs.toString()}`
             );
           }}
         >

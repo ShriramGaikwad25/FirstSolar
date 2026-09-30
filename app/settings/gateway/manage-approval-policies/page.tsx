@@ -4,11 +4,17 @@ import React, { useEffect, useMemo, useState } from "react";
 import { themeQuartz } from "ag-grid-community";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { useForm, Control, FieldValues, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import { Check, ChevronLeft, ChevronRight, Eye, Tag, FileText, User, Hash, Search } from "lucide-react";
 import { asterisk } from "@/utils/utils";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
-import ExpressionBuilder from "@/components/ExpressionBuilder";
+import ApprovalPolicySelectorBuilder, {
+  SelectorBuilderState,
+  buildSelectorJson,
+  createEmptySelectorState,
+  describeSelector,
+  parseSelectorJson,
+  validateSelector,
+} from "@/components/ApprovalPolicySelectorBuilder";
 import { executeQuery } from "@/lib/api";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import type { ColDef } from "ag-grid-community";
@@ -83,40 +89,6 @@ const ATTRIBUTE_OPTIONS: Record<ConditionSubject, string[]> = {
   Entitlement: ["Name", "Type", "Risk", "SoD Flag"],
   "Service Account": ["Name", "System", "Criticality"],
   User: ["Department", "Location", "Job Title", "Manager", "Employment Type"],
-};
-
-// Attribute options for ExpressionBuilder (reuse existing builder attributes)
-const EXPRESSION_ATTRIBUTES: Partial<
-  Record<ConditionSubject, { label: string; value: string }[]>
-> = {
-  Application: [
-    { label: "Risk", value: "risk" },
-    { label: "Pre-Requisite", value: "pre_requisite" },
-    { label: "Shared Pwd", value: "shared_pwd" },
-    { label: "Regulatory Scope", value: "regulatory_scope" },
-    { label: "Access Scope", value: "access_scope" },
-    { label: "Review Schedule", value: "review_schedule" },
-    { label: "Business Unit", value: "business_unit" },
-    { label: "Data Classification", value: "data_classification" },
-    { label: "Privileged", value: "privileged" },
-    { label: "Non Persistent Access", value: "non_persistent_access" },
-    { label: "License Type", value: "license_type" },
-    { label: "Tags", value: "tags" },
-  ],
-  Entitlement: [
-    { label: "Risk", value: "risk" },
-    { label: "Pre-Requisite", value: "pre_requisite" },
-    { label: "Shared Pwd", value: "shared_pwd" },
-    { label: "Regulatory Scope", value: "regulatory_scope" },
-    { label: "Access Scope", value: "access_scope" },
-    { label: "Review Schedule", value: "review_schedule" },
-    { label: "Business Unit", value: "business_unit" },
-    { label: "Data Classification", value: "data_classification" },
-    { label: "Privileged", value: "privileged" },
-    { label: "Non Persistent Access", value: "non_persistent_access" },
-    { label: "License Type", value: "license_type" },
-    { label: "Tags", value: "tags" },
-  ],
 };
 
 const OPERAND_OPTIONS: { value: Operand; label: string }[] = [
@@ -254,19 +226,10 @@ export default function ManageApprovalPoliciesPage() {
     []
   );
 
-  // Expression builder state (Define Condition)
-  const {
-    control: conditionControl,
-    setValue: conditionSetValue,
-    watch: conditionWatch,
-  } = useForm({
-    defaultValues: {
-      approvalConditions: [] as any[],
-    },
-  });
-
-  const [conditionSubject, setConditionSubject] = useState<ConditionSubject>("Request Type");
-  const approvalConditions = (conditionWatch("approvalConditions") as any[]) || [];
+  // Selector builder state (Define Condition) -> selector_json
+  const [selectorState, setSelectorState] = useState<SelectorBuilderState>(createEmptySelectorState);
+  /** Set when an edited policy's stored selector_json could not be loaded into the builder */
+  const [selectorLoadWarning, setSelectorLoadWarning] = useState<string | null>(null);
 
   const onEditPolicy = (row: any) => {
     // Preserve any existing query params (e.g. `edit=1` from the Review page) while
@@ -302,10 +265,15 @@ export default function ManageApprovalPoliciesPage() {
       },
     });
 
-    conditionSetValue("approvalConditions", [], {
-      shouldDirty: false,
-      shouldValidate: false,
-    });
+    const storedSelector = row.selector_json ?? row.SELECTOR_JSON ?? row.selectorJson;
+    const parsedSelector =
+      storedSelector !== undefined && storedSelector !== null ? parseSelectorJson(storedSelector) : null;
+    setSelectorState(parsedSelector ?? createEmptySelectorState());
+    setSelectorLoadWarning(
+      storedSelector !== undefined && storedSelector !== null && !parsedSelector
+        ? "The existing selector for this policy uses a format the builder cannot load. Saving will replace it with the selector defined below."
+        : null
+    );
     setWorkflowSearch("");
   };
 
@@ -338,11 +306,8 @@ export default function ManageApprovalPoliciesPage() {
       },
     });
     setCurrentStep(1);
-    setConditionSubject("Request Type");
-    conditionSetValue("approvalConditions", [], {
-      shouldDirty: false,
-      shouldValidate: false,
-    });
+    setSelectorState(createEmptySelectorState());
+    setSelectorLoadWarning(null);
     setWorkflowSearch("");
     router.push("/settings/gateway/manage-approval-policies?view=create");
   };
@@ -823,15 +788,8 @@ export default function ManageApprovalPoliciesPage() {
           !!status
         );
       }
-      case 2: {
-        return formData.step2.rules.every(
-          (rule) =>
-            !!rule.subject &&
-            !!rule.attribute &&
-            !!rule.operand &&
-            !!rule.value.trim()
-        );
-      }
+      case 2:
+        return validateSelector(selectorState).length === 0;
       case 3:
         return !!formData.step3.selectedWorkflowId;
       case 4:
@@ -843,6 +801,11 @@ export default function ManageApprovalPoliciesPage() {
 
   const handleSubmit = async () => {
     setSubmitError(null);
+    const selectorErrors = validateSelector(selectorState);
+    if (selectorErrors.length) {
+      setSubmitError(`Selector is incomplete: ${selectorErrors.join(" ")}`);
+      return;
+    }
     setIsSubmitting(true);
 
     const policyPayload = {
@@ -854,16 +817,7 @@ export default function ManageApprovalPoliciesPage() {
       status: formData.step1.status.toUpperCase(),
       priority: formData.step1.priority ?? 0,
       businessObjectType: "ACCESS_REQUEST",
-      selectorJson: {
-        scope: "CUSTOM",
-        conditions: approvalConditions.map((cond: any) => ({
-          subject: conditionSubject,
-          attribute: cond.attribute?.value ?? null,
-          operator: cond.operator?.value ?? null,
-          value: cond.value ?? null,
-          logicalOp: cond.logicalOp ?? null,
-        })),
-      },
+      selectorJson: buildSelectorJson(selectorState),
       validFrom: new Date().toISOString(),
       validTo: null,
       isActive: formData.step1.status === "Active",
@@ -884,59 +838,6 @@ export default function ManageApprovalPoliciesPage() {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const renderConditionsPreview = () => {
-    if (!approvalConditions.length) {
-      return "No conditions defined.";
-    }
-
-    const subjectToken = conditionSubject.replace(/\s+/g, "_").toLowerCase();
-
-    return approvalConditions
-      .map((cond: any, index: number) => {
-        const logicalOp = cond.logicalOp || (index === 0 ? "" : "AND");
-        const attributeToken = cond.attribute?.value
-          ? String(cond.attribute.value).replace(/\s+/g, "_").toLowerCase()
-          : "attribute";
-        const operator = cond.operator?.value || "equals";
-        const value = cond.value || "";
-
-        const field = `${subjectToken}.${attributeToken}`;
-
-        let expr: string;
-        switch (operator) {
-          case "equals":
-            expr = `${field} == "${value}"`;
-            break;
-          case "not_equals":
-            expr = `${field} != "${value}"`;
-            break;
-          case "contains":
-            expr = `${field}.contains("${value}")`;
-            break;
-          case "excludes":
-            expr = `!${field}.contains("${value}")`;
-            break;
-          case "starts_with":
-            expr = `${field}.startsWith("${value}")`;
-            break;
-          case "ends_with":
-            expr = `${field}.endsWith("${value}")`;
-            break;
-          case "in":
-            expr = `${field} in ["${value}"]`;
-            break;
-          case "not_in":
-            expr = `${field} !in ["${value}"]`;
-            break;
-          default:
-            expr = `${field} == "${value}"`;
-        }
-
-        return logicalOp && index > 0 ? `${logicalOp} ${expr}` : expr;
-      })
-      .join(" ");
   };
 
   const renderStep = () => {
@@ -1125,66 +1026,12 @@ export default function ManageApprovalPoliciesPage() {
       return (
         <div className="w-full px-6 space-y-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condition Rule
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {(
-                [
-                  "Request Type",
-                  "Application",
-                  "Entitlement",
-                  "Service Account",
-                  "User",
-                ] as ConditionSubject[]
-              ).map((s) => {
-                const isSelected = conditionSubject === s;
-                return (
-                  <div
-                    key={s}
-                    onClick={() => setConditionSubject(s)}
-                    className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                  >
-                    <span className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
-                      {s}
-                    </span>
-                    {isSelected && (
-                      <span className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <ExpressionBuilder
-              title="Build Expression"
-              control={
-                conditionControl as unknown as Control<FieldValues>
-              }
-              setValue={
-                conditionSetValue as unknown as UseFormSetValue<FieldValues>
-              }
-              watch={
-                conditionWatch as unknown as UseFormWatch<FieldValues>
-              }
-              fieldName="approvalConditions"
-              attributesOptions={
-                EXPRESSION_ATTRIBUTES[conditionSubject] ??
-                ATTRIBUTE_OPTIONS[conditionSubject].map((attr) => ({
-                  label: attr,
-                  value: attr.replace(/\s+/g, "_").toLowerCase(),
-                }))
-              }
-              fullWidth
-            />
+            {selectorLoadWarning && (
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                {selectorLoadWarning}
+              </div>
+            )}
+            <ApprovalPolicySelectorBuilder value={selectorState} onChange={setSelectorState} />
           </div>
         </div>
       );
@@ -1347,30 +1194,19 @@ export default function ManageApprovalPoliciesPage() {
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Conditions</div>
-            {approvalConditions.length ? (
-              <ol className="list-decimal list-inside space-y-1.5 text-sm text-gray-800">
-                {approvalConditions.map((cond: any, index: number) => (
-                  <li key={cond.id || `cond-${index}`}>
-                    <span className="font-medium">{conditionSubject}</span>{" "}
-                    where{" "}
-                    <span className="font-medium">
-                      {cond.attribute?.label || ""}
-                    </span>{" "}
-                    {(cond.operator?.label || "").toLowerCase()}{" "}
-                    <span className="font-mono">{cond.value}</span>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-sm text-gray-400">No conditions defined.</p>
-            )}
+            <p className="text-sm text-gray-800">
+              <span className="inline-flex items-center px-2 py-0.5 mr-2 rounded-full bg-blue-100 text-blue-700 text-[11px] font-medium">
+                {selectorState.scope}
+              </span>
+              {describeSelector(selectorState)}
+            </p>
 
             <div className="mt-4">
               <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                Expression Preview
+                Selector JSON
               </div>
-              <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto font-mono max-h-32">
-{renderConditionsPreview()}
+              <pre className="text-xs text-gray-800 bg-gray-50 border border-gray-200 rounded-md p-3 overflow-auto font-mono max-h-64">
+{JSON.stringify(buildSelectorJson(selectorState), null, 2)}
               </pre>
             </div>
           </div>
@@ -1706,60 +1542,12 @@ export default function ManageApprovalPoliciesPage() {
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condition Rule
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-              {(
-                [
-                  "Request Type",
-                  "Application",
-                  "Entitlement",
-                  "Service Account",
-                  "User",
-                ] as ConditionSubject[]
-              ).map((s) => {
-                const isSelected = conditionSubject === s;
-                return (
-                  <div
-                    key={s}
-                    onClick={() => setConditionSubject(s)}
-                    className={`relative p-3.5 border rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md text-center ${
-                      isSelected
-                        ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
-                  >
-                    <span className={`text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
-                      {s}
-                    </span>
-                    {isSelected && (
-                      <span className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shrink-0">
-                        <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <ExpressionBuilder
-              title="Build Expression"
-              control={conditionControl as unknown as Control<FieldValues>}
-              setValue={conditionSetValue as unknown as UseFormSetValue<FieldValues>}
-              watch={conditionWatch as unknown as UseFormWatch<FieldValues>}
-              fieldName="approvalConditions"
-              attributesOptions={
-                EXPRESSION_ATTRIBUTES[conditionSubject] ??
-                ATTRIBUTE_OPTIONS[conditionSubject].map((attr) => ({
-                  label: attr,
-                  value: attr.replace(/\s+/g, "_").toLowerCase(),
-                }))
-              }
-              fullWidth
-            />
+            {selectorLoadWarning && (
+              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                {selectorLoadWarning}
+              </div>
+            )}
+            <ApprovalPolicySelectorBuilder value={selectorState} onChange={setSelectorState} />
           </div>
 
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">

@@ -153,6 +153,9 @@ export default function AppInventorySettingsPage() {
   return (
     <div className="h-screen flex flex-col w-full min-w-0">
       <div className="flex-1 flex flex-col min-h-0 w-full min-w-0 py-3 overflow-y-auto">
+        {appName && (
+          <h1 className="text-xl font-semibold text-gray-900 mb-3 pl-4 break-words">{appName}</h1>
+        )}
         <HorizontalTabs
           tabs={tabsData}
           defaultIndex={0}

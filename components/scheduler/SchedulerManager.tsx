@@ -6,7 +6,6 @@ import {
   Clock,
   CheckCircle,
   AlertCircle,
-  Pause,
   Square,
   RotateCcw,
   Calendar,
@@ -95,17 +94,6 @@ const EMPTY_NEW_JOB_DATA = {
   data: {},
 };
 
-// Visual (display-only) mapping from job status to a light-tint badge style.
-const STATUS_BADGE_STYLES: Record<string, string> = {
-  active: "bg-green-100 text-green-700",
-  paused: "bg-amber-100 text-amber-700",
-  completed: "bg-blue-100 text-blue-700",
-  stopped: "bg-gray-100 text-gray-600",
-};
-
-const getStatusBadgeClasses = (status?: string) =>
-  STATUS_BADGE_STYLES[status || "stopped"] || STATUS_BADGE_STYLES.stopped;
-
 export default function SchedulerManager() {
   const [popup, setPopup] = useState<{
     isOpen: boolean;
@@ -132,6 +120,8 @@ export default function SchedulerManager() {
   const [editableJsonData, setEditableJsonData] = useState<string>("");
   const [originalJsonData, setOriginalJsonData] = useState<string>("");
   const [isUpdatingJson, setIsUpdatingJson] = useState(false);
+  // Pending Active/Inactive change awaiting user confirmation.
+  const [statusConfirm, setStatusConfirm] = useState<"activate" | "deactivate" | null>(null);
   const [showNewJobForm, setShowNewJobForm] = useState(false);
   const [showMiddlePanel, setShowMiddlePanel] = useState(false);
   const [jobSearchTerm, setJobSearchTerm] = useState("");
@@ -1140,27 +1130,37 @@ export default function SchedulerManager() {
                   <Clock className="h-4 w-4" />
                 </span>
                 <h1>{selectedSchedule.name}</h1>
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${getStatusBadgeClasses(
-                    selectedSchedule.status
-                  )}`}
-                >
-                  {selectedSchedule.status}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    selectedSchedule.isRunning
-                      ? "bg-green-100 text-green-700"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  <span
-                    className={`h-1.5 w-1.5 rounded-full ${
-                      selectedSchedule.isRunning ? "bg-green-500" : "bg-gray-400"
-                    }`}
-                  />
-                  {selectedSchedule.isRunning ? "Running" : "Not Running"}
-                </span>
+                {(() => {
+                  // Active = trigger not paused; toggling pauses/resumes the job.
+                  const isActive =
+                    (selectedSchedule.triggerState || "").toUpperCase() !== "PAUSED";
+                  return (
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={isActive}
+                      disabled={isUpdatingJson}
+                      onClick={() => setStatusConfirm(isActive ? "deactivate" : "activate")}
+                      title={isActive ? "Click to make inactive" : "Click to make active"}
+                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white py-0.5 pl-1 pr-2.5 text-xs font-semibold transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span
+                        className={`relative inline-flex h-4 w-7 flex-shrink-0 items-center rounded-full transition-colors ${
+                          isActive ? "bg-green-500" : "bg-gray-300"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-3 w-3 rounded-full bg-white shadow transition-transform ${
+                            isActive ? "translate-x-3.5" : "translate-x-0.5"
+                          }`}
+                        />
+                      </span>
+                      <span className={isActive ? "text-green-700" : "text-gray-600"}>
+                        {isActive ? "Active" : "Inactive"}
+                      </span>
+                    </button>
+                  );
+                })()}
                 <button
                   className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-gray-300 text-gray-600 transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600"
                   onClick={() => {
@@ -1186,9 +1186,15 @@ export default function SchedulerManager() {
                     selectedSchedule.name
                   )
                 }
-                disabled={isUpdatingJson}
+                disabled={isUpdatingJson || selectedSchedule.isRunning}
+                title={selectedSchedule.isRunning ? "Job is currently running" : undefined}
               >
-                {isUpdatingJson ? (
+                {selectedSchedule.isRunning ? (
+                  <>
+                    <div className="loading-spinner-small"></div>
+                    Running
+                  </>
+                ) : isUpdatingJson ? (
                   <>
                     <div className="loading-spinner-small"></div>
                     Running...
@@ -1200,59 +1206,6 @@ export default function SchedulerManager() {
                   </>
                 )}
               </button>
-              {(() => {
-                const state = (
-                  selectedSchedule.triggerState || ""
-                ).toUpperCase();
-                const isPaused = state === "PAUSED";
-                return isPaused;
-              })() ? (
-                <button
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() =>
-                    resumeJob(
-                      selectedSchedule.groupName || "",
-                      selectedSchedule.name
-                    )
-                  }
-                  disabled={isUpdatingJson}
-                >
-                  {isUpdatingJson ? (
-                    <>
-                      <div className="loading-spinner-small"></div>
-                      Enabling...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-4 w-4" />
-                      Enable
-                    </>
-                  )}
-                </button>
-              ) : (
-                <button
-                  className="inline-flex items-center justify-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={() =>
-                    pauseJob(
-                      selectedSchedule.groupName || "",
-                      selectedSchedule.name
-                    )
-                  }
-                  disabled={isUpdatingJson}
-                >
-                  {isUpdatingJson ? (
-                    <>
-                      <div className="loading-spinner-small"></div>
-                      Disabling...
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="h-4 w-4" />
-                      Disable
-                    </>
-                  )}
-                </button>
-              )}
             </div>
           </div>
         ) : (
@@ -1914,6 +1867,63 @@ export default function SchedulerManager() {
           </div>
         )}
       </div>
+
+      {statusConfirm && selectedSchedule && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setStatusConfirm(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900">
+              {statusConfirm === "deactivate" ? "Make job inactive?" : "Make job active?"}
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              {statusConfirm === "deactivate" ? (
+                <>
+                  <span className="font-medium text-gray-800">{selectedSchedule.name}</span> will be
+                  paused and won&apos;t run on its schedule until it is made active again.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-gray-800">{selectedSchedule.name}</span> will be
+                  resumed and run on its schedule.
+                </>
+              )}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => setStatusConfirm(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={`rounded-md px-4 py-2 text-sm font-medium text-white ${
+                  statusConfirm === "deactivate"
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-green-600 hover:bg-green-700"
+                }`}
+                onClick={() => {
+                  const group = selectedSchedule.groupName || "";
+                  const action = statusConfirm;
+                  setStatusConfirm(null);
+                  if (action === "deactivate") pauseJob(group, selectedSchedule.name);
+                  else resumeJob(group, selectedSchedule.name);
+                }}
+              >
+                {statusConfirm === "deactivate" ? "Make Inactive" : "Make Active"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

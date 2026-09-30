@@ -10,7 +10,7 @@ import { useSelectedUsers } from "@/contexts/SelectedUsersContext";
 import { useCart } from "@/contexts/CartContext";
 import { useItemDetails } from "@/contexts/ItemDetailsContext";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
-import { getCurrentUser, getReviewerId, resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
+import { getReviewerId, resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
 
 function clearAccessRequestSelections(
   clearCart: () => void,
@@ -312,16 +312,21 @@ const AccessRequest: React.FC = () => {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, []);
 
-  // Switching between "Access Request" and "Remove Access" clears whatever
-  // was selected/searched for under the User Search panel.
+  // Switching between "Access Request" and "Remove Access" starts the wizard
+  // over: selected users, cart, Step 3 details and Step 2 filters are all cleared.
   const isFirstRequestActionRenderRef = useRef(true);
   useEffect(() => {
     if (isFirstRequestActionRenderRef.current) {
       isFirstRequestActionRenderRef.current = false;
       return;
     }
-    clearUsers();
-  }, [requestAction, clearUsers]);
+    clearAccessRequestSelections(clearCart, clearUsers, clearItemDetails);
+    setSelectedGroups([]);
+    setCatalogTypeFilter("All");
+    setTagFilter("");
+    setSelectedAppInstanceId(null);
+    setShowApplicationInstancesOnly(false);
+  }, [requestAction, clearCart, clearUsers, clearItemDetails]);
 
   // In-app navigation: intercept link clicks and show custom modal
   useEffect(() => {
@@ -528,7 +533,12 @@ const AccessRequest: React.FC = () => {
     [catalogData]
   );
 
+  // Request for Others: can't leave step 1 until at least one user is selected.
+  const isNextDisabled =
+    currentStep === 1 && selectedOption === "others" && selectedUsers.length === 0;
+
   const handleNext = () => {
+    if (isNextDisabled) return;
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -791,8 +801,8 @@ const AccessRequest: React.FC = () => {
               )
             )
           : (() => {
-              const stored = getCurrentUser() as { userid?: string } | null;
-              const selfId = stored?.userid ? String(stored.userid).trim() : "";
+              // Logged-in user's id comes from the JWT "userid" claim (same source as submit).
+              const selfId = (getReviewerId() ?? "").trim();
               return selfId ? [selfId] : [];
             })();
 
@@ -1029,7 +1039,13 @@ const AccessRequest: React.FC = () => {
             {currentStep < steps.length ? (
               <button
                 onClick={handleNext}
-                className="flex items-center px-2 sm:px-5 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs sm:text-sm font-medium"
+                disabled={isNextDisabled}
+                title={isNextDisabled ? "Select at least one user to continue" : undefined}
+                className={`flex items-center px-2 sm:px-5 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium ${
+                  isNextDisabled
+                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    : "bg-blue-600 text-white hover:bg-blue-700"
+                }`}
               >
                 Next
                 <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1 sm:ml-2.5" />
@@ -1311,6 +1327,7 @@ const AccessRequest: React.FC = () => {
             <SelectAccessTab
               onApply={() => setCurrentStep(3)}
               rolesFromApi={apiRoles}
+              hideRecommendedTab
               hideAddDetailsSidebar={requestAction === "remove"}
               hideTabs={requestAction === "remove"}
               hideCatalogTypeDropdown={requestAction === "remove"}

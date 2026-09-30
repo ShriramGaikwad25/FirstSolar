@@ -726,19 +726,14 @@ export default function EditEmailTemplatePage() {
                   <div className="relative">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Template Code <span className="text-red-500">*</span>
-                      <span className="text-xs text-gray-500 font-normal ml-1">(must be unique)</span>
                     </label>
                     <input
                       type="text"
                       value={formData.templateCode}
-                      onChange={(e) => {
-                        const transformedValue = e.target.value.toUpperCase().replace(/\s+/g, '_');
-                        handleFieldChange("templateCode", transformedValue);
-                      }}
-                      onFocus={() => handleFieldFocus("templateCode")}
-                      onBlur={() => handleFieldBlur("templateCode")}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white transition-all"
-                      placeholder="e.g., CERT_REVIEW_ASSIGNMENT"
+                      readOnly
+                      disabled
+                      title="Template code cannot be changed"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
                     />
                   </div>
 

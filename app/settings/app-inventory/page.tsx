@@ -482,26 +482,12 @@ useEffect(() => {
               </div>
             );
           }
-          const appId = params.data?.id ?? "";
           const appName = params.data?.name ?? "";
           return (
             <div className="flex items-center gap-2 py-1">
-              <button
-                type="button"
-                onClick={(e: React.MouseEvent) => {
-                  e.stopPropagation();
-                  if (appId) {
-                    const apiToken = params.data?.apiToken ?? "";
-                    if (typeof window !== "undefined") {
-                      sessionStorage.setItem(`app-inventory-token-${appId}`, apiToken);
-                    }
-                    router.push(`/settings/app-inventory/${appId}`);
-                  }
-                }}
-                className="font-semibold text-gray-900 hover:text-blue-600 hover:underline cursor-pointer text-left"
-              >
+              <span className="font-semibold text-gray-900 text-left">
                 {appName}
-              </button>
+              </span>
             </div>
           );
         },

@@ -211,7 +211,7 @@ export default function GatewayNativeUsersSettings() {
       const [firstName, setFirstName] = useState(row.firstName);
       const [lastName, setLastName] = useState(row.lastName);
       const [email, setEmail] = useState(row.email);
-      const [roles, setRoles] = useState<string[]>(row.adminRoles ?? ["User Administrator"]);
+      const [role, setRole] = useState<string>(row.adminRoles?.[0] ?? "");
       const [showReset, setShowReset] = useState(false);
       const [newPassword, setNewPassword] = useState("");
       const [confirmPassword, setConfirmPassword] = useState("");
@@ -219,9 +219,8 @@ export default function GatewayNativeUsersSettings() {
       const [resetSubmitting, setResetSubmitting] = useState(false);
       const [updateError, setUpdateError] = useState<string | null>(null);
       const [updateSubmitting, setUpdateSubmitting] = useState(false);
-      const [showAddRole, setShowAddRole] = useState(false);
-      const [selectedRoleToAdd, setSelectedRoleToAdd] = useState("");
-      const [editingRole, setEditingRole] = useState<string | null>(null);
+      const [isEditingRole, setIsEditingRole] = useState(false);
+      const [draftRole, setDraftRole] = useState("");
 
       const handleUpdate = async () => {
         if (updateSubmitting) return;
@@ -235,7 +234,7 @@ export default function GatewayNativeUsersSettings() {
             lastName: lastName.trim(),
             displayName: displayName.trim(),
             email: email.trim(),
-            adminRoles: roles,
+            adminRoles: role ? [role] : [],
           };
           const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/updateuser`, {
             method: "POST",
@@ -287,17 +286,6 @@ export default function GatewayNativeUsersSettings() {
             </button>
             <button
               type="button"
-              className={secondaryButtonClass}
-              onClick={() => {
-                setShowAddRole((s) => !s);
-                setEditingRole(null);
-                setSelectedRoleToAdd("");
-              }}
-            >
-              {showAddRole ? "Cancel" : "Add Role"}
-            </button>
-            <button
-              type="button"
               className={primaryButtonClass}
               disabled={updateSubmitting}
               onClick={handleUpdate}
@@ -344,52 +332,6 @@ export default function GatewayNativeUsersSettings() {
             </div>
           )}
 
-          {showAddRole && (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 mb-4">
-              <div className="text-xs font-semibold text-gray-700 mb-2">
-                {editingRole ? "Edit Role" : "Add Role"}
-              </div>
-              <div className="flex items-end gap-3">
-                <div className="flex-1">
-                  <label className={labelClass}>Select Role</label>
-                  <select
-                    value={selectedRoleToAdd}
-                    onChange={(e) => setSelectedRoleToAdd(e.target.value)}
-                    className={`${inputClass} bg-white`}
-                  >
-                    <option value="">Select role</option>
-                    {ADMIN_ROLE_OPTIONS.map((r) => (
-                      <option key={r} value={r} disabled={roles.includes(r) && r !== editingRole}>
-                        {r}{roles.includes(r) && r !== editingRole ? " (current)" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <button
-                  type="button"
-                  className={primaryButtonClass}
-                  disabled={
-                    !selectedRoleToAdd || (roles.includes(selectedRoleToAdd) && selectedRoleToAdd !== editingRole)
-                  }
-                  onClick={() => {
-                    if (!selectedRoleToAdd) return;
-                    if (editingRole) {
-                      setRoles((prev) => prev.map((x) => (x === editingRole ? selectedRoleToAdd : x)));
-                    } else {
-                      if (roles.includes(selectedRoleToAdd)) return;
-                      setRoles((prev) => [...prev, selectedRoleToAdd]);
-                    }
-                    setSelectedRoleToAdd("");
-                    setEditingRole(null);
-                    setShowAddRole(false);
-                  }}
-                >
-                  {editingRole ? "Save" : "Add"}
-                </button>
-              </div>
-            </div>
-          )}
-
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -424,49 +366,67 @@ export default function GatewayNativeUsersSettings() {
           )}
 
           <div className="mt-6 pt-4 border-t border-gray-200">
-            <div className="text-sm font-semibold text-gray-800 mb-3">Admin Roles</div>
-            <div className="rounded-lg border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    <th className="px-4 py-2">Role</th>
-                    <th className="px-4 py-2 w-16">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {roles.map((r) => (
-                    <tr key={r}>
-                      <td className="px-4 py-2.5">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${rolePillClass(r)}`}>
+            <div className="text-sm font-semibold text-gray-800 mb-3">Admin Role</div>
+            <div className="rounded-lg border border-gray-200 px-4 py-3">
+              {isEditingRole ? (
+                <div className="flex items-end gap-3">
+                  <div className="flex-1">
+                    <label className={labelClass}>Select Role</label>
+                    <select
+                      value={draftRole}
+                      onChange={(e) => setDraftRole(e.target.value)}
+                      className={`${inputClass} bg-white`}
+                    >
+                      <option value="">Select role</option>
+                      {ADMIN_ROLE_OPTIONS.map((r) => (
+                        <option key={r} value={r}>
                           {r}
-                        </span>
-                      </td>
-                      <td className="px-4 py-2.5">
-                        <button
-                          type="button"
-                          title="Edit role"
-                          aria-label="Edit role"
-                          className="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-300 transition-colors"
-                          onClick={() => {
-                            setEditingRole(r);
-                            setSelectedRoleToAdd(r);
-                            setShowAddRole(true);
-                          }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {roles.length === 0 && (
-                    <tr>
-                      <td colSpan={2} className="px-4 py-4 text-center text-sm text-gray-500">
-                        No roles assigned.
-                      </td>
-                    </tr>
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    type="button"
+                    className={secondaryButtonClass}
+                    onClick={() => setIsEditingRole(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className={primaryButtonClass}
+                    disabled={!draftRole}
+                    onClick={() => {
+                      setRole(draftRole);
+                      setIsEditingRole(false);
+                    }}
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between gap-3">
+                  {role ? (
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${rolePillClass(role)}`}>
+                      {role}
+                    </span>
+                  ) : (
+                    <span className="text-sm text-gray-500">No role assigned.</span>
                   )}
-                </tbody>
-              </table>
+                  <button
+                    type="button"
+                    title="Edit role"
+                    aria-label="Edit role"
+                    className="p-1.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200 hover:border-blue-300 transition-colors"
+                    onClick={() => {
+                      setDraftRole(role);
+                      setIsEditingRole(true);
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

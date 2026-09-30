@@ -4,7 +4,7 @@ import { useCart } from "@/contexts/CartContext";
 import { useSelectedUsers } from "@/contexts/SelectedUsersContext";
 import { useItemDetails } from "@/contexts/ItemDetailsContext";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
-import { Calendar, Users, User, FileText, ChevronRight } from "lucide-react";
+import { Calendar, Users, User, FileText, ChevronRight, MinusCircle } from "lucide-react";
 import AddDetailsSidebarContent, { getRiskColor, type Role } from "./AddDetailsSidebarContent";
 
 interface ReviewTabProps {
@@ -29,7 +29,7 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
   const isRemove = requestAction === "remove";
   const { items } = useCart();
   const { selectedUsers } = useSelectedUsers();
-  const { getItemDetail, globalAccessType, globalSettings, requestType, attachmentFileByItem } = useItemDetails();
+  const { getItemDetail, globalAccessType, globalSettings, requestType } = useItemDetails();
   const { openSidebar, closeSidebar } = useRightSidebar();
 
   const formatDate = (dateString: string) => {
@@ -42,17 +42,61 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
     });
   };
 
+  const todayString = new Date().toISOString().split("T")[0];
+  const removalDateLabel =
+    !globalSettings.startDate || globalSettings.startDate <= todayString
+      ? `Today (${formatDate(todayString)})`
+      : formatDate(globalSettings.startDate);
+
   return (
     <div className="w-full space-y-6">
       {/* Request Type Summary */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-2">
-        <span className="text-sm font-semibold text-blue-900">Request Type:</span>
-        <span className="text-sm text-blue-700">
-          {selectedUsers.length > 0 ? "Request for Others" : "Request for Self"}
-        </span>
-      </div>
+      {isRemove ? (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-2">
+          <MinusCircle className="w-5 h-5 text-red-600 shrink-0" />
+          <span className="text-sm font-semibold text-red-900">Remove Access</span>
+          <span className="text-sm text-red-700">
+            · {items.length} {items.length === 1 ? "item" : "items"} will be removed
+          </span>
+        </div>
+      ) : (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-2">
+          <span className="text-sm font-semibold text-blue-900">Request Type:</span>
+          <span className="text-sm text-blue-700">
+            {selectedUsers.length > 0 ? "Request for Others" : "Request for Self"}
+          </span>
+        </div>
+      )}
+
+      {/* Remove Access: one Effective Date and one comment apply to the whole request */}
+      {isRemove && (
+        <div className="w-full bg-white border border-gray-200 rounded-lg p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="w-5 h-5 text-gray-600" />
+            <h3 className="text-sm font-semibold text-gray-900">Removal Details</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-[220px_1fr] gap-4 p-3 border border-gray-200 rounded-md bg-gray-50 text-sm">
+            <div>
+              <div className="text-xs font-medium text-gray-500 mb-1">Effective Date</div>
+              <div className="flex items-center gap-2 text-gray-900">
+                <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
+                {removalDateLabel}
+              </div>
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-gray-500 mb-1">Comments</div>
+              {globalSettings.comment && globalSettings.comment.trim() !== "" ? (
+                <p className="text-gray-900 whitespace-pre-wrap break-words">{globalSettings.comment}</p>
+              ) : (
+                <p className="text-gray-400 italic">No comments</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Global request details, styled similar to Selected Access Roles cards */}
+      {!isRemove && (
       <div className="w-full bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <FileText className="w-5 h-5 text-gray-600" />
@@ -77,13 +121,16 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
           </div>
         </div>
       </div>
+      )}
 
       {/* Selected Users Section - Only show if "Request for Others" */}
       {selectedUsers.length > 0 && (
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-4">
             <Users className="w-5 h-5 text-gray-600" />
-            <h3 className="text-sm font-semibold text-gray-900">Selected Users ({selectedUsers.length})</h3>
+            <h3 className="text-sm font-semibold text-gray-900">
+              {isRemove ? "User" : `Selected Users (${selectedUsers.length})`}
+            </h3>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {selectedUsers.map((user) => (
@@ -118,12 +165,20 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
       <div className="w-full bg-white border border-gray-200 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-4">
           <FileText className="w-5 h-5 text-gray-600" />
-          <h3 className="text-sm font-semibold text-gray-900">Selected Access Roles ({items.length})</h3>
+          <h3 className="text-sm font-semibold text-gray-900">
+            {isRemove ? "Access to be Removed" : "Selected Access Roles"} ({items.length})
+          </h3>
         </div>
         {items.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-4">No access roles selected</p>
         ) : (
-          <div className="w-full space-y-4">
+          <div
+            className={
+              isRemove
+                ? "w-full border border-gray-200 rounded-md divide-y divide-gray-200 overflow-hidden"
+                : "w-full space-y-4"
+            }
+          >
             {items.map((item) => {
               const detail = getItemDetail(item.id);
               const isIndefinite = detail?.isIndefinite ?? (globalAccessType === "indefinite");
@@ -156,6 +211,50 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
                 return !!code;
               })();
 
+              const openDetails = () => {
+                openSidebar(
+                  <AddDetailsSidebarContent
+                    role={fullRole}
+                    riskClass={getRiskColor(fullRole.risk)}
+                    onAddToCart={closeSidebar}
+                    showActions={false}
+                  />,
+                  { widthPx: 500, title: "View Details" }
+                );
+              };
+
+              if (isRemove) {
+                return (
+                  <div
+                    key={item.id}
+                    className="w-full px-4 py-3 bg-white hover:bg-gray-50 transition-colors flex items-center justify-between gap-4"
+                  >
+                    <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+                      <h4 className="text-sm font-semibold text-gray-900 truncate">{item.name}</h4>
+                      {applicationName && (
+                        <span className="px-2 py-0.5 rounded text-xs font-medium border text-blue-700 bg-blue-50 border-blue-200">
+                          {applicationName}
+                        </span>
+                      )}
+                      {item.risk && (
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium border ${getRiskColor(item.risk)}`}>
+                          {item.risk} Risk
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openDetails}
+                      className="shrink-0 p-2 rounded-md text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
+                      title="View details"
+                      aria-label="View entitlement details"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                  </div>
+                );
+              }
+
               return (
                 <div
                   key={item.id}
@@ -183,16 +282,7 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
                         )}
                       </div>
                     </div>
-                    {isRemove ? (
-                      /* Remove Access: single Effective Date (today or the picked future date) */
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
-                        <span className="text-xs text-gray-700">
-                          Effective Date: {detail?.startDate ? formatDate(detail.startDate) : "Today"}
-                        </span>
-                      </div>
-                    ) : (
-                      <>
+                    <>
                         <div className="text-left">
                           <span className="text-xs text-gray-600">
                             Access Type: {isIndefinite ? "Indefinite Access" : "Duration"}
@@ -212,11 +302,10 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
                             End: {isIndefinite ? "Indefinite" : (detail?.endDate ? formatDate(detail.endDate) : "Not set")}
                           </span>
                         </div>
-                      </>
-                    )}
+                    </>
 
                     {/* Row 3 */}
-                    <div className="text-xs min-w-0">
+                    <div className="col-span-2 text-xs min-w-0">
                       {detail?.comment ? (
                         <>
                           <span className="font-medium text-gray-700">Comment: </span>
@@ -226,32 +315,10 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
                         <span className="text-gray-400 italic">No comment</span>
                       )}
                     </div>
-                    <div className="text-xs text-left flex flex-wrap items-center gap-2 min-w-0">
-                      {attachmentFileByItem[item.id] ? (
-                        <>
-                          <span className="font-medium text-gray-700">Attachment: </span>
-                          <span className="inline-flex items-center px-2.5 py-1 text-xs bg-emerald-50 text-emerald-800 border border-emerald-200 rounded">
-                            File: {attachmentFileByItem[item.id]}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-gray-400 italic">No attachment</span>
-                      )}
-                    </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      openSidebar(
-                        <AddDetailsSidebarContent
-                          role={fullRole}
-                          riskClass={getRiskColor(fullRole.risk)}
-                          onAddToCart={closeSidebar}
-                          showActions={false}
-                        />,
-                        { widthPx: 500, title: "View Details" }
-                      );
-                    }}
+                    onClick={openDetails}
                     className="shrink-0 p-2 rounded-md text-gray-500 hover:bg-gray-200 hover:text-gray-700 transition-colors"
                     title="View details"
                     aria-label="View entitlement details"
