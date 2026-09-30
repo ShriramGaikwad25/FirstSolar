@@ -70,9 +70,7 @@ export const navLinks: NavItem[] = [
     name: "Risk Analysis",
     href: "/risk-analysis",
     icon: LineChart,
-    subItems: riskAnalysisSubItems.filter((i) =>
-      ["Dashboard", "Rulesets", "Rules", "Functions", "Violations"].includes(i.name)
-    ),
+    subItems: riskAnalysisSubItems,
   },
   {
     name: "Administration",

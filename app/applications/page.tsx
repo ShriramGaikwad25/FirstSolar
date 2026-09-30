@@ -9,7 +9,7 @@ import { ColDef, GridApi, PaginationChangedEvent } from "ag-grid-enterprise";
 import Accordion from "@/components/Accordion";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
-import { formatDateMMDDYY } from "../access-review/page";
+import { formatDateMMDDYY } from "@/utils/utils";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import {
   getCookie,

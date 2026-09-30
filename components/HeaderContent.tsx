@@ -504,32 +504,11 @@ const HeaderContent = () => {
     if (pathname.startsWith("/access-request")) return "Access Management";
 
     // Gateway settings headings that previously rendered blank in header
-    if (pathname === "/settings/gateway/manage-access-policy") return "Manage Access Policy";
-    if (pathname === "/settings/gateway/manage-access-policy/new") {
-      const isView = searchParams?.get("view") === "1";
-      const isEdit = searchParams?.get("edit") === "1";
-      if (isView && isEdit) return "Edit Access Policy";
-      if (isView) return "Review Access Policy";
-      return "Create Access Policy";
-    }
     if (pathname === "/settings/gateway/manage-approval-policies") {
       const isEdit = searchParams?.get("edit") === "1";
       return isEdit ? "Edit Approval Policy" : "Manage Approval Policies";
     }
     if (pathname === "/settings/gateway/manage-approval-policies/review") return "Review Approval Policy";
-    if (pathname === "/settings/gateway/nhi-settings") return "NHI Settings";
-    if (pathname === "/settings/gateway/lookup-custom-approvers") return "Lookup For Custom Approvers";
-    if (pathname === "/settings/gateway/lookup-custom-approvers/new") {
-      return "New condition rule";
-    }
-    if (
-      /^\/settings\/gateway\/lookup-custom-approvers\/[^/]+$/.test(pathname) &&
-      pathname !== "/settings/gateway/lookup-custom-approvers"
-    ) {
-      return "Lookup rule details";
-    }
-    if (pathname === "/non-human-identity/request-access") return "Request Access / Breakglass";
-    if (pathname === "/non-human-identity/create-nhi") return "Create new NHI";
 
     const headingFromNav = getHeadingFromNav(pathname);
     if (headingFromNav && headingFromNav !== "Generic") return headingFromNav;

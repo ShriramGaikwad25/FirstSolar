@@ -3,20 +3,6 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: false,
-  async redirects() {
-    return [
-      {
-        source: "/non-human-identity-1/lookups",
-        destination: "/settings/gateway/nhi-settings",
-        permanent: false,
-      },
-      {
-        source: "/non-human-identity-1/emergency",
-        destination: "/non-human-identity/request-access",
-        permanent: false,
-      },
-    ];
-  },
   // All images are served from /public; no remote hosts are allowed through the optimizer.
   async headers() {
     return [

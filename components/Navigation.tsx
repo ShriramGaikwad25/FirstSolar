@@ -6,8 +6,6 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import {navLinks as allNavLinks, NavItem} from './Navi';
 import { useLeftSidebar } from '@/contexts/LeftSidebarContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { isRestrictedNavUser, RESTRICTED_NAV_ITEM_NAMES } from '@/lib/restricted-nav-users';
 import { getReviewerId } from '@/lib/auth';
 
 export function Navigation() {
@@ -17,11 +15,7 @@ export function Navigation() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const { isVisible, setSidebarWidthPx } = useLeftSidebar();
-  const { user } = useAuth();
-
-  const navigation = isRestrictedNavUser(user?.email)
-    ? allNavLinks.filter((item) => RESTRICTED_NAV_ITEM_NAMES.includes(item.name))
-    : allNavLinks;
+  const navigation = allNavLinks;
 
   useEffect(() => {
     setSidebarWidthPx(isSidebarExpanded ? 280 : 64);
@@ -119,10 +113,8 @@ export function Navigation() {
     // App Inventory
     if (
       pathname === '/settings/app-inventory/add-application' ||
-      pathname === '/settings/app-inventory/add-application-ai-agent' ||
-      pathname === '/settings/app-inventory/ai-assist-app' ||
       pathname === '/settings/app-inventory/global-ad-config-management' ||
-      /^\/settings\/app-inventory\/[^/]+\/(settings|schema-mapping)$/.test(pathname)
+      /^\/settings\/app-inventory\/[^/]+\/settings$/.test(pathname)
     ) {
       return { href: '/settings/app-inventory', label: 'Back to Integrations' };
     }
@@ -137,49 +129,9 @@ export function Navigation() {
     if (pathname.match(/^\/settings\/gateway\/email-templates\/[^/]+$/) && !pathname.includes('/edit/')) {
       return { href: '/settings/gateway/email-templates', label: 'Back to Email Templates' };
     }
-    if (pathname === '/settings/gateway/email-templates') {
-      return { href: '/settings/gateway', label: 'Back to Generic' };
-    }
     // Gateway - Workflow Builder create/edit
     if (pathname === '/settings/gateway/workflow-builder/new') {
       return { href: '/settings/gateway/workflow-builder', label: 'Back to Workflow Builder' };
-    }
-    // Gateway - other pages
-    if (pathname === '/settings/gateway/manage-access-policy/new') {
-      return { href: '/settings/gateway/manage-access-policy', label: 'Back to Manage Access Policy' };
-    }
-    if (pathname === '/settings/gateway/manage-access-policy') {
-      return { href: '/settings', label: 'Back to Administration' };
-    }
-    if (pathname === '/settings/gateway/manage-business-roles/new') {
-      return { href: '/settings/gateway/manage-business-roles', label: 'Back to Manage Business Roles' };
-    }
-    if (pathname === '/settings/gateway/sod/business-process/new') {
-      return { href: '/settings/gateway/sod', label: 'Back to Business Processes' };
-    }
-    if (pathname === '/settings/gateway/sod/business-process/review') {
-      return { href: '/settings/gateway/sod', label: 'Back to Business Processes' };
-    }
-    if (pathname === '/settings/gateway/sod/rules/new') {
-      return { href: '/settings/gateway/sod/rules', label: 'Back to Rules' };
-    }
-    if (pathname === '/settings/gateway/sod/rules/review') {
-      return { href: '/settings/gateway/sod/rules', label: 'Back to Rules' };
-    }
-    if (pathname === '/settings/gateway/sod/policy/new') {
-      return { href: '/settings/gateway/sod/policy', label: 'Back to SoD Policy' };
-    }
-    if (pathname === '/settings/gateway/sod/policy/review') {
-      return { href: '/settings/gateway/sod/policy', label: 'Back to SoD Policy' };
-    }
-    if (pathname === '/settings/gateway/sod/mitigating-controls/new') {
-      return { href: '/settings/gateway/sod/mitigating-controls', label: 'Back to Mitigating Controls' };
-    }
-    if (pathname === '/settings/gateway/sod/mitigating-controls/review') {
-      return { href: '/settings/gateway/sod/mitigating-controls', label: 'Back to Mitigating Controls' };
-    }
-    if (pathname === '/settings/gateway/sod/mitigating-controls') {
-      return { href: '/settings/gateway/sod', label: 'Back to SoD' };
     }
     if (pathname === '/settings/gateway/manage-approval-policies/review') {
       return { href: '/settings/gateway/manage-approval-policies', label: 'Back to Approval Policy' };
@@ -191,65 +143,6 @@ export function Navigation() {
       (searchParams?.get('view') === 'create' || searchParams?.get('edit') === '1')
     ) {
       return { href: '/settings/gateway/manage-approval-policies', label: 'Back to Approval Policy' };
-    }
-    if (pathname === '/settings/gateway/manage-business-roles/review') {
-      return { href: '/settings/gateway/manage-business-roles', label: 'Back to Manage Business Roles' };
-    }
-    if (pathname.match(/^\/settings\/gateway\/lookup-custom-approvers\/[^/]+$/)) {
-      return {
-        href: '/settings/gateway/lookup-custom-approvers',
-        label: 'Back to condition rules',
-      };
-    }
-    if (
-      pathname === '/settings/gateway/transformation-provider' &&
-      (searchParams?.get('view') === 'create' || searchParams?.get('view') === 'edit')
-    ) {
-      return {
-        href: '/settings/gateway/transformation-provider',
-        label: 'Back to Transformation Provider',
-      };
-    }
-    if (pathname === '/settings/gateway/entitlement-management' || pathname === '/settings/gateway/workflow-builder' ||
-        pathname === '/settings/gateway/sam' || pathname === '/settings/gateway/native-users' ||
-        pathname === '/settings/gateway/admin-roles' || pathname === '/settings/gateway/custom-schema' ||
-        pathname === '/settings/gateway/general' || pathname === '/settings/gateway/scheduler' ||
-        pathname === '/settings/gateway/manage-business-roles' || pathname === '/settings/gateway/manage-approval-policies' ||
-        pathname === '/settings/gateway/ai-insights-configuration' || pathname === '/settings/gateway/continuous-compliance' ||
-        pathname === '/settings/gateway/continuous-compliance-event-definitions' ||
-        pathname === '/settings/gateway/sla-escalation-policies' ||
-        pathname === '/settings/gateway/agent-task-library' ||
-        pathname === '/settings/gateway/nhi-settings' || pathname === '/settings/gateway/lookup-custom-approvers' ||
-        pathname === '/settings/gateway/transformation-provider') {
-      return { href: '/settings/gateway', label: 'Back to Generic' };
-    }
-    if (pathname.startsWith('/settings/gateway/manage-access-policy')) {
-      return { href: '/settings/gateway/manage-access-policy', label: 'Back to Access Policy' };
-    }
-    if (pathname === '/non-human-identity/create-nhi') {
-      return { href: '/non-human-identity/nhi-inventory', label: 'Back to NHI Inventory' };
-    }
-    if (pathname === '/non-human-identity/request-access') {
-      return { href: '/non-human-identity', label: 'Back to Legacy NHI' };
-    }
-    if (pathname.match(/^\/non-human-identity\/nhi-inventory\/[^/]+$/)) {
-      return { href: '/non-human-identity/nhi-inventory', label: 'Back to NHI Inventory' };
-    }
-    if (pathname.match(/^\/non-human-identity-2\/nhis\/[^/]+$/)) {
-      return { href: '/non-human-identity-2/nhis', label: 'Back to NHIs' };
-    }
-    if (pathname.match(/^\/non-human-identity\/ai-agent-inventory\/[^/]+$/)) {
-      return { href: '/non-human-identity/ai-agent-inventory', label: 'Back to AI Agent Inventory' };
-    }
-    if (pathname.match(/^\/non-human-identity\/rotation-policy\/[^/]+$/)) {
-      return { href: '/non-human-identity/rotation-policy', label: 'Back to Rotation Policy' };
-    }
-    // App Owner / Access Review
-    if (pathname === '/app-owner') {
-      return { href: '/access-review', label: 'Back to Access Review' };
-    }
-    if (pathname === '/access-review/nhi-q3-production-review') {
-      return { href: '/access-review', label: 'Back to Access Review' };
     }
     // Users
     if (pathname === '/user/create-group' || pathname === '/user/create-user') {
@@ -268,74 +161,9 @@ export function Navigation() {
       // Transient redirector to your own profile — no back link.
       return null;
     }
-    // Campaigns
-    if (pathname.startsWith('/campaigns/manage-campaigns/')) {
-      const fromTab = searchParams?.get('fromTab') || searchParams?.get('tab');
-      if (fromTab === 'template') {
-        return { href: '/campaigns?tab=template', label: 'Back to Templates' };
-      }
-      return { href: '/campaigns', label: 'Back to Campaigns' };
-    }
-    if (pathname.startsWith('/campaigns/schedule/') || pathname.startsWith('/campaigns/new')) {
-      const fromTab = searchParams?.get('fromTab') || searchParams?.get('tab');
-      if (fromTab === 'template') {
-        return { href: '/campaigns?tab=template', label: 'Back to Templates' };
-      }
-      return { href: '/campaigns', label: 'Back to Campaigns' };
-    }
-    // Catalog opened from CC (owner inactive) → back to Continuous Compliance list
-    if (pathname === '/catalog' && searchParams?.get('ccOwnerInactive') === '1') {
-      return { href: '/campaigns/continuous-compliance', label: 'Back to Continuous Compliance' };
-    }
-    // Continuous Compliance campaign details → back to Continuous Compliance list
-    if (
-      pathname === '/campaigns/continuous-compliance/review' ||
-      pathname === '/campaigns/continuous-compliance/entitlement-review' ||
-      pathname === '/campaigns/continuous-compliance/unlinked-accounts' ||
-      pathname === '/campaigns/continuous-compliance/account-inactive-review' ||
-      pathname === '/campaigns/continuous-compliance/manager-inactive-review' ||
-      pathname === '/campaigns/continuous-compliance/service-account-owner-inactive-review' ||
-      pathname === '/campaigns/continuous-compliance/newly-discovered-entitlement-review' ||
-      pathname === '/campaigns/continuous-compliance/api-key-rotation-review' ||
-      pathname === '/campaigns/continuous-compliance/secret-inactivity-review'
-    ) {
-      return { href: '/campaigns/continuous-compliance', label: 'Back to Continuous Compliance' };
-    }
     // Applications
     if (pathname.startsWith('/applications/') && pathname !== '/applications') {
       return { href: '/applications', label: 'Back to Applications' };
-    }
-    // Entitlement Owner
-    if (pathname === '/entitlement-owner') {
-      return { href: '/access-review', label: 'Back to Access Review' };
-    }
-    // SoD Audit detail opened from Continuous Compliance → back to CC (not SoD list)
-    if (
-      pathname.startsWith('/reports/sod-audit/') &&
-      pathname !== '/reports/sod-audit' &&
-      searchParams?.get('source') === 'continuous-compliance'
-    ) {
-      return { href: '/campaigns/continuous-compliance', label: 'Back to Continuous Compliance' };
-    }
-    // SoD Audit detail → back to SoD Audit list
-    if (pathname.startsWith('/reports/sod-audit/') && pathname !== '/reports/sod-audit') {
-      return { href: '/reports/sod-audit', label: 'Back to SoD Audit' };
-    }
-    // Reports
-    if (pathname === '/reports/filter') {
-      return { href: '/reports', label: 'Back to Reports' };
-    }
-    // OCI Policy workspace (detail page)
-    if (pathname.match(/^\/oci-policy-analysis\/policies\/[^/]+$/)) {
-      return { href: '/oci-policy-analysis', label: 'Back to Policy Dashboard' };
-    }
-    // Oracle Reports
-    if (pathname.startsWith('/oracle-reports/') && pathname !== '/oracle-reports') {
-      return { href: '/oracle-reports', label: 'Back to Oracle Reports' };
-    }
-    // Risk Posture detail pages → back to Risk Analysis hub
-    if (pathname.startsWith('/risk-posture/orphan-exposure') || pathname.startsWith('/risk-posture/user-access-drift')) {
-      return { href: '/risk-analysis', label: 'Back to Risk Analysis' };
     }
     // Track Request detail → back to Track Request list
     if (pathname.startsWith('/track-request/') && pathname !== '/track-request') {
