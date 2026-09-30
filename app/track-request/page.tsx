@@ -738,7 +738,6 @@ const TrackRequest: React.FC = () => {
                 // ignore
               }
             }}
-            suppressSizeToFit={false}
           />
         </div>
         <div className="mt-1">

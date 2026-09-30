@@ -92,6 +92,7 @@ import {
   isRestLikeGroupedOnboardApplicationType,
   parseConnectionTestResult,
   type SupportedAppTypeAdvancedParts,
+  type ScreenUsersSchemaPayload,
   type ApplicationTypeIntegrationFieldGroup,
 } from "@/lib/api";
 import TabbedIntegrationOnboardGroups from "../components/TabbedIntegrationOnboardGroups";
@@ -371,7 +372,7 @@ export default function AddApplicationPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [attributeMappingPage, setAttributeMappingPage] = useState(1);
   const [isEditingAttribute, setIsEditingAttribute] = useState(false);
-  const [editingAttribute, setEditingAttribute] = useState<any>(null);
+  const [editingAttribute, setEditingAttribute] = useState<AttributeMapping | null>(null);
   const ATTR_MAPPING_PAGE_SIZE = 10;
   const [groupedIntegrationTab, setGroupedIntegrationTab] = useState(CONNECTION_PARAMETERS_GROUP_ID);
   const [testConnectionLoading, setTestConnectionLoading] = useState(false);
@@ -796,7 +797,7 @@ export default function AddApplicationPage() {
 
   const handleInputChange = (step: keyof FormData, field: string, value: any) => {
     setFormData(prev => {
-      const nextStep = { ...prev[step], [field]: value };
+      const nextStep: Record<string, any> = { ...prev[step], [field]: value };
       if (step === "step3") {
         if (field === "userSearchBase") nextStep.user_searchBase = value;
         else if (field === "groupSearchBase") nextStep.group_searchBase = value;
@@ -1735,7 +1736,7 @@ export default function AddApplicationPage() {
       try {
         const data =
           appType === "ScreenScrapping"
-            ? await fetchScreenUsersSchema(schemaPayload)
+            ? await fetchScreenUsersSchema(schemaPayload as ScreenUsersSchemaPayload)
             : await fetchRestUsersSchema(schemaPayload);
         const rows = attributeMappingsFromRestUsersSchemaJson(data);
         if (rows.length === 0) {
@@ -3449,7 +3450,7 @@ export default function AddApplicationPage() {
                                    {label}
                                  </div>
                                  <div className="text-[10px] text-slate-700 mt-0.5 leading-snug line-clamp-2">
-                                   {describeAdvancedSettingSlotValue(type.advancedSettingParts[key])}
+                                   {describeAdvancedSettingSlotValue(type.advancedSettingParts?.[key])}
                                  </div>
                                </div>
                              ))}

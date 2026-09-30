@@ -8,7 +8,7 @@ import {
   Edit2Icon,
   MoreVertical,
 } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type JSX } from "react";
 import Buttons from "react-multi-date-picker/components/button";
 import ProxyActionModal from "../ProxyActionModal";
 import DelegateActionModal from "../DelegateActionModal";
@@ -17,17 +17,9 @@ import { useActionPanel } from "@/contexts/ActionPanelContext";
 import { useRightSidebar } from "@/contexts/RightSidebarContext";
 import RemediateSidebar from "../RemediateSidebar";
 
-interface User {
-  username: string;
-  email: string;
-  role: string;
-}
-
-interface Group {
-  name: string;
-  email: string;
-  role: string;
-}
+// Same shape the Delegate/Proxy modals hand back (raw API rows)
+type User = Record<string, string>;
+type Group = Record<string, string>;
 
 interface ActionButtonsProps<T> {
   api: GridApi;
@@ -219,7 +211,7 @@ const ActionButtons = <T extends { status?: string }>({
   const [commentCategory, setCommentCategory] = useState("");
   const [commentSubcategory, setCommentSubcategory] = useState("");
   const [isCommentDropdownOpen, setIsCommentDropdownOpen] = useState(false);
-  const [selectedDelegate, setSelectedDelegate] = useState<User | Group | null>(
+  const [selectedDelegate, setSelectedDelegate] = useState<User | Group | "User" | "Group" | null>(
     null
   );
   const [error, setError] = useState<string | null>(null);

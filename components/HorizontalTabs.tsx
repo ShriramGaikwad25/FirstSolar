@@ -115,7 +115,7 @@ const HorizontalTabs: React.FC<TabsProps> = ({
               <button
                 key={index}
                 type="button"
-                ref={(el) => (tabRefs.current[index] = el)}
+                ref={(el) => { tabRefs.current[index] = el; }}
                 role="tab"
                 id={tabId(index)}
                 aria-controls={panelId(index)}

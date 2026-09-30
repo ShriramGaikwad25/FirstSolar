@@ -18,7 +18,8 @@ interface DelegateActionModalProps {
   groups: Group[];
   userAttributes: Attribute[];
   groupAttributes: Attribute[];
-  onSelectDelegate: (delegate: User | Group) => void;
+  // Submit without picking a row passes just the delegate type ("User" | "Group")
+  onSelectDelegate: (delegate: User | Group | "User" | "Group") => void;
 }
 
 const DelegateActionModal: React.FC<DelegateActionModalProps> = ({

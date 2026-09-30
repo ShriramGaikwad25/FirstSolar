@@ -61,7 +61,13 @@ export const activeColumnDefs: ColDef[] = [
     headerName: "Actions",
     width: 280,
     cellRenderer: (params: ActionCellRendererParams) => (
-      <ActionButtons api={params.api} selectedRows={[params.data]} />
+      <ActionButtons
+        api={params.api}
+        selectedRows={[params.data]}
+        context="user"
+        reviewerId={params.data.reviewerId}
+        certId=""
+      />
     ),
   },
 ];

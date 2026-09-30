@@ -189,7 +189,7 @@ export default function AppInventoryPage() {
         };
 
         if (response && response.Applications) {
-          const applications = Array.isArray(response.Applications)
+          const applications: any[] = Array.isArray(response.Applications)
             ? response.Applications
             : [];
 
@@ -708,7 +708,7 @@ useEffect(() => {
           theme={themeQuartz}
           pagination={false}
           domLayout="autoHeight"
-          style={{ width: "100%" }}
+          containerStyle={{ width: "100%" }}
           {...gridProps}
         />
       </div>
@@ -863,7 +863,7 @@ useEffect(() => {
               }}
               pagination={false}
               domLayout="autoHeight"
-              style={{ width: "100%" }}
+              containerStyle={{ width: "100%" }}
             />
           </div>
         </div>

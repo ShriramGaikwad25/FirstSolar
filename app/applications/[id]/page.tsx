@@ -7,9 +7,12 @@ import {
   GridApi,
   ICellRendererParams,
   IDetailCellRendererParams,
+  ValueFormatterParams,
 } from "ag-grid-enterprise";
 import dynamic from "next/dynamic";
-const AgGridReact = dynamic(
+import type { AgGridReactProps } from "ag-grid-react";
+// Row data on this page is untyped API data
+const AgGridReact = dynamic<AgGridReactProps<any>>(
   () => import("ag-grid-react").then((mod) => mod.AgGridReact),
   { ssr: false }
 );
@@ -2833,13 +2836,13 @@ export default function ApplicationDetailPage() {
         field: "lastlogindate",
         headerName: "Last Login",
         enableRowGroup: true,
-        valueFormatter: (params: ICellRendererParams) =>
+        valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
         field: "lastAccessReview",
         headerName: "Last Review",
-        valueFormatter: (params: ICellRendererParams) =>
+        valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
@@ -2863,7 +2866,7 @@ export default function ApplicationDetailPage() {
         headerName: "Access Grant Date",
         flex: 2,
         hide: true,
-        valueFormatter: (params: ICellRendererParams) =>
+        valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       { field: "userType", headerName: "User Type", flex: 2, hide: true },
@@ -2877,7 +2880,7 @@ export default function ApplicationDetailPage() {
         field: "syncDate",
         headerName: "Sync Date",
         flex: 1,
-        valueFormatter: (params: ICellRendererParams) =>
+        valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
@@ -3252,7 +3255,7 @@ export default function ApplicationDetailPage() {
         flex: 1,
         minWidth: 150,
         valueGetter: () => "2026-07-21",
-        valueFormatter: (params: ICellRendererParams) =>
+        valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
@@ -3260,7 +3263,7 @@ export default function ApplicationDetailPage() {
         headerName: "Last Reviewed",
         flex: 1,
         minWidth: 150,
-        valueFormatter: (params: ICellRendererParams) =>
+        valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
@@ -3373,7 +3376,7 @@ export default function ApplicationDetailPage() {
             </div>
           );
         },
-        suppressMenu: true,
+        suppressHeaderMenuButton: true,
         sortable: false,
         filter: false,
         resizable: false,
@@ -3725,7 +3728,7 @@ export default function ApplicationDetailPage() {
                   pageSize={entPageSize}
                   onPageChange={setEntCurrentPage}
                   onPageSizeChange={(newPageSize) => {
-                    setEntPageSize(newPageSize);
+                    setEntPageSize(newPageSize as number);
                     setEntCurrentPage(1); // Reset to first page when changing page size
                   }}
                   pageSizeOptions={[10, 20, 50, 100]}
@@ -3767,7 +3770,7 @@ export default function ApplicationDetailPage() {
                 pageSize={entPageSize}
                 onPageChange={setEntCurrentPage}
                 onPageSizeChange={(newPageSize) => {
-                  setEntPageSize(newPageSize);
+                  setEntPageSize(newPageSize as number);
                   setEntCurrentPage(1); // Reset to first page when changing page size
                 }}
                 pageSizeOptions={[10, 20, 50, 100]}
@@ -3872,7 +3875,7 @@ export default function ApplicationDetailPage() {
                 pageSize={entPageSize}
                 onPageChange={setEntCurrentPage}
                 onPageSizeChange={(newPageSize) => {
-                  setEntPageSize(newPageSize);
+                  setEntPageSize(newPageSize as number);
                   setEntCurrentPage(1); // Reset to first page when changing page size
                 }}
                 pageSizeOptions={[10, 20, 50, 100]}
@@ -3911,7 +3914,7 @@ export default function ApplicationDetailPage() {
               pageSize={entPageSize}
               onPageChange={setEntCurrentPage}
               onPageSizeChange={(newPageSize) => {
-                setEntPageSize(newPageSize);
+                setEntPageSize(newPageSize as number);
                 setEntCurrentPage(1); // Reset to first page when changing page size
               }}
               pageSizeOptions={[10, 20, 50, 100]}
@@ -4038,7 +4041,7 @@ export default function ApplicationDetailPage() {
               pageSize={pageSize}
               onPageChange={handlePageChange}
               onPageSizeChange={(newPageSize) => {
-                setPageSize(newPageSize);
+                setPageSize(newPageSize as number);
                 setCurrentPage(1); // Reset to first page when changing page size
                 closeSidebar();
               }}
@@ -4069,7 +4072,7 @@ export default function ApplicationDetailPage() {
             pageSize={pageSize}
             onPageChange={handlePageChange}
             onPageSizeChange={(newPageSize) => {
-              setPageSize(newPageSize);
+              setPageSize(newPageSize as number);
               setCurrentPage(1); // Reset to first page when changing page size
               closeSidebar();
             }}

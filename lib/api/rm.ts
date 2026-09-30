@@ -616,7 +616,7 @@ const RM_GET_USER_ACCESS_SIM = "SELECT public.kf_rm_get_user_access(?::text) AS 
 const RM_SIMULATE_USER_ACCESS = "SELECT public.kf_rm_simulate_user_access(?::jsonb) AS result";
 const RM_SIMULATE_ROLE = "SELECT public.kf_rm_simulate_role(?, ?::bigint) AS result";
 
-function unwrapSimulationResult<T>(res: unknown): SimulationApiResult & { data?: T } {
+function unwrapSimulationResult<T>(res: unknown): Omit<SimulationApiResult, "data"> & { data?: T } {
   const raw = getKfResultData(res);
   if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
     const o = raw as Record<string, unknown>;

@@ -19,9 +19,6 @@ const nextConfig: NextConfig = {
     ];
   },
   // ESLint during build: configure via eslint.config.mjs and run `npm run lint` separately (Next.js 16+).
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   // Add empty turbopack config to silence warnings
   turbopack: {},
   // Keep webpack config for ag-grid externals (needed for SSR)

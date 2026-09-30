@@ -454,7 +454,7 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
           </p>
         </>
       )}
-      {previewJson && (
+      {!!previewJson && (
         <p className="text-xs text-gray-500 mb-2">
           JSON parsed. Ruleset code:{" "}
           <b>

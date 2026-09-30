@@ -135,11 +135,13 @@ const initialExceptionalState: ExceptionalState = {
 
 const SHOW_SDK_SECTION = false;
 
+type EventOperation = "create" | "update" | "delete" | "getuser" | "getalluser";
+
 const initialEventTabState = {
   isServiceExpanded: false,
   isSDKExpanded: false,
-  activeOperation: "create" as const,
-  activeSDKOperation: "create" as const,
+  activeOperation: "create" as EventOperation,
+  activeSDKOperation: "create" as EventOperation,
 };
 
 const defaultAppAccessRule = {
@@ -607,7 +609,7 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
         if (controller.signal.aborted) return;
 
         if (expressionsUrl) {
-          if (!exprRes?.ok) throw new Error(`Expressions request failed (${exprRes.status})`);
+          if (!exprRes?.ok) throw new Error(`Expressions request failed (${exprRes?.status})`);
         }
         if (!scimRes.ok) throw new Error(`SCIM attributes request failed (${scimRes.status})`);
 

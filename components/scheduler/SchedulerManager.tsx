@@ -26,6 +26,9 @@ import { config } from "../../lib/config";
 import { apiRequestWithAuth } from "@/lib/auth";
 import "./SchedulerManager.css";
 
+// The scheduler API returns an array on success but may return an error object instead
+type SchedulerErrorFields = { error?: string; message?: string };
+
 interface JobSchedule {
   id: string;
   name: string;
@@ -182,7 +185,7 @@ export default function SchedulerManager() {
       setError(null);
 
       // Call external scheduler API directly with auth
-      const data = await apiRequestWithAuth<string[]>(
+      const data = await apiRequestWithAuth<string[] & SchedulerErrorFields>(
         config.api.endpoints.jobs
       );
       console.log("Fetched jobs data:", data);
@@ -376,7 +379,7 @@ export default function SchedulerManager() {
       setJobHistoryError(null);
 
       // Call external scheduler history API directly with auth
-      const data = await apiRequestWithAuth<any[]>(
+      const data = await apiRequestWithAuth<any[] & SchedulerErrorFields>(
         `https://preview.keyforge.ai/kfscheduler/api/v1/ACMECOM/jobs/history/${encodeURIComponent(
           groupName
         )}/${encodeURIComponent(jobName)}`

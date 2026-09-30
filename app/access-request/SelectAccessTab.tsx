@@ -256,6 +256,7 @@ interface User {
   username: string;
   department?: string;
   jobTitle?: string;
+  employeeId?: string;
 }
 
 interface SelectAccessTabProps {

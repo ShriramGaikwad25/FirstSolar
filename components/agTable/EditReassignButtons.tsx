@@ -17,17 +17,9 @@ interface EditReassignButtonsProps<T> {
   onActionSuccess?: () => void;
 }
 
-interface User {
-  username: string;
-  email: string;
-  role: string;
-}
-
-interface Group {
-  name: string;
-  email: string;
-  role: string;
-}
+// Same shape the Delegate/Proxy modals hand back (raw API rows)
+type User = Record<string, string>;
+type Group = Record<string, string>;
 
 const EditReassignButtons = <T extends { status?: string }>({
   api,

@@ -2365,7 +2365,7 @@ export default function WorkflowBuilderCreatePage() {
         ownerType: fresh.step1.ownerType,
         userType: fresh.step1.userType,
         specificUserExpression: fresh.step1.specificUserExpression,
-        specificApps: fresh.step1.specificApps,
+        specificApps: fresh.step1.specificApps || [],
         expressionApps: fresh.step1.expressionApps,
         expressionEntitlement: fresh.step1.expressionEntitlement,
         groupListIsChecked: fresh.step1.groupListIsChecked,
@@ -2546,6 +2546,7 @@ export default function WorkflowBuilderCreatePage() {
     const subscription = watch((values) => {
       setFormData((prev) => ({
         ...prev,
+        // watch() values are DeepPartial; the form always holds complete rows at runtime
         step1: {
           ownerUser: values.ownerUser || [],
           ownerGroup: values.ownerGroup || [],
@@ -2567,7 +2568,7 @@ export default function WorkflowBuilderCreatePage() {
           excludeUsersIsChecked: values.excludeUsersIsChecked || false,
           excludeUsers: values.excludeUsers || null,
           selectData: values.selectData || "",
-        },
+        } as typeof prev.step1,
       }));
     });
     return () => subscription.unsubscribe();

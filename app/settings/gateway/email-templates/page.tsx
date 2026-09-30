@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Mail, Archive, Search } from "lucide-react";
 import AgGridReact from "@/components/ClientOnlyAgGrid";
 import "@/lib/ag-grid-setup";
-import { ColDef, GridApi, GetRowIdParams } from "ag-grid-enterprise";
+import { ColDef, GridApi, GetRowIdParams, GridReadyEvent } from "ag-grid-enterprise";
 import { defaultColDef } from "@/components/dashboard/columnDefs";
 import { useLoading } from "@/contexts/LoadingContext";
 import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
@@ -49,7 +49,7 @@ export default function GatewayEmailTemplatesSettings() {
       try {
         setLoading(true);
         setError(null);
-        showApiLoader?.(true, "Loading email templates...");
+        showApiLoader?.("Loading email templates...");
 
         const response = await fetch(
           `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
@@ -228,7 +228,7 @@ export default function GatewayEmailTemplatesSettings() {
                 defaultColDef={defaultColDef}
                 domLayout="autoHeight"
                 rowSelection="single"
-                onGridReady={(params) => {
+                onGridReady={(params: GridReadyEvent) => {
                   setGridApi(params.api);
                   params.api.sizeColumnsToFit();
                   const handleResize = () => {

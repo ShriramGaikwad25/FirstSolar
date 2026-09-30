@@ -1,3 +1,9 @@
+interface DataItem {
+  label: string;
+  value: number;
+  color?: string;
+}
+
 interface FilterPanelProps {
   data: Record<string, DataItem[]>;
   selected: { [key: string]: number | null };

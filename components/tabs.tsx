@@ -86,7 +86,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, className, buttonClass, activeClass, 
         {tabs.map((tab, index) => (
           <button
             key={index}
-            ref={(el) => (tabRefs.current[index] = el)}
+            ref={(el) => { tabRefs.current[index] = el; }}
             role="tab"
             id={tabId(index)}
             aria-controls={panelId(index)}

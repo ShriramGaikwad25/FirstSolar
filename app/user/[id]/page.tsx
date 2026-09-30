@@ -21,10 +21,12 @@ import { executeQuery } from "@/lib/api";
 import type { ColDef } from "ag-grid-enterprise";
 import dynamic from "next/dynamic";
 import { useReactToPrint } from "react-to-print";
+import type { AgGridReact as AgGridReactType, AgGridReactProps } from "ag-grid-react";
 import "@/components/scheduler/SchedulerManager.css";
 
 // Dynamically import AgGridReact with SSR disabled
-const AgGridReact = dynamic(() => import("ag-grid-react").then((mod) => mod.AgGridReact), {
+// ref is forwarded as a normal prop (React 19), so declare it alongside the grid props
+const AgGridReact = dynamic<AgGridReactProps & React.RefAttributes<AgGridReactType>>(() => import("ag-grid-react").then((mod) => mod.AgGridReact), {
   ssr: false,
 });
 import "@/lib/ag-grid-setup";
@@ -1100,7 +1102,7 @@ export default function UserDetailPage() {
       );
   };
 
-  const CombinedView = ({ printRef }: { printRef: React.RefObject<HTMLDivElement> }) => {
+  const CombinedView = ({ printRef }: { printRef: React.RefObject<HTMLDivElement | null> }) => {
     return (
       <div className="space-y-6" ref={printRef}>
         {/* Profile Card */}
@@ -1117,7 +1119,8 @@ export default function UserDetailPage() {
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `User_Profile_${userData.displayName || userData.email}_${new Date().toISOString().split('T')[0]}`,
-    onBeforeGetContent: () => {
+    // react-to-print v3: onBeforePrint runs before the content is copied (was onBeforeGetContent in v2)
+    onBeforePrint: () => {
       // Expand AG Grid containers to show all rows
       const gridContainers = printRef.current?.querySelectorAll('.ag-theme-alpine');
       gridContainers?.forEach((container: any) => {
