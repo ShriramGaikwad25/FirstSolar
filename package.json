@@ -32,7 +32,7 @@
     "react-multi-date-picker": "^4.5.2",
     "react-select": "^5.10.2",
     "react-to-print": "^3.3.0",
-    "uuid": "^13.0.2",
+    "uuid": "^14.0.2",
     "yup": "^1.7.1"
   },
   "devDependencies": {
