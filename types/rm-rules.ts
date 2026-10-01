@@ -82,6 +82,33 @@ export type FunctionRow = {
   privilege_count: number;
 };
 
+/** M:N rule ↔ ruleset membership; the home ruleset is where the rule was created. */
+export type RuleRulesetMembership = {
+  ruleset_id: number;
+  ruleset_code: string;
+  ruleset_name: string;
+  is_home: boolean;
+};
+
+export type ScopeValue = {
+  scope_type: string;
+  scope_id: string;
+  scope_name: string;
+  in_use?: boolean;
+};
+
+/** Conflicting scope combination for `scope_enforcement = SCOPE_PAIR`. */
+export type RuleScopePair = {
+  pair_id?: number;
+  a_scope_type: string;
+  a_scope_id: string;
+  a_scope_name?: string;
+  b_scope_type: string;
+  b_scope_id: string;
+  b_scope_name?: string;
+  symmetric: boolean;
+};
+
 export type UpsertRuleV2Input = {
   ruleset_id: number;
   rule_code: string;

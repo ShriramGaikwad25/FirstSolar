@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getRuleDetail,
   upsertRuleV2,
   listUserAttributes,
   searchFunctions,
+  listRulesets,
+  listRuleRulesets,
+  setRuleRulesets,
 } from "@/lib/api/rm";
 import { useLookup } from "@/hooks/useLookup";
 import type { RmLookupValue } from "@/lib/api/rm";
@@ -18,6 +21,7 @@ import type {
   UserAttributeCatalog,
   FunctionRow,
 } from "@/types/rm-rules";
+import type { RmRuleset } from "@/types/rm-dashboard";
 import Modal from "@/components/Modal";
 import {
   Pencil,
@@ -32,6 +36,8 @@ import {
   MousePointer,
   Trash2,
   Users,
+  Library,
+  Home,
 } from "lucide-react";
 
 const KIND_META: Record<string, { color: string; el: ReactNode }> = {
@@ -87,7 +93,7 @@ export function PrivilegeRow({ p }: { p: RulePrivilege }) {
   );
 }
 
-type ModalTab = "OVERVIEW" | "SIDE_A" | "SIDE_B" | "USER_CONDITIONS";
+type ModalTab = "OVERVIEW" | "SIDE_A" | "SIDE_B" | "USER_CONDITIONS" | "RULESETS";
 
 type RuleDetailModalProps = {
   open: boolean;
@@ -255,7 +261,9 @@ export function RuleDetailModal({
       </div>
 
       <nav className="flex flex-wrap gap-0.5 border-b border-slate-200 mb-3">
-        {(["OVERVIEW", "SIDE_A", "SIDE_B", "USER_CONDITIONS"] as ModalTab[]).map((t) => {
+        {(["OVERVIEW", "SIDE_A", "SIDE_B", "USER_CONDITIONS", "RULESETS"] as ModalTab[])
+          .filter((t) => t !== "RULESETS" || (ruleId !== null && !creating))
+          .map((t) => {
           const label =
             t === "OVERVIEW"
               ? "Overview"
@@ -263,7 +271,9 @@ export function RuleDetailModal({
                 ? `Side A (${sideA.length})`
                 : t === "SIDE_B"
                   ? `Side B (${sideB.length})`
-                  : `User Conditions (${userConditions.length})`;
+                  : t === "RULESETS"
+                    ? "Rulesets"
+                    : `User Conditions (${userConditions.length})`;
           return (
             <button
               key={t}
@@ -317,7 +327,133 @@ export function RuleDetailModal({
           onChange={(uc) => updateForm("user_conditions", uc)}
         />
       )}
+      {tab === "RULESETS" && ruleId !== null && !creating && (
+        <RuleRulesetsEditor ruleId={ruleId} homeRulesetId={form.ruleset_id} editMode={editMode} />
+      )}
     </Modal>
+  );
+}
+
+// Rulesets tab — manage M:N rule↔ruleset membership
+function RuleRulesetsEditor({
+  ruleId,
+  homeRulesetId,
+  editMode,
+}: {
+  ruleId: number;
+  /** The rule's own ruleset_id — fallback when membership doesn't flag a home row. */
+  homeRulesetId: number;
+  editMode: boolean;
+}) {
+  const qc = useQueryClient();
+
+  const membershipQ = useQuery({
+    queryKey: ["rule-rulesets", ruleId],
+    queryFn: async () => (await listRuleRulesets(ruleId)).data ?? [],
+  });
+  // Same call/key as the Rules page: kf_rm_list_rulesets returns nothing for an empty status.
+  const allRulesetsQ = useQuery({
+    queryKey: ["rulesets-active"],
+    queryFn: async () => (await listRulesets("ACTIVE", 1, 200)).data ?? [],
+  });
+
+  const homeId = useMemo(
+    () => (membershipQ.data ?? []).find((m) => m.is_home)?.ruleset_id ?? (homeRulesetId || undefined),
+    [membershipQ.data, homeRulesetId]
+  );
+  const memberIds = useMemo(() => {
+    const ids = new Set((membershipQ.data ?? []).map((m) => m.ruleset_id));
+    if (homeId) ids.add(homeId);
+    return ids;
+  }, [membershipQ.data, homeId]);
+
+  const save = useMutation({
+    mutationFn: async (nextNonHomeIds: number[]) => setRuleRulesets(ruleId, nextNonHomeIds),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["rule-rulesets", ruleId] });
+      void qc.invalidateQueries({ queryKey: ["rules"] });
+      void qc.invalidateQueries({ queryKey: ["rulesets-active"] });
+    },
+  });
+
+  function toggle(rsId: number, checked: boolean) {
+    const current = (membershipQ.data ?? []).filter((m) => !m.is_home).map((m) => m.ruleset_id);
+    const next = checked
+      ? Array.from(new Set([...current, rsId]))
+      : current.filter((id) => id !== rsId);
+    save.mutate(next);
+  }
+
+  if (membershipQ.isLoading || allRulesetsQ.isLoading) {
+    return <div className="text-sm text-slate-500">Loading…</div>;
+  }
+
+  // Keep rulesets the rule belongs to visible even if they're not ACTIVE.
+  const rulesets: RmRuleset[] = [...(allRulesetsQ.data ?? [])];
+  for (const m of membershipQ.data ?? []) {
+    if (!rulesets.some((r) => r.ruleset_id === m.ruleset_id)) {
+      rulesets.push({ ruleset_id: m.ruleset_id, ruleset_code: m.ruleset_code, ruleset_name: m.ruleset_name });
+    }
+  }
+  const loadError = membershipQ.error ?? allRulesetsQ.error;
+
+  return (
+    <div className="text-[13px]">
+      <div className="mb-2.5 flex items-center gap-1.5 text-slate-500">
+        <Library className="h-3.5 w-3.5 shrink-0" />
+        This rule belongs to {memberIds.size} ruleset{memberIds.size === 1 ? "" : "s"}. The home
+        ruleset (where it was created) is always retained.
+      </div>
+      {loadError && (
+        <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+          {(loadError as Error).message}
+        </div>
+      )}
+      {rulesets.length === 0 && !loadError && (
+        <div className="py-4 text-center text-slate-500">No rulesets found.</div>
+      )}
+      {save.isError && (
+        <div className="mb-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded px-2 py-1">
+          {(save.error as Error).message}
+        </div>
+      )}
+      <div className="grid gap-1">
+        {rulesets.map((rs) => {
+          const isMember = memberIds.has(rs.ruleset_id);
+          const isHome = rs.ruleset_id === homeId;
+          return (
+            <label
+              key={rs.ruleset_id}
+              className={`flex items-center gap-2.5 rounded-lg border border-slate-200 px-2.5 py-2 ${
+                isMember ? "bg-blue-50" : "bg-white"
+              } ${isHome || !editMode ? "cursor-default" : "cursor-pointer"} ${
+                !editMode && !isMember ? "opacity-60" : ""
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={isMember}
+                disabled={isHome || !editMode || save.isPending}
+                onChange={(e) => toggle(rs.ruleset_id, e.target.checked)}
+                aria-label={`Map to ${rs.ruleset_code ?? rs.ruleset_id}`}
+              />
+              <span className="font-semibold">{rs.ruleset_name ?? rs.ruleset_code}</span>
+              <span className="text-[11px] text-slate-500">{rs.ruleset_code}</span>
+              {isHome && (
+                <span className="ml-auto inline-flex items-center gap-0.5 rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-medium text-blue-800">
+                  <Home className="h-2.5 w-2.5" /> Home
+                </span>
+              )}
+            </label>
+          );
+        })}
+      </div>
+      {!editMode && (
+        <div className="mt-2 text-xs text-slate-500">
+          Click <b>Edit</b> above to change ruleset membership.
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -638,8 +774,8 @@ function FunctionCard({
             {fn.system_type}
           </span>
           <div className="min-w-0">
-            <div className="font-semibold text-sm truncate">{fn.function_code}</div>
-            <div className="text-xs text-slate-500 truncate">{fn.function_name}</div>
+            <div className="font-semibold text-sm truncate" title={fn.function_code}>{fn.function_code}</div>
+            <div className="text-xs text-slate-500 truncate" title={fn.function_name}>{fn.function_name}</div>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">

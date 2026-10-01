@@ -282,7 +282,7 @@ export default function RiskAnalysisDashboardClient() {
                   <tbody>
                     {d.top_risky_users.map((u) => (
                       <tr key={u.userid} className="border-b border-gray-100 last:border-0">
-                        <td className="py-2 px-3 text-gray-900 truncate">{u.displayname || u.username}</td>
+                        <td className="py-2 px-3 text-gray-900 truncate" title={u.displayname || u.username || undefined}>{u.displayname || u.username}</td>
                         <td className="py-2 px-3 text-center tabular-nums text-gray-800">{u.violation_count}</td>
                         <td className="py-2 px-3 text-center font-semibold text-red-600 tabular-nums">{u.risk_score}</td>
                       </tr>
@@ -319,8 +319,8 @@ export default function RiskAnalysisDashboardClient() {
                   {d.recent_runs.map((r) => (
                     <tr key={r.run_id} className="border-b border-gray-100 last:border-0">
                       <td className="py-2 px-3 text-gray-900 tabular-nums">#{r.run_id}</td>
-                      <td className="py-2 px-3 text-gray-800 truncate">{r.ruleset_code}</td>
-                      <td className="py-2 px-3 text-gray-800 truncate">{r.run_type}</td>
+                      <td className="py-2 px-3 text-gray-800 truncate" title={r.ruleset_code}>{r.ruleset_code}</td>
+                      <td className="py-2 px-3 text-gray-800 truncate" title={r.run_type}>{r.run_type}</td>
                       <td className="py-2 px-3">
                         <RunStatusBadge
                           label={r.run_status_name || r.run_status || "—"}

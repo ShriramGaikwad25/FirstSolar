@@ -7,6 +7,9 @@ import type {
   RuleDetail,
   RuleFunctionBinding,
   RuleListRow,
+  RuleRulesetMembership,
+  RuleScopePair,
+  ScopeValue,
   UpsertRuleV2Input,
   UserAttributeCatalog,
 } from "@/types/rm-rules";
@@ -18,9 +21,11 @@ import type {
   UpsertFunctionInput,
 } from "@/types/rm-functions";
 import type {
+  ConflictPath,
   ListViolationsParams,
   ListViolationsResult,
   Violation,
+  ViolationDetailFull,
 } from "@/types/rm-violations";
 import type { MitigationListRow, UpsertMitigationInput } from "@/types/rm-mitigations";
 import type { ExceptionListRow } from "@/types/rm-exceptions";
@@ -50,7 +55,10 @@ export type {
   RuleFunctionBinding,
   RuleListRow,
   RulePrivilege,
+  RuleRulesetMembership,
+  RuleScopePair,
   RuleUserCondition,
+  ScopeValue,
   UpsertRuleV2Input,
   UserAttributeCatalog,
 } from "@/types/rm-rules";
@@ -63,7 +71,16 @@ export type {
   PrivilegeSearchRow,
   UpsertFunctionInput,
 } from "@/types/rm-functions";
-export type { ListViolationsParams, ListViolationsResult, Violation } from "@/types/rm-violations";
+export type {
+  ConflictEdge,
+  ConflictNode,
+  ConflictPath,
+  ListViolationsParams,
+  ListViolationsResult,
+  Violation,
+  ViolationComment,
+  ViolationDetailFull,
+} from "@/types/rm-violations";
 export type { MitigationListRow, UpsertMitigationInput } from "@/types/rm-mitigations";
 export type { ExceptionListRow } from "@/types/rm-exceptions";
 export type { AnalysisRunListRow } from "@/types/rm-analysis-runs";
@@ -104,6 +121,7 @@ const RM_EXPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_export_ruleset_json(?:
 const RM_EXPORT_RULESET_CSV_QUERY = "SELECT public.kf_rm_export_ruleset_csv(?::bigint) AS result";
 const RM_IMPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_import_ruleset_json(?::jsonb, ?::text) AS result";
 const RM_IMPORT_RULESET_CSV_QUERY = "SELECT public.kf_rm_import_ruleset_from_csv(?::jsonb) AS result";
+const RM_COPY_RULESET_QUERY = "SELECT public.kf_rm_copy_ruleset(?::jsonb) AS result";
 
 function asString(v: unknown, fallback = ""): string {
   if (v == null) return fallback;
@@ -258,6 +276,36 @@ export async function importRulesetCsv(
   return { data: getKfResultData(res) };
 }
 
+export type CopyRulesetInput = {
+  source_ruleset_id: number;
+  new_code: string;
+  new_name: string;
+  /** SHARE reuses the same rule rows; DEEP duplicates every rule. */
+  mode?: "SHARE" | "DEEP";
+};
+
+export type CopyRulesetResult = {
+  ruleset_id: number;
+  ruleset_code: string;
+  mode: string;
+  rules_mapped: number;
+};
+
+export async function copyRuleset(input: CopyRulesetInput): Promise<{ data: CopyRulesetResult }> {
+  const body = {
+    source_ruleset_id: input.source_ruleset_id,
+    new_code: input.new_code,
+    new_name: input.new_name,
+    mode: input.mode ?? "SHARE",
+  };
+  const res = await executeQuery<unknown>(RM_COPY_RULESET_QUERY, [JSON.stringify(body)]);
+  const data = getKfResultData(res);
+  if (data && typeof data === "object" && (data as { success?: unknown }).success === false) {
+    throw new Error(String((data as { error?: unknown }).error ?? "Copy failed"));
+  }
+  return { data: data as CopyRulesetResult };
+}
+
 // --- Rules ---
 const RM_LIST_RULES_QUERY =
   "SELECT public.kf_rm_list_rules(?::uuid, ?::bigint, NULL, NULL, NULL, NULL, ?, ?) AS result";
@@ -409,6 +457,82 @@ export async function searchFunctions(
   return { data: asArray<FunctionRow>(getKfResultData(res)) };
 }
 
+// --- Rule <-> Ruleset M:N + scope pairs ---
+const RM_LIST_RULE_RULESETS_QUERY =
+  "SELECT public.kf_rm_list_rule_rulesets(?::uuid, ?::bigint) AS result";
+const RM_SET_RULE_RULESETS_QUERY =
+  "SELECT public.kf_rm_set_rule_rulesets(?::uuid, ?::bigint, ?::bigint[]) AS result";
+const RM_LIST_SCOPE_VALUES_QUERY =
+  "SELECT public.kf_rm_list_scope_values(?::uuid, NULLIF(?, '')) AS result";
+const RM_GET_RULE_SCOPE_PAIRS_QUERY =
+  "SELECT public.kf_rm_get_rule_scope_pairs(?::uuid, ?::bigint) AS result";
+const RM_SET_RULE_SCOPE_PAIRS_QUERY =
+  "SELECT public.kf_rm_set_rule_scope_pairs(?::uuid, ?::bigint, ?::jsonb) AS result";
+
+/** kf_rm_* functions return `{ success: false, error }` (no `data`) on failure. */
+function throwIfKfError(data: unknown, fallback: string): void {
+  if (data && typeof data === "object" && (data as { success?: unknown }).success === false) {
+    throw new Error(String((data as { error?: unknown }).error ?? fallback));
+  }
+}
+
+export async function listRuleRulesets(ruleId: number): Promise<{ data: RuleRulesetMembership[] }> {
+  const res = await executeQuery<unknown>(RM_LIST_RULE_RULESETS_QUERY, [rmTenantId(), ruleId]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Could not load ruleset membership");
+  return {
+    data: asArray<Record<string, unknown>>(data).map((m) => ({
+      ruleset_id: Number(m.ruleset_id) || 0,
+      ruleset_code: asString(m.ruleset_code),
+      ruleset_name: asString(m.ruleset_name),
+      is_home: m.is_home === true || m.is_home === "true",
+    })),
+  };
+}
+
+/** `rulesetIds` are the non-home rulesets; the home ruleset is always retained server-side. */
+export async function setRuleRulesets(
+  ruleId: number,
+  rulesetIds: number[]
+): Promise<{ data: unknown }> {
+  const res = await executeQuery<unknown>(RM_SET_RULE_RULESETS_QUERY, [
+    rmTenantId(),
+    ruleId,
+    `{${rulesetIds.join(",")}}`,
+  ]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Ruleset membership update failed");
+  return { data };
+}
+
+export async function listScopeValues(scopeType?: string): Promise<{ data: ScopeValue[] }> {
+  const res = await executeQuery<unknown>(RM_LIST_SCOPE_VALUES_QUERY, [rmTenantId(), scopeType ?? ""]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Could not load scope values");
+  return { data: asArray<ScopeValue>(data) };
+}
+
+export async function getRuleScopePairs(ruleId: number): Promise<{ data: RuleScopePair[] }> {
+  const res = await executeQuery<unknown>(RM_GET_RULE_SCOPE_PAIRS_QUERY, [rmTenantId(), ruleId]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Could not load scope pairs");
+  return { data: asArray<RuleScopePair>(data) };
+}
+
+export async function setRuleScopePairs(
+  ruleId: number,
+  pairs: RuleScopePair[]
+): Promise<{ data: unknown }> {
+  const res = await executeQuery<unknown>(RM_SET_RULE_SCOPE_PAIRS_QUERY, [
+    rmTenantId(),
+    ruleId,
+    JSON.stringify(pairs),
+  ]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Scope pairs update failed");
+  return { data };
+}
+
 // --- Functions (catalog) ---
 const RM_LIST_FUNCTIONS_PAGED_QUERY =
   "SELECT public.kf_rm_list_functions_paged(?::uuid, NULL::varchar, NULL::varchar, ?::varchar, ?, ?) AS result";
@@ -492,6 +616,110 @@ export async function listViolations(filters: ListViolationsParams): Promise<Lis
   ]);
   const raw = getKfResultData(res);
   return mapListViolationsResult(raw, page, pageSize);
+}
+
+// --- Violation workflow (detail drawer, bulk actions, conflict path) ---
+// `actor` is the signed-in user (email); the RPC gateway used to inject it server-side.
+const RM_GET_VIOLATION_DETAIL_QUERY =
+  "SELECT public.kf_rm_get_violation_detail(?::uuid, ?::bigint) AS result";
+const RM_GET_VIOLATION_PATH_QUERY =
+  "SELECT public.kf_rm_get_violation_path(?::uuid, ?::bigint) AS result";
+const RM_VIOLATION_SET_STATUS_QUERY =
+  "SELECT public.kf_rm_violation_set_status(?::uuid, ?::bigint, ?::text, NULLIF(?, ''), NULLIF(?, '')) AS result";
+const RM_VIOLATION_BULK_SET_STATUS_QUERY =
+  "SELECT public.kf_rm_violation_bulk_set_status(?::uuid, ?::bigint[], ?::text, NULLIF(?, ''), NULLIF(?, '')) AS result";
+const RM_VIOLATION_ASSIGN_QUERY =
+  "SELECT public.kf_rm_violation_assign(?::uuid, ?::bigint, NULLIF(?, ''), NULLIF(?, '')::date, NULLIF(?, '')) AS result";
+const RM_VIOLATION_COMMENT_ADD_QUERY =
+  "SELECT public.kf_rm_violation_comment_add(?::uuid, ?::bigint, ?::text, NULLIF(?, '')) AS result";
+
+export async function getViolationDetail(violationId: number): Promise<{ data: ViolationDetailFull | null }> {
+  const res = await executeQuery<unknown>(RM_GET_VIOLATION_DETAIL_QUERY, [rmTenantId(), violationId]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Could not load violation");
+  if (data && typeof data === "object" && !Array.isArray(data)) {
+    const o = data as ViolationDetailFull;
+    return { data: { ...o, details: asArray(o.details), comments: asArray(o.comments) } };
+  }
+  return { data: null };
+}
+
+export async function getViolationPath(violationId: number): Promise<{ data: ConflictPath }> {
+  const res = await executeQuery<unknown>(RM_GET_VIOLATION_PATH_QUERY, [rmTenantId(), violationId]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Could not load conflict path");
+  const o = (data && typeof data === "object" ? data : {}) as Partial<ConflictPath>;
+  return { data: { nodes: asArray(o.nodes), edges: asArray(o.edges) } };
+}
+
+export async function setViolationStatus(input: {
+  violation_id: number;
+  status: string;
+  notes?: string;
+  actor?: string;
+}): Promise<{ data: unknown }> {
+  const res = await executeQuery<unknown>(RM_VIOLATION_SET_STATUS_QUERY, [
+    rmTenantId(),
+    input.violation_id,
+    input.status,
+    input.notes ?? "",
+    input.actor ?? "",
+  ]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Failed to change status");
+  return { data };
+}
+
+export async function bulkSetViolationStatus(
+  violationIds: number[],
+  status: string,
+  options: { notes?: string; actor?: string } = {}
+): Promise<{ data: { updated?: number; status?: string } | null }> {
+  const res = await executeQuery<unknown>(RM_VIOLATION_BULK_SET_STATUS_QUERY, [
+    rmTenantId(),
+    `{${violationIds.join(",")}}`,
+    status,
+    options.notes ?? "",
+    options.actor ?? "",
+  ]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Bulk update failed");
+  return { data: (data ?? null) as { updated?: number; status?: string } | null };
+}
+
+/** `assignee_id: null` unassigns. */
+export async function assignViolation(input: {
+  violation_id: number;
+  assignee_id: string | null;
+  due_date?: string | null;
+  actor?: string;
+}): Promise<{ data: unknown }> {
+  const res = await executeQuery<unknown>(RM_VIOLATION_ASSIGN_QUERY, [
+    rmTenantId(),
+    input.violation_id,
+    input.assignee_id ?? "",
+    input.due_date ?? "",
+    input.actor ?? "",
+  ]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Failed to assign");
+  return { data };
+}
+
+export async function addViolationComment(
+  violationId: number,
+  body: string,
+  actor?: string
+): Promise<{ data: unknown }> {
+  const res = await executeQuery<unknown>(RM_VIOLATION_COMMENT_ADD_QUERY, [
+    rmTenantId(),
+    violationId,
+    body,
+    actor ?? "",
+  ]);
+  const data = getKfResultData(res);
+  throwIfKfError(data, "Failed to add comment");
+  return { data };
 }
 
 export async function listFunctionsPaged(

@@ -354,6 +354,36 @@ textarea:focus-visible,
   background-color: transparent !important;
 }
 
+/* Risk Analysis tables (Rules, Rulesets): same alternating gray rows as Track requests */
+.risk-analysis-grid div[role="row"]:not(.ag-header-row).risk-analysis-row-striped {
+  background-color: #f9fafb !important;
+}
+.risk-analysis-grid .risk-analysis-row-striped .ag-cell {
+  background-color: transparent !important;
+}
+/* Wrapped column titles break between words, never inside one ("Action / s") */
+.risk-analysis-grid .ag-header-cell-text {
+  word-break: normal;
+  overflow-wrap: normal;
+}
+/* Wrapped cells (Violations): normal line height so multi-line text reads cleanly */
+.risk-analysis-grid .ag-cell-wrap-text {
+  line-height: 1.4;
+  word-break: normal;
+  overflow-wrap: anywhere;
+  /* Tall rows: keep every cell's content at the top, where the eye starts */
+  align-items: flex-start !important;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+.risk-analysis-grid .ag-cell-wrap-text .ag-cell-value {
+  white-space: normal;
+}
+.risk-analysis-grid .ag-cell {
+  display: flex;
+  align-items: center;
+}
+
 /* Track requests: start (left) horizontally, centered vertically */
 .track-request-grid .ag-cell {
   display: flex;

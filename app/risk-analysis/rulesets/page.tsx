@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   listRulesets,
@@ -10,14 +10,34 @@ import {
   exportRulesetCsv,
   importRulesetJson,
   importRulesetCsv,
+  copyRuleset,
   type ImportRulesetCsvInput,
 } from "@/lib/api/rm";
 import { useLookup } from "@/hooks/useLookup";
 import { csvToRows, rowsToCsv, triggerDownload } from "@/lib/rm-csv";
 import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
-import { Plus, Play, Upload, Download, FileJson, FileSpreadsheet } from "lucide-react";
-import type { RulesetCsvRow } from "@/types/rm-dashboard";
+import {
+  Plus,
+  Play,
+  Upload,
+  Download,
+  FileJson,
+  FileSpreadsheet,
+  Copy,
+  Search,
+  Library,
+} from "lucide-react";
+import AgGridReact from "@/components/ClientOnlyAgGrid";
+import "@/lib/ag-grid-setup";
+import type {
+  ColDef,
+  GetRowIdParams,
+  ICellRendererParams,
+  RowClassParams,
+} from "ag-grid-enterprise";
+import CustomPagination from "@/components/agTable/CustomPagination";
+import type { RmRuleset, RulesetCsvRow } from "@/types/rm-dashboard";
 
 const RULESET_STATUS = "RULESET_STATUS";
 
@@ -53,104 +73,274 @@ export default function RulesetsPage() {
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [downloadFor, setDownloadFor] = useState<null | { id: number; code: string }>(null);
+  const [copyFrom, setCopyFrom] = useState<null | { id: number; code: string }>(null);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number | "all">(20);
+
+  const statusOptions = useMemo(
+    () => [...new Set((q.data ?? []).map((r) => r.status).filter((s): s is string => !!s))],
+    [q.data]
+  );
+
+  const filteredRulesets = useMemo(() => {
+    let rows = q.data ?? [];
+    const term = search.trim().toLowerCase();
+    if (term) {
+      rows = rows.filter(
+        (r) =>
+          String(r.ruleset_code ?? "").toLowerCase().includes(term) ||
+          String(r.ruleset_name ?? "").toLowerCase().includes(term)
+      );
+    }
+    if (statusFilter) rows = rows.filter((r) => r.status === statusFilter);
+    return rows;
+  }, [q.data, search, statusFilter]);
+
+  const totalPages =
+    pageSize === "all" ? 1 : Math.max(1, Math.ceil(filteredRulesets.length / pageSize));
+  // Filtering can shrink the list below the current page; clamp instead of resetting in an effect.
+  const page = Math.min(currentPage, totalPages);
+  const paginatedRulesets = useMemo(() => {
+    if (pageSize === "all") return filteredRulesets;
+    const start = (page - 1) * pageSize;
+    return filteredRulesets.slice(start, start + pageSize);
+  }, [filteredRulesets, page, pageSize]);
+
+  const actionButton =
+    "inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 hover:text-blue-600 disabled:opacity-50 whitespace-nowrap";
+
+  const columnDefs = useMemo<ColDef<RmRuleset>[]>(
+    () => [
+      {
+        headerName: "Code",
+        field: "ruleset_code",
+        flex: 1,
+        minWidth: 160,
+        tooltipField: "ruleset_code",
+        valueGetter: (p) => p.data?.ruleset_code ?? "—",
+        cellClass: "font-semibold text-gray-900",
+      },
+      {
+        headerName: "Name",
+        field: "ruleset_name",
+        flex: 2,
+        minWidth: 220,
+        tooltipField: "ruleset_name",
+        valueGetter: (p) => p.data?.ruleset_name ?? "—",
+      },
+      {
+        headerName: "Status",
+        field: "status",
+        width: 120,
+        cellRenderer: (p: ICellRendererParams<RmRuleset>) =>
+          p.value ? <Badge label={p.value} color={statusColor(p.value)} /> : "—",
+      },
+      {
+        headerName: "Active rules",
+        field: "active_rule_count",
+        width: 155,
+        valueGetter: (p) => p.data?.active_rule_count ?? 0,
+        cellClass: "tabular-nums",
+      },
+      {
+        headerName: "Actions",
+        colId: "actions",
+        width: 290,
+        sortable: false,
+        suppressHeaderMenuButton: true,
+        resizable: false,
+        cellRenderer: (p: ICellRendererParams<RmRuleset>) => {
+          const r = p.data;
+          if (!r) return null;
+          const code = r.ruleset_code || "ruleset";
+          const running = run.isPending && run.variables === r.ruleset_id;
+          return (
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                className={actionButton}
+                title="Clone this ruleset (share rules for scenario testing)"
+                onClick={() => setCopyFrom({ id: r.ruleset_id, code })}
+              >
+                <Copy className="h-3.5 w-3.5" />
+                Copy
+              </button>
+              <button
+                type="button"
+                className={actionButton}
+                title="Download as JSON / CSV"
+                onClick={() => setDownloadFor({ id: r.ruleset_id, code })}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Export
+              </button>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 disabled:opacity-50 whitespace-nowrap"
+                title="Run risk analysis for this ruleset"
+                disabled={run.isPending}
+                onClick={() => run.mutate(r.ruleset_id)}
+              >
+                <Play className="h-3.5 w-3.5" />
+                {running ? "Running…" : "Run analysis"}
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [statuses.data, run.isPending, run.variables]
+  );
+
+  const pagination = (
+    <CustomPagination
+      totalItems={filteredRulesets.length}
+      currentPage={page}
+      totalPages={totalPages}
+      pageSize={pageSize}
+      onPageChange={setCurrentPage}
+      onPageSizeChange={(n) => {
+        setPageSize(n);
+        setCurrentPage(1);
+      }}
+      pageSizeOptions={[10, 20, 50, 100, "all"]}
+    />
+  );
+
+  const fieldClass =
+    "w-full px-3 py-2 border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm";
 
   return (
     <div className="w-full min-w-0">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Rulesets</h1>
+      <div className="mb-3 flex items-center justify-between gap-3 border-b border-gray-300 pb-2">
+        <h1 className="text-2xl font-bold text-blue-950">Rulesets</h1>
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
             onClick={() => setUploadOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            <Upload className="h-3.5 w-3.5" />
+            <Upload className="h-4 w-4" />
             Upload
           </button>
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            <Plus className="h-3.5 w-3.5" />
+            <Plus className="h-4 w-4" />
             New ruleset
           </button>
         </div>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-        {q.isLoading && <div className="p-4 text-sm text-gray-500">Loading…</div>}
-        {q.isError && (
-          <div className="p-4 text-sm text-red-600">
-            {q.error instanceof Error ? q.error.message : String(q.error)}
+      {/* Search and filters */}
+      <div className="mb-6 w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="flex w-full flex-wrap items-end gap-4">
+          <div className="relative w-72 shrink-0">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Search</label>
+            <Search className="absolute left-3 top-9 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            <input
+              type="text"
+              className={`${fieldClass} pl-9`}
+              placeholder="Ruleset code or name"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
           </div>
-        )}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] table-fixed border-collapse text-sm text-left">
-            <colgroup>
-              <col className="w-[16%]" />
-              <col className="w-[28%]" />
-              <col className="w-[14%]" />
-              <col className="w-[8%]" />
-              <col className="w-[34%]" />
-            </colgroup>
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-gray-600">
-                <th className="py-2.5 px-3 font-medium">Code</th>
-                <th className="py-2.5 px-3 font-medium">Name</th>
-                <th className="py-2.5 px-3 font-medium">Status</th>
-                <th className="py-2.5 px-3 font-medium text-center">Rules</th>
-                <th className="py-2.5 px-3 font-medium text-right whitespace-nowrap">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {q.data?.map((r) => (
-                <tr key={r.ruleset_id} className="border-b border-gray-100 last:border-0">
-                  <td className="py-2.5 px-3 truncate">
-                    <span className="font-semibold text-gray-900">
-                      {r.ruleset_code ?? "—"}
-                    </span>
-                  </td>
-                  <td className="py-2.5 px-3 text-gray-800 truncate">{r.ruleset_name ?? "—"}</td>
-                  <td className="py-2.5 px-3">
-                    {r.status != null && r.status !== "" ? (
-                      <Badge label={r.status} color={statusColor(r.status)} />
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="py-2.5 px-3 text-center tabular-nums text-gray-800">
-                    {r.active_rule_count ?? 0}
-                  </td>
-                  <td className="py-2.5 pl-3 pr-2 text-right whitespace-nowrap">
-                    <div className="inline-flex items-center justify-end gap-1.5">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                        title="Download as JSON / CSV"
-                        onClick={() =>
-                          setDownloadFor({ id: r.ruleset_id, code: r.ruleset_code || "ruleset" })
-                        }
-                      >
-                        <Download className="h-3.5 w-3.5" />
-                        Export
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1 rounded border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-                        disabled={run.isPending}
-                        onClick={() => run.mutate(r.ruleset_id)}
-                      >
-                        <Play className="h-3.5 w-3.5" />
-                        Run analysis
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+          <div className="min-w-[160px] max-w-xs flex-1">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+            <select
+              className={fieldClass}
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+            >
+              <option value="">Any status</option>
+              {statusOptions.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+          </div>
+          <span className="inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700">
+            <Library className="h-4 w-4" />
+            Rulesets: <span className="text-blue-900">{filteredRulesets.length}</span>
+          </span>
+          {(search || statusFilter) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("");
+              }}
+              className="h-[38px] shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 hover:text-gray-700"
+            >
+              Clear filters
+            </button>
+          )}
         </div>
+      </div>
+
+      {q.isError && (
+        <div className="mb-4 rounded-md border-l-4 border-red-500 bg-red-50 p-4 text-red-700">
+          <p className="font-medium">Error loading rulesets</p>
+          <p className="text-sm">{q.error instanceof Error ? q.error.message : String(q.error)}</p>
+        </div>
+      )}
+      {run.isSuccess && (
+        <div className="mb-4 rounded-md border-l-4 border-emerald-500 bg-emerald-50 p-4 text-sm text-emerald-800">
+          Analysis started. Results will appear on the Dashboard and Violations pages.
+        </div>
+      )}
+      {run.isError && (
+        <div className="mb-4 rounded-md border-l-4 border-red-500 bg-red-50 p-4 text-red-700">
+          <p className="font-medium">Could not start analysis</p>
+          <p className="text-sm">{(run.error as Error).message}</p>
+        </div>
+      )}
+
+      {/* Rulesets table (AG Grid) */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div className="mb-1 border-b border-gray-100">{pagination}</div>
+        <div className="ag-theme-quartz risk-analysis-grid w-full" style={{ width: "100%", minWidth: 0 }}>
+          <AgGridReact
+            rowData={paginatedRulesets}
+            columnDefs={columnDefs}
+            getRowId={(p: GetRowIdParams<RmRuleset>) => String(p.data.ruleset_id)}
+            rowClassRules={{
+              "risk-analysis-row-striped": (p: RowClassParams<RmRuleset>) =>
+                (p.node.rowIndex ?? 0) % 2 === 1,
+            }}
+            domLayout="autoHeight"
+            pagination={false}
+            headerHeight={44}
+            rowHeight={48}
+            tooltipShowDelay={300}
+            defaultColDef={{
+              sortable: true,
+              filter: false,
+              resizable: true,
+              suppressSizeToFit: true,
+              // Never clip a column title: wrap it and grow the header row instead.
+              wrapHeaderText: true,
+              autoHeaderHeight: true,
+            }}
+            loading={q.isLoading}
+            overlayNoRowsTemplate={`<span class="ag-overlay-loading-center">No rulesets found.</span>`}
+          />
+        </div>
+        <div className="mt-1">{pagination}</div>
       </div>
 
       <Modal
@@ -222,7 +412,145 @@ export default function RulesetsPage() {
           }}
         />
       )}
+      {copyFrom && (
+        <CopyModal
+          sourceId={copyFrom.id}
+          sourceCode={copyFrom.code}
+          onClose={() => setCopyFrom(null)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ["rulesets"] });
+            setCopyFrom(null);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+// Copy modal — clone a ruleset. SHARE reuses the same rule rows (cheap,
+// ideal for scenario testing); DEEP duplicates every rule so edits to the
+// copy don't touch the original.
+function CopyModal({
+  sourceId,
+  sourceCode,
+  onClose,
+  onDone,
+}: {
+  sourceId: number;
+  sourceCode: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [code, setCode] = useState(`${sourceCode}_COPY`);
+  const [name, setName] = useState("");
+  const [mode, setMode] = useState<"SHARE" | "DEEP">("SHARE");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [result, setResult] = useState("");
+
+  const submit = async () => {
+    setBusy(true);
+    setErr("");
+    setResult("");
+    try {
+      const res = await copyRuleset({
+        source_ruleset_id: sourceId,
+        new_code: code.trim(),
+        new_name: name.trim() || code.trim(),
+        mode,
+      });
+      setResult(
+        `Created ${res.data?.ruleset_code ?? code.trim()} with ${res.data?.rules_mapped ?? 0} rules (${res.data?.mode ?? mode}).`
+      );
+      setTimeout(onDone, 900);
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      open
+      title={`Copy ruleset — ${sourceCode}`}
+      onClose={onClose}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-md border border-blue-600 bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+            disabled={busy || !code.trim()}
+            onClick={() => void submit()}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            {busy ? "Copying…" : "Create copy"}
+          </button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">New ruleset code</label>
+          <input
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">New ruleset name</label>
+          <input
+            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            value={name}
+            placeholder={code}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 mb-1">Copy mode</label>
+          <div className="grid gap-1.5">
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                className="mt-1"
+                checked={mode === "SHARE"}
+                onChange={() => setMode("SHARE")}
+              />
+              <span>
+                <b>Share rules</b> — the copy points at the same rule definitions. Edit a rule
+                once, both rulesets see it. Best for spinning up scenario rulesets.
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-sm text-gray-700">
+              <input
+                type="radio"
+                className="mt-1"
+                checked={mode === "DEEP"}
+                onChange={() => setMode("DEEP")}
+              />
+              <span>
+                <b>Deep copy</b> — duplicate every rule into the new ruleset. Independent; edits
+                to the copy don&apos;t affect the source.
+              </span>
+            </label>
+          </div>
+        </div>
+        {err && (
+          <div className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            {err}
+          </div>
+        )}
+        {result && <p className="text-[13px] text-green-600">{result}</p>}
+      </div>
+    </Modal>
   );
 }
 
