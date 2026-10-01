@@ -12,8 +12,11 @@ import {
   Cpu,
   RefreshCw,
   Layers,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
+import { CatalogExportButton, CatalogImportButton } from "@/components/CatalogFileActions";
 
 type FieldCategory = "general" | "business" | "technical" | "security" | "lifecycle" | "other";
 
@@ -91,7 +94,7 @@ interface FieldConfig {
   listValues: string;
   /** Dynamic list source */
   apiEndpoint: string;
-  /** Shown in the "Selection" column */
+  /** Shown in the "Display" column */
   showInUI: boolean;
 }
 
@@ -99,8 +102,9 @@ function splitListValues(raw: string): string[] {
   return raw.split(",").map((v) => v.trim()).filter(Boolean);
 }
 
-const CATALOG_METADATA_URL = () =>
-  `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/catalog-metadata/list`;
+const CATALOG_METADATA_BASE_URL = () =>
+  `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/catalog-metadata`;
+const CATALOG_METADATA_URL = () => `${CATALOG_METADATA_BASE_URL()}/list`;
 
 function pickStr(...vals: unknown[]): string | undefined {
   for (const v of vals) {
@@ -168,19 +172,37 @@ function extractMetadataItems(json: any): any[] {
 
 interface MetadataField {
   key: string;
+  /** catalog_metadata_id used by PUT .../catalog-metadata/{id}; undefined when the API gave none */
+  id?: string;
   category: FieldCategory;
   config: FieldConfig;
   /** Original API item, kept for the save call */
   raw: any;
+  /** Added with "Add field" and not created on the server yet */
+  isNew?: boolean;
 }
+
+const EMPTY_FIELD_CONFIG: FieldConfig = {
+  name: "",
+  label: "",
+  tooltip: "",
+  dataType: "Text",
+  listType: "static",
+  listValues: "",
+  apiEndpoint: "",
+  showInUI: true,
+};
 
 function mapMetadataItem(item: any, index: number): MetadataField {
   const name =
     pickStr(item?.columnName, item?.name, item?.fieldName, item?.field_name, item?.key, item?.attributeName) ?? `field${index + 1}`;
-  const label = pickStr(item?.label, item?.displayName, item?.display_name, item?.displayLabel) ?? name;
+  const label =
+    pickStr(item?.ui_label, item?.uiLabel, item?.label, item?.displayName, item?.display_name, item?.displayLabel) ?? name;
+  const id = pickStr(item?.catalog_metadata_id, item?.catalogMetadataId, item?.id, item?.metadataId);
   const listTypeRaw = normalizeKey(pickStr(item?.listType, item?.list_type, item?.listSource, item?.list_source) ?? "");
   return {
-    key: pickStr(item?.id, item?.metadataId) ?? `${name}-${index}`,
+    key: id ?? `${name}-${index}`,
+    id,
     category: toCategory(item, name, label),
     raw: item,
     config: {
@@ -189,7 +211,14 @@ function mapMetadataItem(item: any, index: number): MetadataField {
       tooltip: pickStr(item?.tooltip, item?.toolTip, item?.tool_tip, item?.helpText) ?? "",
       dataType: toDataType(pickStr(item?.dataType, item?.data_type, item?.datatype, item?.type)),
       listType: listTypeRaw.includes("dynamic") ? "dynamic" : "static",
-      listValues: toListValues(item?.listValues ?? item?.list_values ?? item?.values ?? item?.options),
+      listValues: toListValues(
+        item?.static_list_values ??
+          item?.staticListValues ??
+          item?.listValues ??
+          item?.list_values ??
+          item?.values ??
+          item?.options
+      ),
       apiEndpoint: pickStr(item?.apiEndpoint, item?.api_endpoint, item?.endpoint, item?.listApiEndpoint) ?? "",
       showInUI: toBool(item?.showInUI ?? item?.showInUi ?? item?.show_in_ui ?? item?.visible, true),
     },
@@ -322,6 +351,10 @@ export default function EntitlementManagementSettings() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>({});
+  // Bumped after an import so the metadata is fetched again
+  const [reloadKey, setReloadKey] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -349,7 +382,9 @@ export default function EntitlementManagementSettings() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
+
+  const newFieldKeys = useMemo(() => new Set(fields.filter((f) => f.isNew).map((f) => f.key)), [fields]);
 
   const fieldsByCategory = useMemo(() => {
     const out = Object.fromEntries(CATEGORY_ORDER.map((c) => [c, [] as string[]])) as Record<FieldCategory, string[]>;
@@ -361,15 +396,136 @@ export default function EntitlementManagementSettings() {
     setConfigs((prev) => ({ ...prev, [field]: { ...prev[field], ...patch } }));
   }, []);
 
-  const handleSave = () => {
-    // TODO: Persist field configuration once the save endpoint is available.
-    setSavedConfigs(configs);
-    setIsEditing(false);
+  // PUT each changed field to .../catalog-metadata/{id}; fields that saved are kept even if others fail
+  const handleSave = async () => {
+    const added = fields.filter((f) => f.isNew);
+    const changed = fields.filter((f) => {
+      if (f.isNew) return false;
+      const next = configs[f.key];
+      const prev = savedConfigs[f.key];
+      return (
+        next &&
+        prev &&
+        (next.label !== prev.label ||
+          next.showInUI !== prev.showInUI ||
+          splitListValues(next.listValues).join("|") !== splitListValues(prev.listValues).join("|"))
+      );
+    });
+    if (changed.length === 0 && added.length === 0) {
+      setIsEditing(false);
+      return;
+    }
+    // New fields need a unique column name and a label before anything is sent
+    const takenNames = new Set(fields.filter((f) => !f.isNew).map((f) => normalizeKey(configs[f.key]?.name ?? "")));
+    const invalid: string[] = [];
+    for (const f of added) {
+      const cfg = configs[f.key];
+      const name = cfg.name.trim();
+      if (!name) invalid.push(`${cfg.label.trim() || "New field"}: name is required`);
+      else if (!cfg.label.trim()) invalid.push(`${name}: label is required`);
+      else if (takenNames.has(normalizeKey(name))) invalid.push(`${name}: a field with this name already exists`);
+      else takenNames.add(normalizeKey(name));
+    }
+    if (invalid.length) {
+      setSaveError(`Some new fields are incomplete:\n${invalid.join("\n")}`);
+      return;
+    }
+    setIsSaving(true);
+    setSaveError(null);
+    const saved: Record<string, FieldConfig> = {};
+    const created: Record<string, string | undefined> = {};
+    const failures: string[] = [];
+    // POST a new custom field to .../catalog-metadata
+    const createField = async (f: MetadataField) => {
+      const cfg = configs[f.key];
+      try {
+        const res = await fetch(CATALOG_METADATA_BASE_URL(), {
+          method: "POST",
+          headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            db_column_name: cfg.name.trim(),
+            ui_label: cfg.label.trim(),
+            tooltip: cfg.tooltip,
+            category: CATEGORY_META[f.category].label,
+            data_type: cfg.dataType.toLowerCase(),
+            is_list: cfg.dataType === "List",
+            static_list_values: cfg.dataType === "List" ? splitListValues(cfg.listValues) : [],
+            show_in_ui: cfg.showInUI,
+          }),
+        });
+        const json = await res.json().catch(() => null);
+        if (!res.ok) {
+          throw new Error(pickStr(json?.errorMessage, json?.message) || `Create failed (${res.status})`);
+        }
+        const item = json?.item ?? json?.data ?? json;
+        created[f.key] = pickStr(item?.catalog_metadata_id, item?.catalogMetadataId, item?.id);
+        saved[f.key] = cfg;
+      } catch (e) {
+        failures.push(`${cfg.label}: ${e instanceof Error ? e.message : "Create failed"}`);
+      }
+    };
+    await Promise.all([
+      ...added.map(createField),
+      ...changed.map(async (f) => {
+        const cfg = configs[f.key];
+        if (!f.id) {
+          failures.push(`${cfg.label}: metadata id is not available`);
+          return;
+        }
+        try {
+          const res = await fetch(`${CATALOG_METADATA_BASE_URL()}/${encodeURIComponent(f.id)}`, {
+            method: "PUT",
+            headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ui_label: cfg.label,
+              show_in_ui: cfg.showInUI,
+              static_list_values: splitListValues(cfg.listValues),
+            }),
+          });
+          if (!res.ok) {
+            const json = await res.json().catch(() => null);
+            throw new Error(pickStr(json?.errorMessage, json?.message) || `Update failed (${res.status})`);
+          }
+          saved[f.key] = cfg;
+        } catch (e) {
+          failures.push(`${cfg.label}: ${e instanceof Error ? e.message : "Update failed"}`);
+        }
+      }),
+    ]);
+    // Created fields become regular fields (same row key, so their edit state stays attached)
+    setFields((prev) => prev.map((f) => (f.key in created ? { ...f, isNew: false, id: created[f.key] } : f)));
+    setSavedConfigs((prev) => ({ ...prev, ...saved }));
+    setIsSaving(false);
+    if (failures.length) {
+      setSaveError(`Some fields could not be saved:\n${failures.join("\n")}`);
+    } else {
+      setIsEditing(false);
+    }
   };
 
   const handleCancel = () => {
+    setFields((prev) => prev.filter((f) => !f.isNew));
     setConfigs(savedConfigs);
+    setSaveError(null);
     setIsEditing(false);
+  };
+
+  // Add an empty custom field row to a category card and switch to edit mode
+  const addField = (category: FieldCategory) => {
+    const key = `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setFields((prev) => [...prev, { key, category, raw: null, isNew: true, config: { ...EMPTY_FIELD_CONFIG } }]);
+    setConfigs((prev) => ({ ...prev, [key]: { ...EMPTY_FIELD_CONFIG } }));
+    setCollapsedCategories((prev) => ({ ...prev, [category]: false }));
+    setIsEditing(true);
+  };
+
+  const removeNewField = (key: string) => {
+    setFields((prev) => prev.filter((f) => f.key !== key));
+    setConfigs((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   };
 
   const toggleCategory = (key: string) => {
@@ -450,23 +606,40 @@ export default function EntitlementManagementSettings() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!isEditing && (
+              <>
+                <CatalogImportButton
+                  title="Import metadata (.csv or .xlsx)"
+                  buildUrl={() => `${CATALOG_METADATA_BASE_URL()}/import?dryRun=false`}
+                  onImported={() => setReloadKey((k) => k + 1)}
+                />
+                <CatalogExportButton
+                  title="Export metadata (CSV)"
+                  fileName="catalog-metadata"
+                  formats={["csv"]}
+                  buildUrl={(format) => `${CATALOG_METADATA_BASE_URL()}/export?format=${format}`}
+                />
+              </>
+            )}
             {isEditing ? (
               <>
                 <button
                   type="button"
                   onClick={handleCancel}
-                  className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
+                  disabled={isSaving}
+                  className="flex items-center gap-2 rounded-full px-4 py-2 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   <X className="w-4 h-4" />
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={handleSave}
-                  className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium"
+                  onClick={() => void handleSave()}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 rounded-full px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50"
                 >
                   <Check className="w-4 h-4" />
-                  Save
+                  {isSaving ? "Saving…" : "Save"}
                 </button>
               </>
             ) : (
@@ -490,6 +663,11 @@ export default function EntitlementManagementSettings() {
             {loadError}
           </div>
         )}
+        {saveError && (
+          <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded-md text-sm whitespace-pre-wrap">
+            {saveError}
+          </div>
+        )}
         {isLoading ? (
           <div className="flex items-center justify-center py-24">
             <div className="text-center">
@@ -511,7 +689,7 @@ export default function EntitlementManagementSettings() {
             const fields = fieldsByCategory[catKey];
             // Uncategorised fields collect under "other", which is not shown
             if (fields.length === 0 || catKey === "other") return null;
-            const selectedCount = fields.filter((f) => configs[f]?.showInUI).length;
+            const displayedCount = fields.filter((f) => configs[f]?.showInUI).length;
             const collapsed = !!collapsedCategories[catKey];
 
             return (
@@ -534,7 +712,7 @@ export default function EntitlementManagementSettings() {
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${meta.chipBg} ${meta.chipText}`}>
-                      {selectedCount}/{fields.length} selected
+                      {displayedCount}/{fields.length} displayed
                     </span>
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
                   </div>
@@ -548,18 +726,20 @@ export default function EntitlementManagementSettings() {
                         <span>Label</span>
                         <span>Tool Tip</span>
                         <span>Data Type</span>
-                        <span className="text-center">Selection</span>
+                        <span className="text-center">Display</span>
                       </div>
                       {fields.map((field) => {
                         const cfg = configs[field];
+                        const isNew = newFieldKeys.has(field);
                         return (
-                          <div key={field} className="border-t border-gray-100">
+                          <div key={field} className={`border-t border-gray-100 ${isNew ? "bg-blue-50/40" : ""}`}>
                             <div className={`${ROW_GRID} items-center px-5 py-2.5`}>
                               {isEditing ? (
                                 <input
                                   type="text"
                                   value={cfg.name}
                                   onChange={(e) => updateField(field, { name: e.target.value })}
+                                  placeholder={isNew ? "column_name" : undefined}
                                   aria-label={`Name — ${field}`}
                                   className={`${inputClass} font-mono`}
                                 />
@@ -573,6 +753,7 @@ export default function EntitlementManagementSettings() {
                                   type="text"
                                   value={cfg.label}
                                   onChange={(e) => updateField(field, { label: e.target.value })}
+                                  placeholder={isNew ? "Label shown in the UI" : undefined}
                                   aria-label={`Label — ${field}`}
                                   className={inputClass}
                                 />
@@ -624,19 +805,43 @@ export default function EntitlementManagementSettings() {
                                   })()}
                                 </div>
                               )}
-                              <div className="flex justify-center">
+                              <div className="flex items-center justify-center gap-2">
                                 <ToggleSwitch
                                   checked={cfg.showInUI}
                                   disabled={!isEditing}
-                                  ariaLabel={`Selection — ${field}`}
+                                  ariaLabel={`Display — ${field}`}
                                   onChange={(next) => updateField(field, { showInUI: next })}
                                 />
+                                {isNew && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeNewField(field)}
+                                    disabled={isSaving}
+                                    title="Remove this new field"
+                                    aria-label="Remove new field"
+                                    className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                             {isEditing && cfg.dataType === "List" && renderListPanel(field, cfg)}
                           </div>
                         );
                       })}
+                      <div className="border-t border-gray-100 px-5 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => addField(catKey)}
+                          disabled={isSaving}
+                          title={`Add a custom field to ${meta.label}`}
+                          className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add field
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}

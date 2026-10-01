@@ -375,6 +375,17 @@ export async function getAPPOCertificationDetailsWithFilter<T>(
   return apiRequestWithAuth<PaginatedResponse<T>>(url.toString(), { headers });
 }
 
+export async function getGroups<T = any>(): Promise<T> {
+  const endpoint = `${BASE_URL2()}/groups`;
+  return apiRequestWithAuth<T>(endpoint, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+}
+
 export async function getEntitlementDetails(
   appInstanceId: string,
   entitlementId: string

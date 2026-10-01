@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 const AgGridReact = dynamic(() => import("ag-grid-react").then(mod => mod.AgGridReact), { ssr: false });
 import { useRouter } from "next/navigation"; // Updated import
 import React, { useMemo, useRef, useState, useEffect } from "react";
-import { executeQuery } from "@/lib/api";
+import { executeQuery, getGroups } from "@/lib/api";
 import "@/lib/ag-grid-setup";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { Plus, Search, Pencil, X } from "lucide-react";
@@ -504,34 +504,35 @@ function UserGroupsTab() {
         setLoading(true);
         setError(null);
         
-        // Execute query to get all user groups
-        const query = "SELECT * FROM kf_groups";
-        const parameters: string[] = [];
-        
-        const response = await executeQuery(query, parameters);
-        
+        const response: any = await getGroups();
+
+        // Accept a bare array or common list wrappers
+        const sourceArray: any[] | null = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.groups)
+            ? response.groups
+            : Array.isArray(response?.items)
+              ? response.items
+              : Array.isArray(response?.data)
+                ? response.data
+                : Array.isArray(response?.resultSet)
+                  ? response.resultSet
+                  : null;
+
         // Transform API response to match our UserGroupData interface
-        if (response && typeof response === 'object' && 'resultSet' in response && Array.isArray((response as any).resultSet)) {
-          const sourceArray: any[] = (response as any).resultSet;
-          const transformedData: UserGroupData[] = sourceArray.map((group: any) => ({
-            userGroup: group.name || group.group_name || group.userGroup || "Unknown Group",
-            description: group.description || group.desc || "",
-            owner: group.owner || group.owner_email || group.created_by || "",
-            noOfUsers: group.no_of_users || group.user_count || group.member_count || 0,
-            tags: group.tags || group.category || group.type || "",
-          }));
-          setRowData(transformedData);
-          setTotalItems(transformedData.length);
-          setTotalPages(Math.ceil(transformedData.length / pageSize));
-        } else if (response && Array.isArray(response)) {
-          // Handle case where response is directly an array
-          const transformedData: UserGroupData[] = response.map((group: any) => ({
-            userGroup: group.name || group.group_name || group.userGroup || "Unknown Group",
-            description: group.description || group.desc || "",
-            owner: group.owner || group.owner_email || group.created_by || "",
-            noOfUsers: group.no_of_users || group.user_count || group.member_count || 0,
-            tags: group.tags || group.category || group.type || "",
-          }));
+        if (sourceArray) {
+          const transformedData: UserGroupData[] = sourceArray.map((group: any) => {
+            const tags = group.tags ?? group.category ?? group.type ?? "";
+            return {
+              userGroup: group.name || group.groupName || group.group_name || group.displayName || group.userGroup || "Unknown Group",
+              description: group.description || group.desc || "",
+              owner: group.owner || group.ownerEmail || group.owner_email || group.created_by || group.createdBy || "",
+              noOfUsers:
+                group.no_of_users ?? group.user_count ?? group.userCount ?? group.member_count ?? group.memberCount ??
+                (Array.isArray(group.members) ? group.members.length : 0),
+              tags: Array.isArray(tags) ? tags.join(", ") : String(tags),
+            };
+          });
           setRowData(transformedData);
           setTotalItems(transformedData.length);
           setTotalPages(Math.ceil(transformedData.length / pageSize));

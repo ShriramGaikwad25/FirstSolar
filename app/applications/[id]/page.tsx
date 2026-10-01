@@ -46,6 +46,7 @@ import { createPortal } from "react-dom";
 import { formatDateMMDDYY } from "@/utils/utils";
 import "@/lib/ag-grid-setup";
 import Exports from "@/components/agTable/Exports";
+import { CatalogExportButton, CatalogImportButton } from "@/components/CatalogFileActions";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import EditReassignButtons from "@/components/agTable/EditReassignButtons";
 import ActionButtons from "@/components/agTable/ActionButtons";
@@ -150,24 +151,84 @@ const CATALOG_EDITABLE_FIELD_KEYS: Record<string, string[]> = {
   "Dynamic Tag": ["tags", "dynamicTag"],
 };
 
-/** Top-level keys of a catalog record; everything else lives under `fields`. */
-const CATALOG_TOP_LEVEL_KEYS = new Set(["name", "type", "applicationName", "lastReviewed", "description"]);
+/** A catalog attribute's value is either plain or wrapped as `{ genAi, value, displayOnly }`. */
+function unwrapCatalogAttributeValue(v: any): any {
+  return v != null && typeof v === "object" && !Array.isArray(v) && "value" in v ? v.value : v;
+}
 
-/** Apply changed sidebar values onto a copy of the catalog record, keeping its existing key names. */
-function buildCatalogUpdatePayload(record: any, original: any, edited: any): any {
-  const payload = JSON.parse(JSON.stringify(record || {}));
-  if (!payload.fields || typeof payload.fields !== "object") payload.fields = {};
+/** Flatten the catalog `attributes` array ([{ columnName, value }]) into `{ columnName: value }`. */
+function catalogAttributesToFields(attributes: any): Record<string, any> {
+  if (!Array.isArray(attributes)) return attributes && typeof attributes === "object" ? attributes : {};
+  const out: Record<string, any> = {};
+  for (const a of attributes) {
+    if (a?.columnName) out[a.columnName] = unwrapCatalogAttributeValue(a.value);
+  }
+  return out;
+}
+
+/**
+ * Body for PUT .../update/{catalogid}: only the sidebar values that changed, keyed by the catalog
+ * column name under `attributes`, e.g. `{ "attributes": { "description": "..." } }`. The key is the record's matching attribute
+ * columnName, else its matching top-level key, else the snake_case catalog key. Returns null when
+ * nothing changed.
+ */
+function buildCatalogUpdatePatch(
+  record: any,
+  original: any,
+  edited: any
+): { attributes: Record<string, any> } | null {
+  const attrs: any[] = Array.isArray(record?.attributes) ? record.attributes : [];
+  const patch: Record<string, any> = {};
   for (const [displayKey, apiKeys] of Object.entries(CATALOG_EDITABLE_FIELD_KEYS)) {
     const next = edited?.[displayKey];
     if (next === undefined || String(next ?? "") === String(original?.[displayKey] ?? "")) continue;
-    const topKey = apiKeys.find((k) => k in payload && k !== "fields");
-    const fieldKey = apiKeys.find((k) => k in payload.fields);
-    if (topKey) payload[topKey] = next;
-    else if (fieldKey) payload.fields[fieldKey] = next;
-    else if (CATALOG_TOP_LEVEL_KEYS.has(apiKeys[0])) payload[apiKeys[0]] = next;
-    else payload.fields[apiKeys[0]] = next;
+    const lowerKeys = apiKeys.map((k) => k.toLowerCase());
+    const attr = attrs.find((a) => lowerKeys.includes(String(a?.columnName ?? "").toLowerCase()));
+    const topKey = apiKeys.find((k) => record && k in record && k !== "fields" && k !== "attributes");
+    patch[attr?.columnName ?? topKey ?? apiKeys.find((k) => k.includes("_")) ?? apiKeys[0]] = next;
   }
-  return payload;
+  return Object.keys(patch).length ? { attributes: patch } : null;
+}
+
+/**
+ * Apply the changed sidebar values to a copy of the full GET item, so the sidebar and grid can be
+ * refreshed when the update API doesn't return the updated item. Top-level and `fields` values are
+ * updated in place; the matching `attributes` entry (by columnName) has its value set, keeping the
+ * `{ genAi, value, displayOnly }` wrapper when present, or a new entry is appended.
+ */
+function applyCatalogEdits(record: any, original: any, edited: any): any | null {
+  const updated = JSON.parse(JSON.stringify(record || {}));
+  const isObj = (v: unknown) => v != null && typeof v === "object" && !Array.isArray(v);
+  if (!Array.isArray(updated.attributes)) {
+    updated.attributes = Object.entries(isObj(updated.attributes) ? updated.attributes : {}).map(
+      ([columnName, value]) => ({ columnName, value })
+    );
+  }
+  let changed = false;
+  for (const [displayKey, apiKeys] of Object.entries(CATALOG_EDITABLE_FIELD_KEYS)) {
+    const next = edited?.[displayKey];
+    if (next === undefined || String(next ?? "") === String(original?.[displayKey] ?? "")) continue;
+    changed = true;
+    const lowerKeys = apiKeys.map((k) => k.toLowerCase());
+    const topKey = apiKeys.find((k) => k in updated && k !== "fields" && k !== "attributes");
+    const fieldKey = isObj(updated.fields) ? apiKeys.find((k) => k in updated.fields) : undefined;
+    const attr = updated.attributes.find((a: any) =>
+      lowerKeys.includes(String(a?.columnName ?? "").toLowerCase())
+    );
+    if (topKey) updated[topKey] = next;
+    if (fieldKey) updated.fields[fieldKey] = next;
+    if (attr) {
+      if (isObj(attr.value) && "value" in attr.value) attr.value.value = next;
+      else attr.value = next;
+    } else {
+      updated.attributes.push({
+        columnName: apiKeys.find((k) => k.includes("_")) ?? apiKeys[0],
+        label: displayKey,
+        value: { genAi: "false", value: next, displayOnly: "false" },
+      });
+    }
+  }
+  return changed ? updated : null;
 }
 
 /** Entitlement id for `kf_entitlement_assignment_v` (may differ from catalog id). */
@@ -579,6 +640,17 @@ const DEFAULT_FILTER_COLOR: FilterColorSet = {
   badgeText: "text-gray-700",
 };
 
+/** Application name stored by the applications list (`applicationDetails`), or "" when unknown. */
+function getStoredApplicationName(): string {
+  try {
+    const parsed = JSON.parse(localStorage.getItem("applicationDetails") || "null");
+    const name = parsed?.applicationName;
+    return name && name !== "N/A" ? String(name) : "";
+  } catch {
+    return "";
+  }
+}
+
 export default function ApplicationDetailPage() {
   const { openSidebar, closeSidebar } = useRightSidebar();
   const reviewerId = getReviewerId() || "";
@@ -723,6 +795,8 @@ export default function ApplicationDetailPage() {
   const [entCurrentPage, setEntCurrentPage] = useState(1);
   const [entPageSize, setEntPageSize] = useState(20);
   const [entTotalItems, setEntTotalItems] = useState(0);
+  // Bumped after an import so the entitlement list is fetched again
+  const [entReloadKey, setEntReloadKey] = useState(0);
   const [entTotalPages, setEntTotalPages] = useState(0);
 
   // Search is sent to the catalog API when the Search button (or Enter) is pressed
@@ -1014,7 +1088,7 @@ export default function ApplicationDetailPage() {
 
   // Convert a catalog API item ({ id, name, type, applicationName, lastReviewed, fields }) into a grid/sidebar row
   const mapCatalogItemToRow = (item: any, base: any = {}) => {
-    const fields = item?.fields || {};
+    const fields = { ...(item?.fields || {}), ...catalogAttributesToFields(item?.attributes) };
     const catalogDetails = {
       ...item,
       ...fields,
@@ -1093,15 +1167,17 @@ export default function ApplicationDetailPage() {
           setSaveError("Catalog id is not available for this entitlement.");
           return;
         }
-        const record = catalogItem ?? {
-          id: catalogId,
-          name: baseData?.name ?? baseData?.entitlementName,
-          type: baseData?.type,
-          applicationName: baseData?.applicationName,
-          lastReviewed: baseData?.lastReviewed,
-          fields: baseData?.fields ?? {},
-        };
-        const payload = buildCatalogUpdatePayload(record, finalData, localEditableData);
+        // The update API takes the whole item, so it must come from the GET call
+        if (!catalogItem) {
+          setSaveError("Entitlement details haven't loaded yet. Please try again.");
+          return;
+        }
+        const payload = buildCatalogUpdatePatch(catalogItem, finalData, localEditableData);
+        if (!payload) {
+          setLocalEditMode(false);
+          setLocalEditableData(null);
+          return;
+        }
         setSaveInProgress(true);
         setSaveError(null);
         try {
@@ -1121,11 +1197,12 @@ export default function ApplicationDetailPage() {
               pickString(json?.errorMessage, json?.message) || `Update failed (${res.status})`
             );
           }
+          // Response is the updated item (same shape as GET); otherwise apply the edits locally
           const returned = json?.item ?? json?.data ?? json;
           const updated =
-            returned && typeof returned === "object" && ("name" in returned || "fields" in returned)
+            returned && typeof returned === "object" && ("name" in returned || "attributes" in returned)
               ? returned
-              : payload;
+              : applyCatalogEdits(catalogItem, finalData, localEditableData) ?? catalogItem;
           setCatalogItem(updated);
           setEntRowData((prev) =>
             prev.map((row: any) =>
@@ -2832,14 +2909,7 @@ export default function ApplicationDetailPage() {
     let cancelled = false;
     const fetchEntitlementsData = async () => {
       try {
-        let applicationName = "";
-        try {
-          const stored = localStorage.getItem("applicationDetails");
-          const parsed = stored ? JSON.parse(stored) : null;
-          if (parsed?.applicationName && parsed.applicationName !== "N/A") {
-            applicationName = String(parsed.applicationName);
-          }
-        } catch {}
+        const applicationName = getStoredApplicationName();
 
         // Fetch only the page currently shown (API pages are 0-based)
         const params = new URLSearchParams({
@@ -2878,7 +2948,7 @@ export default function ApplicationDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, tabIndex, entCurrentPage, entPageSize, appliedEntSearch]);
+  }, [id, tabIndex, entCurrentPage, entPageSize, appliedEntSearch, entReloadKey]);
 
   //   {
   //     "Ent ID": "ENT201",
@@ -4199,7 +4269,29 @@ export default function ApplicationDetailPage() {
                   {entTotalItems} matching entitlements
                 </p>
               )}
-              <Exports gridApi={gridApiRef.current} />
+              <div className="flex items-center gap-1">
+                <CatalogImportButton
+                  title="Import entitlements (.csv or .xlsx)"
+                  buildUrl={() => {
+                    // applicationName makes the API reject rows from other applications
+                    const params = new URLSearchParams({ dryRun: "false" });
+                    const applicationName = getStoredApplicationName();
+                    if (applicationName) params.set("applicationName", applicationName);
+                    return `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/import?${params.toString()}`;
+                  }}
+                  onImported={() => setEntReloadKey((k) => k + 1)}
+                />
+                <CatalogExportButton
+                  title="Export entitlements"
+                  fileName={`entitlements${getStoredApplicationName() ? `-${getStoredApplicationName()}` : ""}`}
+                  buildUrl={(format) => {
+                    const params = new URLSearchParams({ format });
+                    const applicationName = getStoredApplicationName();
+                    if (applicationName) params.set("applicationName", applicationName);
+                    return `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/export?${params.toString()}`;
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
