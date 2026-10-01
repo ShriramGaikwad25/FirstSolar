@@ -91,7 +91,7 @@ interface FieldConfig {
   listValues: string;
   /** Dynamic list source */
   apiEndpoint: string;
-  displayOnly: boolean;
+  /** Shown in the "Selection" column */
   showInUI: boolean;
 }
 
@@ -191,14 +191,13 @@ function mapMetadataItem(item: any, index: number): MetadataField {
       listType: listTypeRaw.includes("dynamic") ? "dynamic" : "static",
       listValues: toListValues(item?.listValues ?? item?.list_values ?? item?.values ?? item?.options),
       apiEndpoint: pickStr(item?.apiEndpoint, item?.api_endpoint, item?.endpoint, item?.listApiEndpoint) ?? "",
-      displayOnly: toBool(item?.displayOnly ?? item?.display_only ?? item?.readOnly ?? item?.readonly, false),
       showInUI: toBool(item?.showInUI ?? item?.showInUi ?? item?.show_in_ui ?? item?.visible, true),
     },
   };
 }
 
 const ROW_GRID =
-  "grid grid-cols-[minmax(150px,1fr)_minmax(170px,1.2fr)_minmax(200px,1.6fr)_140px_104px_104px] gap-3";
+  "grid grid-cols-[minmax(150px,1fr)_minmax(170px,1.2fr)_minmax(200px,1.6fr)_140px_104px] gap-3";
 
 const inputClass =
   "w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none";
@@ -510,8 +509,9 @@ export default function EntitlementManagementSettings() {
             const meta = CATEGORY_META[catKey];
             const CategoryIcon = meta.icon;
             const fields = fieldsByCategory[catKey];
-            if (fields.length === 0) return null;
-            const shownCount = fields.filter((f) => configs[f]?.showInUI).length;
+            // Uncategorised fields collect under "other", which is not shown
+            if (fields.length === 0 || catKey === "other") return null;
+            const selectedCount = fields.filter((f) => configs[f]?.showInUI).length;
             const collapsed = !!collapsedCategories[catKey];
 
             return (
@@ -534,7 +534,7 @@ export default function EntitlementManagementSettings() {
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${meta.chipBg} ${meta.chipText}`}>
-                      {shownCount}/{fields.length} shown in UI
+                      {selectedCount}/{fields.length} selected
                     </span>
                     <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${collapsed ? "-rotate-90" : ""}`} />
                   </div>
@@ -542,14 +542,13 @@ export default function EntitlementManagementSettings() {
 
                 {!collapsed && (
                   <div className="border-t border-gray-100 overflow-x-auto">
-                    <div className="min-w-[960px]">
+                    <div className="min-w-[856px]">
                       <div className={`${ROW_GRID} px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400`}>
                         <span>Name</span>
                         <span>Label</span>
                         <span>Tool Tip</span>
                         <span>Data Type</span>
-                        <span className="text-center">Display Only</span>
-                        <span className="text-center">Show In UI</span>
+                        <span className="text-center">Selection</span>
                       </div>
                       {fields.map((field) => {
                         const cfg = configs[field];
@@ -627,17 +626,9 @@ export default function EntitlementManagementSettings() {
                               )}
                               <div className="flex justify-center">
                                 <ToggleSwitch
-                                  checked={cfg.displayOnly}
-                                  disabled={!isEditing}
-                                  ariaLabel={`Display only — ${field}`}
-                                  onChange={(next) => updateField(field, { displayOnly: next })}
-                                />
-                              </div>
-                              <div className="flex justify-center">
-                                <ToggleSwitch
                                   checked={cfg.showInUI}
                                   disabled={!isEditing}
-                                  ariaLabel={`Show in UI — ${field}`}
+                                  ariaLabel={`Selection — ${field}`}
                                   onChange={(next) => updateField(field, { showInUI: next })}
                                 />
                               </div>
