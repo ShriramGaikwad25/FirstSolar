@@ -390,7 +390,8 @@ export default function CreateUserGroupPage() {
           actorId,
         });
       } else {
-        const created = await createGroup<Partial<GroupResponse>>({
+        // POST /groups: members go in `users`
+        await createGroup({
           groupCode: toGroupCode(groupName),
           groupName,
           description,
@@ -401,14 +402,8 @@ export default function CreateUserGroupPage() {
           tags,
           metadata: {},
           actorId: getReviewerId(),
-          members,
+          users: members,
         });
-
-        // The create payload doesn't document members; if they weren't stored, set them with an update
-        const createdMembers = created?.members ?? [];
-        if (created?.groupId && members.length > 0 && createdMembers.length !== members.length) {
-          await updateGroup(created.groupId, { ...created, members, actorId: getReviewerId() });
-        }
       }
 
       setNotice({
