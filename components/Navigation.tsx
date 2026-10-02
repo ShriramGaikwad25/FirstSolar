@@ -145,7 +145,10 @@ export function Navigation() {
       return { href: '/settings/gateway/manage-approval-policies', label: 'Back to Approval Policy' };
     }
     // Users
-    if (pathname === '/user/create-group' || pathname === '/user/create-user') {
+    if (pathname === '/user/create-group') {
+      return { href: '/user?tab=groups', label: 'Back to User Groups' };
+    }
+    if (pathname === '/user/create-user') {
       return { href: '/user', label: 'Back to Users' };
     }
     if (pathname.startsWith('/user/') && pathname !== '/user' && pathname !== '/user/create-group' && pathname !== '/user/create-user') {

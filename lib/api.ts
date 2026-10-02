@@ -386,6 +386,66 @@ export async function getGroups<T = any>(): Promise<T> {
   });
 }
 
+export async function getGroupById<T = any>(groupId: string): Promise<T> {
+  const endpoint = `${BASE_URL2()}/groups/${encodeURIComponent(groupId)}`;
+  return apiRequestWithAuth<T>(endpoint, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+  });
+}
+
+export async function createGroup<T = any>(payload: unknown): Promise<T> {
+  const endpoint = `${BASE_URL2()}/groups`;
+  return apiRequestWithAuth<T>(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateGroup<T = any>(groupId: string, payload: unknown): Promise<T> {
+  const endpoint = `${BASE_URL2()}/groups/${encodeURIComponent(groupId)}`;
+  return apiRequestWithAuth<T>(endpoint, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+async function postGroupMembers<T>(
+  groupId: string,
+  action: "add" | "remove",
+  userIds: string[],
+  actorId: string | null
+): Promise<T> {
+  const endpoint = `${BASE_URL2()}/groups/${encodeURIComponent(groupId)}/members/${action}`;
+  return apiRequestWithAuth<T>(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    body: JSON.stringify({ userIds, actorId }),
+  });
+}
+
+export async function addGroupMembers<T = any>(groupId: string, userIds: string[], actorId: string | null): Promise<T> {
+  return postGroupMembers<T>(groupId, "add", userIds, actorId);
+}
+
+export async function removeGroupMembers<T = any>(groupId: string, userIds: string[], actorId: string | null): Promise<T> {
+  return postGroupMembers<T>(groupId, "remove", userIds, actorId);
+}
+
 export async function getEntitlementDetails(
   appInstanceId: string,
   entitlementId: string

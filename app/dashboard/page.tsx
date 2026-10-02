@@ -6,12 +6,11 @@ import {
   Building2,
   Users,
   AlertTriangle,
-  ShieldAlert,
+  Search,
   Inbox,
   Clock,
 } from "lucide-react";
-import SectionActivityChart from "@/components/SectionActivityChart";
-import { getReviewerId } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
 import { getCertAnalytics, executeQuery } from "@/lib/api";
 import { navLinks } from "@/components/Navi";
 
@@ -19,7 +18,7 @@ interface DashboardStats {
   totalApplications: number;
   totalUsers: number;
   highRiskItems: number;
-  sodViolations: number;
+  trackRequests: number;
   myApprovals: number;
 }
 
@@ -27,9 +26,20 @@ const EMPTY_STATS: DashboardStats = {
   totalApplications: 0,
   totalUsers: 0,
   highRiskItems: 0,
-  sodViolations: 0,
+  trackRequests: 0,
   myApprovals: 0,
 };
+
+// Accent colors for the quick-link sections, drawn from the app's existing palette
+const sectionPalette = [
+  { bg: "#E5EEFC", fg: "#1759E4" },
+  { bg: "#EEF0F8", fg: "#6574BD" },
+  { bg: "#E8F3E8", fg: "#1C821C" },
+  { bg: "#FCEFEB", fg: "#E0745A" },
+];
+
+// Per-link icon colors, so links inside a section card don't all share one hue
+const itemIconColors = ["#1759E4", "#6574BD", "#1C821C", "#E0745A", "#F59E0B", "#DC2626"];
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -45,7 +55,7 @@ export default function DashboardPage() {
       }
 
       try {
-        const [appsResponse, analyticsData, usersCountResponse, myApprovalsResponse] =
+        const [appsResponse, analyticsData, usersCountResponse, myApprovalsResponse, trackRequestsResponse] =
           await Promise.all([
             fetch(
               `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getApplications/${reviewerId}?page=1&page_size=1`
@@ -59,6 +69,12 @@ export default function DashboardPage() {
             executeQuery<{ resultSet?: Array<{ count?: number }> }>(
               "SELECT COUNT(*) as count FROM kf_wf_get_approval_task WHERE assignee_id = ?::uuid AND task_status = 'OPEN'",
               [reviewerId]
+            ).catch(() => null),
+            apiRequestWithAuth<any>(
+              `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
+                String(reviewerId).trim()
+              )}?page=0&size=1`,
+              { method: "GET" }
             ).catch(() => null),
           ]);
 
@@ -76,20 +92,26 @@ export default function DashboardPage() {
           setStats((prev) => ({ ...prev, myApprovals: typeof count === "number" ? count : 0 }));
         }
 
+        if (trackRequestsResponse?.dbResponse) {
+          const total = Number(trackRequestsResponse.dbResponse.page?.totalElements);
+          const fallback = Array.isArray(trackRequestsResponse.dbResponse.data)
+            ? trackRequestsResponse.dbResponse.data.length
+            : 0;
+          setStats((prev) => ({ ...prev, trackRequests: Number.isFinite(total) ? total : fallback }));
+        }
+
         if (analyticsData?.analytics) {
           let totalHighRiskEntitlements = 0;
           let totalHighRiskAccounts = 0;
-          let totalViolations = 0;
 
           Object.values(analyticsData.analytics).forEach((a: any) => {
             totalHighRiskEntitlements += Number(a.highriskentitlement_count) || 0;
             totalHighRiskAccounts += Number(a.highriskaccount_count) || 0;
-            totalViolations += Number(a.violations_count) || 0;
           });
 
           const totalHighRisk = totalHighRiskEntitlements + totalHighRiskAccounts;
 
-          setStats((prev) => ({ ...prev, highRiskItems: totalHighRisk, sodViolations: totalViolations }));
+          setStats((prev) => ({ ...prev, highRiskItems: totalHighRisk }));
         }
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -107,52 +129,42 @@ export default function DashboardPage() {
       title: "Applications",
       value: stats.totalApplications,
       icon: Building2,
-      iconBg: "#EFF6FF",
-      iconColor: "#1759E4",
+      color: "#1759E4",
+      tint: "#E5EEFC",
       href: "/applications",
     },
     {
       title: "Total Users",
       value: stats.totalUsers,
       icon: Users,
-      iconBg: "#EEF2FF",
-      iconColor: "#6366F1",
+      color: "#6574BD",
+      tint: "#EEF0F8",
       href: "/user",
     },
     {
       title: "High-Risk Items",
       value: stats.highRiskItems,
       icon: AlertTriangle,
-      iconBg: "#FEF2F2",
-      iconColor: "#DC2626",
+      color: "#DC2626",
+      tint: "#FEF2F2",
       href: "/risk-analysis",
     },
     {
-      title: "SoD Violations",
-      value: stats.sodViolations,
-      icon: ShieldAlert,
-      iconBg: "#FFF7ED",
-      iconColor: "#EA580C",
-      href: "/risk-analysis/violations",
+      title: "Track Requests",
+      value: stats.trackRequests,
+      icon: Search,
+      color: "#F59E0B",
+      tint: "#FEF6E7",
+      href: "/track-request",
     },
     {
       title: "My Approvals",
       value: stats.myApprovals,
       icon: Inbox,
-      iconBg: "#F0FDF4",
-      iconColor: "#16A34A",
+      color: "#1C821C",
+      tint: "#E8F3E8",
       href: "/access-request/pending-approvals",
     },
-  ];
-
-  const administrationItemCount =
-    navLinks.find((section) => section.name === "Administration")?.subItems?.length ?? 0;
-
-  const sectionActivity = [
-    { label: "My Workspace — Users", value: stats.totalUsers, color: "#6366F1" },
-    { label: "Request Management — Open Approvals", value: stats.myApprovals, color: "#16A34A" },
-    { label: "Risk Analysis — SoD Violations", value: stats.sodViolations, color: "#EA580C" },
-    { label: "Administration — Items", value: administrationItemCount, color: "#6B7280" },
   ];
 
   return (
@@ -180,11 +192,12 @@ export default function DashboardPage() {
             <Link
               key={tile.title}
               href={tile.href}
-              className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 hover:shadow-md hover:border-gray-300 transition"
+              className="relative overflow-hidden bg-white border border-gray-200 rounded-xl shadow-sm p-4 hover:shadow-md hover:border-gray-300 transition"
             >
+              <div className="absolute inset-x-0 top-0 h-0.5" style={{ backgroundColor: tile.color }} />
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center mb-3"
-                style={{ backgroundColor: tile.iconBg, color: tile.iconColor }}
+                style={{ backgroundColor: tile.tint, color: tile.color }}
               >
                 <Icon className="h-4 w-4" />
               </div>
@@ -197,38 +210,40 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Section activity chart — one bar per sidebar section */}
-      <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-5">
-        <h2 className="text-sm font-semibold text-gray-900 mb-1">Section Activity</h2>
-        <p className="text-xs text-gray-400 mb-2">Live counts across the sidebar's sections</p>
-        <SectionActivityChart data={sectionActivity} />
-      </div>
-
       {/* Quick links — mirrors the left navigation sidebar's sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         {navLinks
           .filter((section) => section.subItems && section.subItems.length > 0)
-          .map((section) => {
+          .map((section, index) => {
             const SectionIcon = section.icon;
+            const palette = sectionPalette[index % sectionPalette.length];
             return (
               <div
                 key={section.name}
-                className="bg-white border border-gray-200 rounded-xl shadow-sm p-4"
+                className="relative overflow-hidden bg-white border border-gray-200 rounded-xl shadow-sm p-4"
               >
+                <div className="absolute inset-x-0 top-0 h-0.5" style={{ backgroundColor: palette.fg }} />
                 <div className="flex items-center gap-2 mb-3">
-                  <SectionIcon className="h-4 w-4 text-gray-500" />
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center"
+                    style={{ backgroundColor: palette.bg, color: palette.fg }}
+                  >
+                    <SectionIcon className="h-4 w-4" />
+                  </div>
                   <h2 className="text-sm font-semibold text-gray-900">{section.name}</h2>
                 </div>
                 <div className="flex flex-col gap-1">
-                  {section.subItems!.map((item) => {
+                  {section.subItems!.map((item, itemIndex) => {
                     const ItemIcon = item.icon;
+                    const itemColor = itemIconColors[(index + itemIndex) % itemIconColors.length];
                     return (
                       <Link
                         key={item.href}
                         href={item.href}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-[var(--hover-bg)] transition-colors"
+                        style={{ "--hover-bg": palette.bg } as React.CSSProperties}
                       >
-                        <ItemIcon className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                        <ItemIcon className="h-3.5 w-3.5 shrink-0" style={{ color: itemColor }} />
                         <span className="truncate">{item.name}</span>
                       </Link>
                     );

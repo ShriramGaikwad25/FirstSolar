@@ -3,8 +3,8 @@ import { ColDef, GridApi } from "ag-grid-enterprise";
 import { themeQuartz } from "ag-grid-community";
 import dynamic from "next/dynamic";
 const AgGridReact = dynamic(() => import("ag-grid-react").then(mod => mod.AgGridReact), { ssr: false });
-import { useRouter } from "next/navigation"; // Updated import
-import React, { useMemo, useRef, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation"; // Updated import
+import React, { Suspense, useMemo, useRef, useState, useEffect } from "react";
 import { executeQuery, getGroups } from "@/lib/api";
 import "@/lib/ag-grid-setup";
 import CustomPagination from "@/components/agTable/CustomPagination";
@@ -453,6 +453,7 @@ const columnDefs = useMemo<ColDef[]>(
 
 // User Groups Tab Component
 interface UserGroupData {
+  groupId?: string;
   userGroup: string;
   description: string;
   owner: string;
@@ -522,8 +523,10 @@ function UserGroupsTab() {
         // Transform API response to match our UserGroupData interface
         if (sourceArray) {
           const transformedData: UserGroupData[] = sourceArray.map((group: any) => {
-            const tags = group.tags ?? group.category ?? group.type ?? "";
+            const tags = group.tags ?? "";
+            const id = group.groupId ?? group.group_id ?? group.id ?? group.groupid;
             return {
+              groupId: id != null ? String(id) : undefined,
               userGroup: group.name || group.groupName || group.group_name || group.displayName || group.userGroup || "Unknown Group",
               description: group.description || group.desc || "",
               owner: group.owner || group.ownerEmail || group.owner_email || group.created_by || group.createdBy || "",
@@ -702,6 +705,7 @@ function UserGroupsTab() {
 
           const handleModifyClick = () => {
             const groupName = params.data?.userGroup;
+            const groupId = params.data?.groupId;
             try {
               // Persist selected group so the form can be prefilled
               if (params.data) {
@@ -712,11 +716,10 @@ function UserGroupsTab() {
             }
 
             // Navigate to create-group page in edit mode
-            if (groupName) {
-              router.push(`/user/create-group?mode=edit&group=${encodeURIComponent(groupName)}`);
-            } else {
-              router.push("/user/create-group?mode=edit");
-            }
+            const query = new URLSearchParams({ mode: "edit" });
+            if (groupId) query.set("groupId", groupId);
+            if (groupName) query.set("group", groupName);
+            router.push(`/user/create-group?${query.toString()}`);
           };
 
           return (
@@ -853,18 +856,30 @@ function UserGroupsTab() {
   );
 }
 
-// Main User Component with Tabs
-export default function User() {
-  const tabs = [
-    {
-      label: "Users",
-      component: UsersTab,
-    },
-    {
-      label: "User Groups",
-      component: UserGroupsTab,
-    },
-  ];
+const userTabs = [
+  { key: "users", label: "Users", component: UsersTab },
+  { key: "groups", label: "User Groups", component: UserGroupsTab },
+];
 
-  return <HorizontalTabs tabs={tabs} defaultIndex={0} />;
+// Main User Component with Tabs; the active tab is kept in ?tab= so links
+// (e.g. back from Create/Update User Group) can land on a specific tab.
+function UserTabs() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tabIndex = Math.max(0, userTabs.findIndex((t) => t.key === searchParams.get("tab")));
+
+  const handleTabChange = (index: number) => {
+    const key = userTabs[index]?.key;
+    router.replace(key && index > 0 ? `/user?tab=${key}` : "/user", { scroll: false });
+  };
+
+  return <HorizontalTabs tabs={userTabs} activeIndex={tabIndex} onChange={handleTabChange} />;
+}
+
+export default function User() {
+  return (
+    <Suspense fallback={null}>
+      <UserTabs />
+    </Suspense>
+  );
 }

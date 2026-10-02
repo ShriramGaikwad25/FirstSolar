@@ -182,6 +182,8 @@ interface MetadataField {
   isNew?: boolean;
 }
 
+const MAX_CUSTOM_FIELDS = 10;
+
 const EMPTY_FIELD_CONFIG: FieldConfig = {
   name: "",
   label: "",
@@ -416,7 +418,9 @@ export default function EntitlementManagementSettings() {
       return;
     }
     // New fields need a unique column name and a label before anything is sent
-    const takenNames = new Set(fields.filter((f) => !f.isNew).map((f) => normalizeKey(configs[f.key]?.name ?? "")));
+    const takenNames = new Set(
+      fields.filter((f) => !f.isNew && f.category !== "other").map((f) => normalizeKey(configs[f.key]?.name ?? ""))
+    );
     const invalid: string[] = [];
     for (const f of added) {
       const cfg = configs[f.key];
@@ -510,11 +514,28 @@ export default function EntitlementManagementSettings() {
     setIsEditing(false);
   };
 
-  // Add an empty custom field row to a category card and switch to edit mode
+  // Custom fields are named Extended1..Extended10; the first free slot is used for the next one.
+  // Fields in the hidden "other" card are not considered.
+  const nextExtendedName = useMemo(() => {
+    const used = new Set<number>();
+    for (const f of fields) {
+      if (f.category === "other") continue;
+      const match = /^extended(\d+)$/i.exec((configs[f.key]?.name ?? "").trim());
+      if (match) used.add(Number(match[1]));
+    }
+    for (let n = 1; n <= MAX_CUSTOM_FIELDS; n++) {
+      if (!used.has(n)) return `Extended${n}`;
+    }
+    return null;
+  }, [fields, configs]);
+
+  // Add a custom field row (auto-named) to a category card and switch to edit mode
   const addField = (category: FieldCategory) => {
+    if (!nextExtendedName) return;
     const key = `new-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-    setFields((prev) => [...prev, { key, category, raw: null, isNew: true, config: { ...EMPTY_FIELD_CONFIG } }]);
-    setConfigs((prev) => ({ ...prev, [key]: { ...EMPTY_FIELD_CONFIG } }));
+    const config = { ...EMPTY_FIELD_CONFIG, name: nextExtendedName };
+    setFields((prev) => [...prev, { key, category, raw: null, isNew: true, config }]);
+    setConfigs((prev) => ({ ...prev, [key]: config }));
     setCollapsedCategories((prev) => ({ ...prev, [category]: false }));
     setIsEditing(true);
   };
@@ -734,20 +755,9 @@ export default function EntitlementManagementSettings() {
                         return (
                           <div key={field} className={`border-t border-gray-100 ${isNew ? "bg-blue-50/40" : ""}`}>
                             <div className={`${ROW_GRID} items-center px-5 py-2.5`}>
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={cfg.name}
-                                  onChange={(e) => updateField(field, { name: e.target.value })}
-                                  placeholder={isNew ? "column_name" : undefined}
-                                  aria-label={`Name — ${field}`}
-                                  className={`${inputClass} font-mono`}
-                                />
-                              ) : (
-                                <span className="text-sm text-gray-800 font-mono truncate" title={cfg.name}>
-                                  {cfg.name}
-                                </span>
-                              )}
+                              <span className="text-sm text-gray-800 font-mono truncate" title={cfg.name}>
+                                {cfg.name}
+                              </span>
                               {isEditing ? (
                                 <input
                                   type="text"
@@ -834,8 +844,12 @@ export default function EntitlementManagementSettings() {
                         <button
                           type="button"
                           onClick={() => addField(catKey)}
-                          disabled={isSaving}
-                          title={`Add a custom field to ${meta.label}`}
+                          disabled={isSaving || !nextExtendedName}
+                          title={
+                            nextExtendedName
+                              ? `Add a custom field to ${meta.label}`
+                              : `Limit reached: at most ${MAX_CUSTOM_FIELDS} custom fields`
+                          }
                           className="flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors disabled:opacity-50"
                         >
                           <Plus className="w-3.5 h-3.5" />
