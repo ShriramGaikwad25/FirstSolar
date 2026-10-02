@@ -72,29 +72,16 @@ export default function AppInventoryPage() {
       name: String(applicationName),
       description: `${applicationType} application registered for tenant ${tenantId}`,
       category: String(applicationType),
-      riskLevel: "Medium", // Default risk level
+      riskLevel: String(app.RiskLevel ?? app.riskLevel ?? app.risk ?? ""),
       serviceUrl: String(scimUrl),
       apiToken: String(apiToken || ''),
-      createdOn: new Date().toISOString().split('T')[0], // Current date as placeholder
+      createdOn: String(app.CreatedOn ?? app.createdOn ?? app.created_on ?? app.createdAt ?? ""),
       status: statusNormalized,
     };
   };
 
   const [applicationsData, setApplicationsData] = useState<AppInventoryItem[]>([]);
   const [aiApplicationsData, setAiApplicationsData] = useState<AppInventoryItem[]>([]);
-
-  // Dummy placeholder record shown on the Integrations page
-  const dummyGlobalAdConfigItem: AppInventoryItem = {
-    id: "dummy-global-ad-config-management",
-    name: "Global AD config management",
-    description: "Centralized management of global Active Directory configuration settings across the organization",
-    category: "Active Directory",
-    riskLevel: "Low",
-    serviceUrl: "",
-    apiToken: "",
-    createdOn: new Date().toISOString().split("T")[0],
-    status: "Integrated",
-  };
 
   // Fetch applications from API (all apps + in-progress apps to set status)
   useEffect(() => {
@@ -107,7 +94,7 @@ export default function AppInventoryPage() {
           getInProgressApplications(),
         ]);
 
-        // Parse in-progress apps from itasset/ACMECOM/getallapp (flexible response shape)
+        // Parse in-progress apps from itasset/{tenant}/getallapp (flexible response shape)
         const idKeys = [
           "ApplicationID", "applicationID", "ApplicationId", "applicationId",
           "id", "Id", "appId", "AppId", "appid", "application_id",
@@ -180,10 +167,10 @@ export default function AppInventoryPage() {
             name: String(applicationName || "In Progress Application"),
             description: String(applicationType ? `${applicationType} application` : "In progress application"),
             category: String(applicationType || "Unknown"),
-            riskLevel: "Medium",
+            riskLevel: String(app.riskLevel ?? app.risk ?? ""),
             serviceUrl: String(scimUrl || ""),
             apiToken: String(apiToken || ""),
-            createdOn: (app.createdOn ?? app.created_on ?? app.createdAt ?? new Date().toISOString().split("T")[0]) || new Date().toISOString().split("T")[0],
+            createdOn: String(app.createdOn ?? app.created_on ?? app.createdAt ?? ""),
             status: "In Progress",
           };
         };
@@ -227,7 +214,7 @@ export default function AppInventoryPage() {
             fromInProgressOnly.push(row);
           }
 
-          const merged = [dummyGlobalAdConfigItem, ...dedupedMain, ...fromInProgressOnly];
+          const merged = [...dedupedMain, ...fromInProgressOnly];
           setApplicationsData(merged);
         } else {
           throw new Error(response?.message || "Invalid response format: Applications array not found");
@@ -285,10 +272,10 @@ export default function AppInventoryPage() {
             name: String(applicationName),
             description: String(description || `${applicationType} application`),
             category: String(applicationType || 'Unknown'),
-            riskLevel: 'Medium',
+            riskLevel: String(app.riskLevel ?? app.risk ?? ''),
             serviceUrl: String(scimOrConnUrl),
             apiToken: String(apiToken || ''),
-            createdOn: new Date().toISOString().split('T')[0],
+            createdOn: String(app.createdOn ?? app.createdAt ?? ''),
             status: 'Integrated',
           } as AppInventoryItem;
         });
@@ -303,113 +290,20 @@ export default function AppInventoryPage() {
     }
   }, [activeTabIndex, mounted]);
 
-  // Sample data - fallback if API fails
-  const sampleData: AppInventoryItem[] = [
-    dummyGlobalAdConfigItem,
-    {
-      id: "1",
-      name: "Active Directory",
-      description: "Centralized directory service for user authentication and authorization across the organization",
-      category: "Identity Management",
-      riskLevel: "Low",
-      serviceUrl: "https://intranet.example.com/ad",
-      apiToken: "",
-      createdOn: "2023-08-05",
-      status: "Integrated"
-    },
-    {
-      id: "2",
-      name: "SAP ERP System",
-      description: "Enterprise resource planning system managing financial, HR, and operational processes",
-      category: "Business Applications",
-      riskLevel: "Medium",
-      serviceUrl: "https://sap.example.com",
-      apiToken: "",
-      createdOn: "2022-11-20",
-      status: "In Progress"
-    },
-    {
-      id: "3",
-      name: "Workday HCM",
-      description: "Human capital management platform for employee lifecycle management and payroll processing",
-      category: "HR Systems",
-      riskLevel: "Low",
-      serviceUrl: "https://workday.example.com",
-      apiToken: "",
-      createdOn: "2023-02-14",
-      status: "Integrated"
-    },
-    {
-      id: "4",
-      name: "Oracle Database",
-      description: "Primary database system storing critical business data and supporting multiple applications",
-      category: "Database Systems",
-      riskLevel: "High",
-      serviceUrl: "https://db-admin.example.com/oracle",
-      apiToken: "",
-      createdOn: "2021-06-30",
-      status: "In Progress"
-    },
-    {
-      id: "5",
-      name: "Salesforce CRM",
-      description: "Customer relationship management platform for sales, marketing, and customer service operations",
-      category: "Business Applications",
-      riskLevel: "Medium",
-      serviceUrl: "https://acme.my.salesforce.com",
-      apiToken: "",
-      createdOn: "2023-09-10",
-      status: "Integrated"
-    },
-    {
-      id: "6",
-      name: "Microsoft Office 365",
-      description: "Productivity suite including email, document collaboration, and communication tools",
-      category: "Productivity Tools",
-      riskLevel: "Low",
-      serviceUrl: "https://portal.office.com",
-      apiToken: "",
-      createdOn: "2020-12-01",
-      status: "Integrated"
-    },
-    {
-      id: "7",
-      name: "ServiceNow ITSM",
-      description: "IT service management platform for incident, problem, and change management processes",
-      category: "IT Management",
-      riskLevel: "Medium",
-      serviceUrl: "https://servicenow.example.com",
-      apiToken: "",
-      createdOn: "2022-05-18",
-      status: "In Progress"
-    },
-    {
-      id: "8",
-      name: "Confluence Wiki",
-      description: "Collaborative workspace for documentation, knowledge sharing, and team collaboration",
-      category: "Collaboration Tools",
-      riskLevel: "Low",
-      serviceUrl: "https://confluence.example.com",
-      apiToken: "",
-      createdOn: "2021-03-22",
-      status: "Integrated"
-    }
-  ];
-
 useEffect(() => {
   setMounted(true);
 }, []);
 
   const categoryOptions = useMemo(() => {
   const set = new Set<string>();
-  const data = (applicationsData.length > 0 ? applicationsData : sampleData) || [];
+  const data = applicationsData;
   for (const item of data) set.add(item.category);
   return Array.from(set).sort();
 }, [applicationsData]);
 
   const filteredData = useMemo(() => {
   const q = searchQuery.trim().toLowerCase();
-  const data = (applicationsData.length > 0 ? applicationsData : sampleData) || [];
+  const data = applicationsData;
   return data.filter((item) => {
     const matchesQuery =
       q.length === 0 ||
@@ -708,10 +602,6 @@ useEffect(() => {
   const handleSettings = (item: AppInventoryItem) => {
     const appId = item?.id ?? "";
     if (!appId) return;
-    if (appId === dummyGlobalAdConfigItem.id) {
-      router.push("/settings/app-inventory/global-ad-config-management");
-      return;
-    }
     const apiToken = item?.apiToken ?? "";
     if (typeof window !== "undefined") {
       sessionStorage.setItem(`app-inventory-token-${appId}`, apiToken);

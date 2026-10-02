@@ -1,4 +1,3 @@
-import { tenantId as defaultTenantId } from '@/lib/config';
 
 /** Cookie name matches Keyforge `registeredAppName` (also used by API routes). */
 export const REGISTERED_APP_COOKIE = 'registeredAppName';
@@ -136,14 +135,13 @@ export function isTenantAuthPath(pathname: string): boolean {
   return parseTenantFromPathname(normalized) !== null;
 }
 
-/** Path to open sign-in for a tenant (e.g. /ACMECOM). */
+/** Path to open sign-in for a tenant (e.g. /ACMECOM); /logged-out when no tenant is known. */
 export function getTenantLoginPath(tenantId?: string | null): string {
   const id =
     tenantId?.trim() ||
     (typeof window !== 'undefined' ? getActiveTenantId() : null) ||
-    defaultTenantId?.trim() ||
-    'ACMECOM';
-  return `/${id}`;
+    '';
+  return id ? `/${id}` : '/logged-out';
 }
 
 export function redirectToTenantLogin(tenantId?: string | null): void {

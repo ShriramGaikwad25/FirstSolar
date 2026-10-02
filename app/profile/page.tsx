@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getCurrentUser, getReviewerId, apiRequestWithAuth } from "@/lib/auth";
+import { getCurrentUser, getReviewerId, apiRequestWithAuth, resolveTenantIdForHeader } from "@/lib/auth";
 
 export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -42,7 +42,7 @@ export default function ProfilePage() {
       try {
         setIsLoading(true);
         setError(null);
-        const endpoint = "https://preview.keyforge.ai/entities/api/v1/ACMECOM/executeQuery";
+        const endpoint = `https://preview.keyforge.ai/entities/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/executeQuery`;
 
         const searchTerm = (searchIdentifier || "").trim();
         const reviewerTerm = (reviewerId || "").trim();

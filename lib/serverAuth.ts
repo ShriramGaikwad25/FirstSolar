@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAMES } from "@/lib/auth";
 import { REGISTERED_APP_COOKIE } from "@/lib/tenant";
-import { tenantId as defaultTenantId } from "@/lib/config";
 
 export function getJwtTokenFromRequest(request: NextRequest): string | null {
   try {
@@ -62,13 +61,9 @@ export function withRegisterScimAuthHeader(
 /** Resolves the caller's tenant from the incoming request's registeredAppName cookie. */
 export function getTenantIdFromRequest(request: NextRequest): string {
   try {
-    return (
-      request.cookies.get(REGISTERED_APP_COOKIE)?.value?.trim() ||
-      defaultTenantId?.trim() ||
-      "ACMECOM"
-    );
+    return request.cookies.get(REGISTERED_APP_COOKIE)?.value?.trim() || "";
   } catch {
-    return defaultTenantId?.trim() || "ACMECOM";
+    return "";
   }
 }
 

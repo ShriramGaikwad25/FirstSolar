@@ -289,15 +289,6 @@ const AD_POWERSHELL_AGENT_POOL_OPTIONS: Array<{
   label: string;
 }> = [
   { groupLabel: null, value: "__direct__", label: "No agent — direct or VPN connectivity" },
-  { groupLabel: "Middle East & Africa", value: "dpw-uae-jebelali", label: "Jebel Ali · 2 agents, healthy" },
-  { groupLabel: "Middle East & Africa", value: "dpw-uae-hq", label: "Dubai HQ · 2 agents, healthy" },
-  { groupLabel: "Middle East & Africa", value: "dpw-sn-dakar", label: "Dakar · 1 agent, healthy" },
-  { groupLabel: "Europe", value: "dpw-uk-southampton", label: "Southampton · 2 agents, healthy" },
-  { groupLabel: "Europe", value: "dpw-nl-rotterdam", label: "Rotterdam · 2 agents, healthy" },
-  { groupLabel: "Asia Pacific", value: "dpw-in-mundra", label: "Mundra · 2 agents, healthy" },
-  { groupLabel: "Asia Pacific", value: "dpw-au-sydney", label: "Sydney · 1 agent, degraded" },
-  { groupLabel: "Americas", value: "dpw-ca-princerupert", label: "Prince Rupert · 2 agents, healthy" },
-  { groupLabel: "Americas", value: "dpw-pe-callao", label: "Callao · 2 agents, healthy" },
 ];
 
 export default function AddApplicationPage() {
@@ -884,7 +875,7 @@ export default function AddApplicationPage() {
         const discoveredOn = `${dd}/${mm}/${yyyy}`;
 
         const savePayload = {
-          tenantId: "ACMECOM",
+          tenantId: resolveTenantIdForHeader(),
           appid: "",
           serviceURL: "",
           name: formData.step2.applicationName || "",
@@ -1027,7 +1018,7 @@ export default function AddApplicationPage() {
           group_searchBase: groupSearchBaseVal,
         };
         const savePayload = {
-          tenantId: "ACMECOM",
+          tenantId: resolveTenantIdForHeader(),
           appid: appIdFromUrl || "",
           serviceURL: "",
           name: formData.step2.applicationName || "",
@@ -1143,7 +1134,7 @@ export default function AddApplicationPage() {
             };
           }
         });
-        await mapSchemaFields("ACMECOM", appId, {
+        await mapSchemaFields(resolveTenantIdForHeader(), appId, {
           provisioningAttrMap,
           reconcilliationAttrMap: {},
         });
@@ -1253,7 +1244,7 @@ export default function AddApplicationPage() {
   /** Block POST/GET to legacy IT Asset submitrequest while this page is mounted (stale chunks or stray callers). */
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const needle = "/itasset/ACMECOM/submitrequest";
+    const needle = `/itasset/${resolveTenantIdForHeader()}/submitrequest`;
     const nextFetch = window.fetch.bind(window);
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
       const url =
@@ -1505,7 +1496,7 @@ export default function AddApplicationPage() {
     let cancelled = false;
     (async () => {
       try {
-        const json = await getMappedSchema("ACMECOM", appId);
+        const json = await getMappedSchema(resolveTenantIdForHeader(), appId);
         if (cancelled) return;
         const rows = attributeMappingsFromGetMappedSchemaJson(json);
         if (rows.length > 0) {
@@ -2629,7 +2620,7 @@ export default function AddApplicationPage() {
                     group_searchBase: groupSearchBaseVal,
                   };
                   const savePayload = {
-                    tenantId: "ACMECOM",
+                    tenantId: resolveTenantIdForHeader(),
                     appid: appIdFromUrl || "",
                     serviceURL: "",
                     name: formData.step2.applicationName || "",
@@ -5377,7 +5368,6 @@ export default function AddApplicationPage() {
                         className="w-full px-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline appearance-none bg-white"
                       >
                         <option value=""></option>
-                        <option value="DPW-Dubai-CyberArk">DPW-Dubai-CyberArk</option>
                         <option value="US-AD-OCI-Vault">US-AD-OCI-Vault</option>
                         <option value="NA-Shared-CyberArk">NA-Shared-CyberArk</option>
                         <option value="UK-HashiCorp-Vault">UK-HashiCorp-Vault</option>
@@ -11156,7 +11146,7 @@ export default function AddApplicationPage() {
                     setDisconnectedUploadLoading(true);
                     try {
                       const basicDefinition = {
-                        tenantId: "ACMECOM",
+                        tenantId: resolveTenantIdForHeader(),
                         applicationName: appName,
                         fieldDelimiter: formData.step3.fieldDelimiter ?? ",",
                         multivalueDelimiter: formData.step3.multivalueDelimiter ?? "#",
@@ -11612,7 +11602,7 @@ export default function AddApplicationPage() {
                                   })
                                 );
                                 const payload = {
-                                  tenantId: "ACMECOM",
+                                  tenantId: resolveTenantIdForHeader(),
                                   appId: "BASEREPO",
                                   applicationName: appName,
                                   appType: "users",
@@ -11882,7 +11872,7 @@ export default function AddApplicationPage() {
                                             }
                                             try {
                                               const basicDefinition = {
-                                                tenantId: "ACMECOM",
+                                                tenantId: resolveTenantIdForHeader(),
                                                 applicationName: appName,
                                                 fieldDelimiter: fieldDelimiterValue,
                                                 multivalueDelimiter: multivalueDelimiterValue,
@@ -12084,7 +12074,7 @@ export default function AddApplicationPage() {
                                               formData.step1.applicationName?.trim() ||
                                               "";
                                             const payload = {
-                                              tenantId: "ACMECOM",
+                                              tenantId: resolveTenantIdForHeader(),
                                               appId: "BASEREPO",
                                               applicationName: appName,
                                               appType: fieldName,
@@ -12314,7 +12304,7 @@ export default function AddApplicationPage() {
                           group_searchBase: groupSearchBaseVal,
                         };
                         const savePayload = {
-                          tenantId: "ACMECOM",
+                          tenantId: resolveTenantIdForHeader(),
                           appid: appIdFromUrl || "",
                           serviceURL: "",
                           name: formData.step2.applicationName || "",
@@ -12856,7 +12846,7 @@ export default function AddApplicationPage() {
                       group_searchBase: groupSearchBaseVal,
                     };
                     const onboardPayload = {
-                      tenantId: "ACMECOM",
+                      tenantId: resolveTenantIdForHeader(),
                       appid: appIdFromUrl || "",
                       serviceURL: "",
                       name: formData.step2.applicationName || "",

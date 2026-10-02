@@ -7,7 +7,7 @@ import {
   redirectToTenantLogin,
 } from '@/lib/tenant';
 import { clearJitAccessHistoryStore } from '@/lib/jitAccessHistoryStorage';
-import { tenantId as defaultTenantId } from '@/lib/config';
+import appConfig from '@/config.json';
 
 /** Best-effort message from KeyForge / gateway / PG JSON error bodies. */
 function pickHttpErrorBodyMessage(errorJson: unknown, fallback: string): string {
@@ -1054,14 +1054,9 @@ export async function refreshJWTToken(): Promise<boolean> {
 // - On 401/403 or response body "Token Expired" -> try refresh JWT using access token
 // - On refresh success -> retry request once
 // - On refresh failure (access token expired) -> forceLogout
-/** Resolves the current tenant id (path segment -> stored user -> config default). Use this instead of hardcoding a tenant literal. */
+/** Resolves the current tenant id (path segment / session -> stored user). Use this instead of hardcoding a tenant literal. */
 export function resolveTenantIdForHeader(): string {
-  return (
-    getActiveTenantId()?.trim() ||
-    getCurrentUser()?.tenantId?.trim() ||
-    defaultTenantId?.trim() ||
-    'ACMECOM'
-  );
+  return getActiveTenantId()?.trim() || getCurrentUser()?.tenantId?.trim() || '';
 }
 
 /** Auth + tenant headers for call sites that use raw fetch() instead of apiRequestWithAuth (e.g. non-JSON responses). */
@@ -1441,6 +1436,28 @@ export function getReviewerId(): string | null {
     if (typeof fromJwt === 'string' && fromJwt.trim()) return fromJwt.trim();
   }
   return getCookie(COOKIE_NAMES.REVIEWER_ID);
+}
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** TEMPORARY fallback (config.json `tenantUuid`) until the JWT carries the tenant UUID. Remove with the fallback in getTenantUuid(). */
+const TEMP_FALLBACK_TENANT_UUID = (appConfig as { tenantUuid?: string }).tenantUuid?.trim() || '';
+let warnedTenantUuidFallback = false;
+const TENANT_UUID_CLAIMS =['tenantUuid', 'tenant_uuid', 'tenantGuid', 'tenant_id', 'tenantId', 'tid'];
+
+/** Tenant UUID for DB functions that take a tenant_id uuid, read from the signed-in user's JWT claims. */
+export function getTenantUuid(): string {
+  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
+  const claims = jwtToken ? decodeJwtClaims(jwtToken) : null;
+  for (const key of TENANT_UUID_CLAIMS) {
+    const value = claims?.[key];
+    if (typeof value === 'string' && UUID_PATTERN.test(value.trim())) return value.trim();
+  }
+  // TEMPORARY: remove once the backend adds the tenant UUID claim to the JWT.
+  if (!warnedTenantUuidFallback) {
+    warnedTenantUuidFallback = true;
+    console.warn('Tenant UUID not found in JWT claims; using temporary fallback');
+  }
+  return TEMP_FALLBACK_TENANT_UUID;
 }
 
 // User role(s) now live in the JWT's "adminRoles" claim (an array). Falls back to the legacy

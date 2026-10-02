@@ -124,7 +124,7 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
   }
 
   const trimmedReviewerId = String(reviewerId).trim();
-  const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/${encodeURIComponent(
+  const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/${encodeURIComponent(
     trimmedReviewerId
   )}`;
 
@@ -212,7 +212,7 @@ async function resolveApproverActionIds(
     throw new Error("Missing request identifier for this item.");
   }
 
-  const detailUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/detail/${encodeURIComponent(
+  const detailUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/detail/${encodeURIComponent(
     row.requestUuid
   )}`;
   const data = await apiRequestWithAuth<any>(detailUrl, { method: "GET" });

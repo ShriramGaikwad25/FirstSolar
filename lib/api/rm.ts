@@ -1,3 +1,4 @@
+import { getTenantUuid } from "@/lib/auth";
 import { executeQuery } from "@/lib/api";
 import { coerceRowObject, extractResultRows } from "@/lib/nhi-dashboard";
 import { getKfResultData, mapExecuteQueryToDashboard, mapExecuteQueryToRulesets } from "@/lib/rm-dashboard-data";
@@ -42,10 +43,8 @@ import type { ErpInstance, ExtractTemplate, UpsertErpInstanceInput } from "@/typ
 import type { Lookup, LookupType, UpsertLookupValueInput } from "@/types/rm-lookups";
 // SimulationResult / SimulationApiResult used in unwrapSimulationResult
 
-const RM_TENANT_ID = "a0000000-0000-0000-0000-000000000001";
-
 function rmTenantId(): string {
-  return RM_TENANT_ID;
+  return getTenantUuid();
 }
 
 export type { RulesetCsvRow } from "@/types/rm-dashboard";
@@ -154,7 +153,7 @@ export async function getLookupByCategory(
 ): Promise<{ data: RmLookupValue[] }> {
   const res = await executeQuery<unknown>(RM_LIST_LOOKUP_VALUES_QUERY, [
     category,
-    RM_TENANT_ID,
+    rmTenantId(),
     locale,
   ]);
   const data = getKfResultData(res);
@@ -189,7 +188,7 @@ export async function listRulesets(
   const st =
     status != null && String(status).trim() !== "" ? String(status).trim() : "";
   const response = await executeQuery<unknown>(RM_LIST_RULESETS_QUERY, [
-    RM_TENANT_ID,
+    rmTenantId(),
     st,
     page,
     pageSize,
@@ -223,7 +222,7 @@ export async function listAnalysisRuns(
   pageSize: number = 50
 ): Promise<{ data: AnalysisRunListRow[] }> {
   const res = await executeQuery<unknown>(RM_LIST_ANALYSIS_RUNS_QUERY, [
-    RM_TENANT_ID,
+    rmTenantId(),
     page,
     pageSize,
   ]);
@@ -606,7 +605,7 @@ export async function listViolations(filters: ListViolationsParams): Promise<Lis
       ? String(filters.status).trim()
       : "";
   const res = await executeQuery<unknown>(RM_LIST_VIOLATIONS_QUERY, [
-    RM_TENANT_ID,
+    rmTenantId(),
     status,
     sortBy,
     sortDir,
@@ -786,8 +785,8 @@ export async function searchPrivileges(
 export async function getDashboard(rulesetId?: number): Promise<{ data: RmDashboardData }> {
   const response =
     rulesetId == null
-      ? await executeQuery<unknown>(RM_GET_DASHBOARD_V2_ALL_QUERY, [RM_TENANT_ID])
-      : await executeQuery<unknown>(RM_GET_DASHBOARD_V2_BY_RULESET_QUERY, [RM_TENANT_ID, rulesetId]);
+      ? await executeQuery<unknown>(RM_GET_DASHBOARD_V2_ALL_QUERY, [rmTenantId()])
+      : await executeQuery<unknown>(RM_GET_DASHBOARD_V2_BY_RULESET_QUERY, [rmTenantId(), rulesetId]);
   return { data: mapExecuteQueryToDashboard(response) };
 }
 
@@ -798,7 +797,7 @@ const RM_UPSERT_MITIGATION_QUERY =
   "SELECT public.kf_rm_upsert_mitigation(?::jsonb) AS result";
 
 export async function listMitigations(): Promise<{ data: MitigationListRow[] }> {
-  const res = await executeQuery<unknown>(RM_LIST_MITIGATIONS_QUERY, [RM_TENANT_ID]);
+  const res = await executeQuery<unknown>(RM_LIST_MITIGATIONS_QUERY, [rmTenantId()]);
   return { data: asArray<MitigationListRow>(getKfResultData(res)) };
 }
 
@@ -820,7 +819,7 @@ export async function listExceptions(
   pageSize: number = 100
 ): Promise<{ data: ExceptionListRow[] }> {
   const res = await executeQuery<unknown>(RM_LIST_EXCEPTIONS_QUERY, [
-    RM_TENANT_ID,
+    rmTenantId(),
     page,
     pageSize,
   ]);
@@ -869,7 +868,7 @@ export async function searchUsers(
   limit: number = 15
 ): Promise<{ data: UserSearchRow[] }> {
   const res = await executeQuery<unknown>(RM_SEARCH_USERS_SIM, [
-    RM_TENANT_ID,
+    rmTenantId(),
     query,
     limit,
   ]);
@@ -881,7 +880,7 @@ export async function searchEntitlements(
   limit: number = 15
 ): Promise<{ data: EntitlementSearchRow[] }> {
   const res = await executeQuery<unknown>(RM_SEARCH_ENTITLEMENTS_SIM, [
-    RM_TENANT_ID,
+    rmTenantId(),
     query,
     limit,
   ]);
@@ -921,7 +920,7 @@ const RM_LIST_EXTRACT_TEMPLATES_QUERY =
   "SELECT public.kf_rm_list_extract_templates(?, ?::uuid) AS result";
 
 export async function listErpInstances(): Promise<{ data: ErpInstance[] }> {
-  const res = await executeQuery<unknown>(RM_LIST_ERP_INSTANCES_QUERY, [RM_TENANT_ID]);
+  const res = await executeQuery<unknown>(RM_LIST_ERP_INSTANCES_QUERY, [rmTenantId()]);
   return { data: asArray<ErpInstance>(getKfResultData(res)) };
 }
 
@@ -937,7 +936,7 @@ export async function listExtractTemplates(
 ): Promise<{ data: ExtractTemplate[] }> {
   const res = await executeQuery<unknown>(RM_LIST_EXTRACT_TEMPLATES_QUERY, [
     systemType,
-    RM_TENANT_ID,
+    rmTenantId(),
   ]);
   return { data: asArray<ExtractTemplate>(getKfResultData(res)) };
 }
@@ -1008,7 +1007,7 @@ function mapListFromQuery<T>(
 }
 
 export async function listLookupTypes(): Promise<{ data: LookupType[] }> {
-  const res = await executeQuery<unknown>(RM_LIST_LOOKUP_TYPES_QUERY, [RM_TENANT_ID]);
+  const res = await executeQuery<unknown>(RM_LIST_LOOKUP_TYPES_QUERY, [rmTenantId()]);
   return { data: mapListFromQuery(res, mapLookupTypeRow, (r) => Boolean(r.type_code)) };
 }
 
@@ -1022,7 +1021,7 @@ export async function listLookupValues(
 ): Promise<{ data: Lookup[] }> {
   const res = await executeQuery<unknown>(RM_LIST_LOOKUP_VALUES_QUERY, [
     typeCode,
-    RM_TENANT_ID,
+    rmTenantId(),
     locale,
   ]);
   return {

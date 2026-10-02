@@ -565,7 +565,6 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
                     className="w-full text-xs text-gray-900 border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                   >
                     <option value=""></option>
-                    <option value="DPW-Dubai-CyberArk">DPW-Dubai-CyberArk</option>
                     <option value="US-AD-OCI-Vault">US-AD-OCI-Vault</option>
                     <option value="NA-Shared-CyberArk">NA-Shared-CyberArk</option>
                     <option value="UK-HashiCorp-Vault">UK-HashiCorp-Vault</option>

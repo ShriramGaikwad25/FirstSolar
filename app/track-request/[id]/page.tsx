@@ -248,7 +248,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
       return;
     }
 
-    const url = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
+    const url = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
       String(reviewerId).trim()
     )}/${encodeURIComponent(String(id).trim())}`;
     setLoading(true);

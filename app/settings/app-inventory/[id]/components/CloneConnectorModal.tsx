@@ -87,7 +87,7 @@ export default function CloneConnectorModal({
                 type="text"
                 value={connectorName}
                 onChange={(e) => setConnectorName(e.target.value)}
-                placeholder="e.g. AD_DPWorld_Abu_Dhabi"
+                placeholder="e.g. AD_Corp_EU"
                 className="w-full text-sm border border-gray-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -99,7 +99,7 @@ export default function CloneConnectorModal({
                 type="text"
                 value={targetDomain}
                 onChange={(e) => setTargetDomain(e.target.value)}
-                placeholder="e.g. abudhabi.dpworld.local"
+                placeholder="e.g. eu.corp.local"
                 className="w-full text-sm border border-gray-300 rounded-md px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>

@@ -590,7 +590,7 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
           schemaAppId && applicationType ? buildCelExpressionsUrl(schemaAppId, applicationType) : null;
 
         const mappedSchemaPromise = schemaAppId
-          ? getMappedSchema("ACMECOM", schemaAppId).catch(() => null)
+          ? getMappedSchema(resolveTenantIdForHeader(), schemaAppId).catch(() => null)
           : Promise.resolve(null);
 
         const expressionsPromise = expressionsUrl
@@ -945,14 +945,14 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
 
     setIsTransformationSaving(true);
     try {
-      const existingMapped = await getMappedSchema("ACMECOM", appId);
+      const existingMapped = await getMappedSchema(resolveTenantIdForHeader(), appId);
       const payload = buildMapFieldsPayloadWithTransformations(
         existingMapped,
         inboundMappingRows,
         outboundMappingRows
       );
-      await mapSchemaFields("ACMECOM", appId, payload);
-      const refreshed = await getMappedSchema("ACMECOM", appId);
+      await mapSchemaFields(resolveTenantIdForHeader(), appId, payload);
+      const refreshed = await getMappedSchema(resolveTenantIdForHeader(), appId);
       const { inbound, outbound } = transformationMappingsFromMappedSchema(refreshed);
       setInboundMappingRows(inbound);
       setOutboundMappingRows(outbound);
@@ -1162,7 +1162,6 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
                 className="w-full px-4 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline appearance-none bg-white"
               >
                 <option value=""></option>
-                <option value="DPW-Dubai-CyberArk">DPW-Dubai-CyberArk</option>
                 <option value="US-AD-OCI-Vault">US-AD-OCI-Vault</option>
                 <option value="NA-Shared-CyberArk">NA-Shared-CyberArk</option>
                 <option value="UK-HashiCorp-Vault">UK-HashiCorp-Vault</option>

@@ -742,14 +742,14 @@ const PendingApprovalDetailPage = ({
     setError(null);
 
     const trimmedReviewerId = String(reviewerId).trim();
-    const url = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/detail/${encodeURIComponent(
+    const url = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/detail/${encodeURIComponent(
       String(id).trim(),
     )}`;
 
     // assigneeType / claimable / claimedBy live on the task-list endpoint's rows, not on this
     // detail endpoint's tasks[] — fetch it in parallel and match by requestUuid so the Claim /
     // Release affordances can reflect the same queue-assignment state the list page shows.
-    const listUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/approvals/${encodeURIComponent(
+    const listUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/${encodeURIComponent(
       trimmedReviewerId,
     )}`;
     const fetchListPage = (page: number) =>

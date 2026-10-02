@@ -6,7 +6,7 @@ import { Search } from "lucide-react";
 const AgGridReact = dynamic(() => import("ag-grid-react").then((mod) => mod.AgGridReact), { ssr: false });
 import "@/lib/ag-grid-setup";
 import { ColDef, ICellRendererParams } from "ag-grid-enterprise";
-import { getReviewerId, apiRequestWithAuth, getCurrentUser, getCookie, COOKIE_NAMES } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth, getCurrentUser, getCookie, COOKIE_NAMES, resolveTenantIdForHeader } from "@/lib/auth";
 import { getAccessRequestStatusBadgeClasses } from "@/lib/access-request-status-badge";
 import {
   type MyApprovalsStatusFilter,
@@ -135,7 +135,7 @@ const TrackRequest: React.FC = () => {
     }
 
     const trimmedReviewerId = String(reviewerId).trim();
-    const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
+    const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
       trimmedReviewerId
     )}`;
     setLoading(true);
@@ -166,7 +166,7 @@ const TrackRequest: React.FC = () => {
 
     /** wfInstanceId set for requests with an open clarification question, for the "C" badge. */
     const fetchClarificationWfInstanceIds = apiRequestWithAuth<any>(
-      `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/task/inbox/${encodeURIComponent(
+      `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/inbox/${encodeURIComponent(
         trimmedReviewerId
       )}`,
       { method: "GET" }

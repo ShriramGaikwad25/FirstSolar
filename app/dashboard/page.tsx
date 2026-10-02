@@ -10,7 +10,7 @@ import {
   Inbox,
   Clock,
 } from "lucide-react";
-import { getReviewerId, apiRequestWithAuth } from "@/lib/auth";
+import { getReviewerId, apiRequestWithAuth, getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 import { getCertAnalytics, executeQuery } from "@/lib/api";
 import { navLinks } from "@/components/Navi";
 
@@ -57,8 +57,10 @@ export default function DashboardPage() {
       try {
         const [appsResponse, analyticsData, usersCountResponse, myApprovalsResponse, trackRequestsResponse] =
           await Promise.all([
+            // Same request as the Applications page so the count matches it
             fetch(
-              `https://preview.keyforge.ai/entities/api/v1/ACMECOM/getApplications/${reviewerId}?page=1&page_size=1`
+              `https://preview.keyforge.ai/entities/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/getApplications/${reviewerId}?page=1&page_size=1000`,
+              { headers: getJwtAuthHeaders() }
             )
               .then((res) => (res.ok ? res.json() : null))
               .catch(() => null),
@@ -71,7 +73,7 @@ export default function DashboardPage() {
               [reviewerId]
             ).catch(() => null),
             apiRequestWithAuth<any>(
-              `https://preview.keyforge.ai/workflow/api/v1/ACMECOM/request/raisedby/${encodeURIComponent(
+              `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
                 String(reviewerId).trim()
               )}?page=0&size=1`,
               { method: "GET" }
@@ -79,7 +81,8 @@ export default function DashboardPage() {
           ]);
 
         if (appsResponse && appsResponse.executionStatus === "success") {
-          setStats((prev) => ({ ...prev, totalApplications: appsResponse.total_items || 0 }));
+          const items = Array.isArray(appsResponse.items) ? appsResponse.items : [];
+          setStats((prev) => ({ ...prev, totalApplications: appsResponse.total_items || items.length }));
         }
 
         if (usersCountResponse?.resultSet?.[0]) {

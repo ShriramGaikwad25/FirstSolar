@@ -17,6 +17,7 @@ import ApprovalPolicySelectorBuilder, {
   validateSelector,
 } from "@/components/ApprovalPolicySelectorBuilder";
 import { executeQuery } from "@/lib/api";
+import { getTenantUuid } from "@/lib/auth";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import type { ColDef } from "ag-grid-community";
 
@@ -103,9 +104,6 @@ const OPERAND_OPTIONS: { value: Operand; label: string }[] = [
   { value: "not_in", label: "Not in (comma separated)" },
 ];
 
-// Hardcoded to match the "ACMECOM" tenant convention already used elsewhere in this app
-// (e.g. add-application/page.tsx), but kf_wf_p_upsert_approval_policy expects the tenant's UUID.
-const APPROVAL_POLICY_TENANT_ID = "a0000000-0000-0000-0000-000000000001";
 
 function slugifyPolicyCode(name: string): string {
   const base = name
@@ -811,7 +809,8 @@ export default function ManageApprovalPoliciesPage() {
     setIsSubmitting(true);
 
     const policyPayload = {
-      tenantId: APPROVAL_POLICY_TENANT_ID,
+      // kf_wf_p_upsert_approval_policy expects the tenant's UUID
+      tenantId: getTenantUuid(),
       code: slugifyPolicyCode(formData.step1.name),
       name: formData.step1.name,
       description: formData.step1.description,

@@ -5,7 +5,6 @@ import { apiRequestWithAuth, checkTokenExpiredError, getCookie, COOKIE_NAMES } f
 import { getOriginalFetch } from "./authFetch";
 import { mergeSupportedObjectsExtensions } from "./supported-objects-extensions";
 import { getActiveTenantId } from "./tenant";
-import { tenantId as defaultTenantId } from "./config";
 
 function BASE_URL(): string {
   return `https://preview.keyforge.ai/certification/api/v1/${resolveEntitiesTenant()}`;
@@ -483,7 +482,7 @@ export async function getCatalogEntitlements<T>(
 }
 
 function resolveEntitiesTenant(): string {
-  return getActiveTenantId() || defaultTenantId?.trim() || "ACMECOM";
+  return getActiveTenantId() || "";
 }
 
 export async function executeQuery<T>(

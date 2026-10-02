@@ -17,167 +17,6 @@ const ATTRIBUTE_OPTIONS = ["department", "employeeType", "location", "department
 
 const OPERATOR_OPTIONS = ["Equals", "Matches all"];
 
-const SEED_MAPPINGS_DUBAI: OuMapping[] = [
-  {
-    id: "ou-dxb-1",
-    attribute: "department",
-    operator: "Equals",
-    value: "Operations",
-    priority: 1,
-    targetOu: "OU=Operations,OU=DPWorld_Dubai,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-dxb-2",
-    attribute: "department",
-    operator: "Equals",
-    value: "Information Technology",
-    priority: 2,
-    targetOu: "OU=Information Technology,OU=DPWorld_Dubai,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-dxb-3",
-    attribute: "department",
-    operator: "Equals",
-    value: "Finance",
-    priority: 3,
-    targetOu: "OU=Finance,OU=DPWorld_Dubai,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-dxb-4",
-    attribute: "department",
-    operator: "Equals",
-    value: "Human Resources",
-    priority: 4,
-    targetOu: "OU=Human Resources,OU=DPWorld_Dubai,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-dxb-5",
-    attribute: "department",
-    operator: "Equals",
-    value: "Supply Chain Logistics",
-    priority: 5,
-    targetOu: "OU=Supply Chain Logistics,OU=DPWorld_Dubai,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-];
-
-const SEED_MAPPINGS_ABU_DHABI: OuMapping[] = [
-  {
-    id: "ou-auh-1",
-    attribute: "department",
-    operator: "Equals",
-    value: "Operations",
-    priority: 1,
-    targetOu: "OU=Operations,OU=DPWorld_Abu_Dhabi,DC=keyforge-us,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-auh-2",
-    attribute: "department",
-    operator: "Equals",
-    value: "Information Technology",
-    priority: 2,
-    targetOu: "OU=Information Technology,OU=DPWorld_Abu_Dhabi,DC=keyforge-us,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-auh-3",
-    attribute: "department",
-    operator: "Equals",
-    value: "Finance",
-    priority: 3,
-    targetOu: "OU=Finance,OU=DPWorld_Abu_Dhabi,DC=keyforge-us,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-auh-4",
-    attribute: "department",
-    operator: "Equals",
-    value: "Human Resources",
-    priority: 4,
-    targetOu: "OU=Human Resources,OU=DPWorld_Abu_Dhabi,DC=keyforge-us,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-auh-5",
-    attribute: "department",
-    operator: "Equals",
-    value: "Supply Chain Logistics",
-    priority: 5,
-    targetOu: "OU=Supply Chain Logistics,OU=DPWorld_Abu_Dhabi,DC=keyforge-us,DC=local",
-    active: true,
-  },
-];
-
-/** Fallback rule set for any AD Domain connector other than Dubai/Abu Dhabi. */
-const SEED_MAPPINGS_OTHER: OuMapping[] = [
-  {
-    id: "ou-iga-1",
-    attribute: "department",
-    operator: "Equals",
-    value: "Engineering",
-    priority: 1,
-    targetOu: "OU=Information Technology,OU=IGA,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-iga-2",
-    attribute: "department",
-    operator: "Equals",
-    value: "Information Technology",
-    priority: 2,
-    targetOu: "OU=Information Technology,OU=IGA,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-iga-3",
-    attribute: "department",
-    operator: "Equals",
-    value: "IT Operations",
-    priority: 3,
-    targetOu: "OU=Operations,OU=IGA,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-iga-4",
-    attribute: "department",
-    operator: "Equals",
-    value: "Operations",
-    priority: 4,
-    targetOu: "OU=Operations,OU=IGA,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-iga-5",
-    attribute: "department",
-    operator: "Equals",
-    value: "IT Finance",
-    priority: 5,
-    targetOu: "OU=Finance,OU=IGA,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-  {
-    id: "ou-iga-6",
-    attribute: "department",
-    operator: "Equals",
-    value: "Finance",
-    priority: 6,
-    targetOu: "OU=Finance,OU=IGA,DC=keyforge-ca,DC=local",
-    active: true,
-  },
-];
-
-function seedMappingsForApp(appName?: string): OuMapping[] {
-  const name = (appName ?? "").toLowerCase();
-  if (name.includes("abu") && name.includes("dhabi")) return SEED_MAPPINGS_ABU_DHABI;
-  if (name.includes("dubai")) return SEED_MAPPINGS_DUBAI;
-  return SEED_MAPPINGS_OTHER;
-}
-
 let mappingIdCounter = 0;
 function nextMappingId(): string {
   mappingIdCounter += 1;
@@ -203,13 +42,12 @@ function emptyForm(nextPriority: number): MappingFormState {
 }
 
 export default function OuAssignmentTab({
-  appName,
   onCancel,
 }: {
   appName?: string;
   onCancel?: () => void;
 }) {
-  const [mappings, setMappings] = useState<OuMapping[]>(() => seedMappingsForApp(appName));
+  const [mappings, setMappings] = useState<OuMapping[]>([]);
   const [search, setSearch] = useState("");
 
   const [modalOpen, setModalOpen] = useState(false);
