@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import { themeQuartz } from "ag-grid-community";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { Check, ChevronLeft, ChevronRight, Eye, Tag, FileText, User, Hash, Search } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Eye, Tag, FileText, User, Hash, Search, X } from "lucide-react";
+import UserPickerModal from "@/components/UserPickerModal";
 import { asterisk } from "@/utils/utils";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import ApprovalPolicySelectorBuilder, {
@@ -185,6 +186,7 @@ export default function ManageApprovalPoliciesPage() {
   const [listPageSize, setListPageSize] = useState<number | "all">(10);
   const [listError, setListError] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
+  const [isOwnerPickerOpen, setIsOwnerPickerOpen] = useState(false);
   const [formData, setFormData] = useState<ApprovalPolicyFormData>({
     step1: {
       name: "",
@@ -840,6 +842,62 @@ export default function ManageApprovalPoliciesPage() {
     }
   };
 
+  const clearOwner = () =>
+    setFormData((prev) => ({ ...prev, step1: { ...prev.step1, owner: "" } }));
+
+  /** Owner picker, same interaction as the User Group owner field. */
+  const renderOwnerField = () => (
+    <div className="relative min-w-0">
+      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" aria-hidden />
+      <button
+        type="button"
+        onClick={() => setIsOwnerPickerOpen(true)}
+        className="flex w-full min-w-0 items-center pl-10 pr-16 pt-5 pb-1.5 min-h-[50px] border border-gray-300 rounded-md bg-white text-left hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      >
+        <span className="truncate text-gray-900">{formData.step1.owner}</span>
+      </button>
+      <label
+        className={`absolute left-10 transition-all duration-200 pointer-events-none ${
+          formData.step1.owner ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
+        }`}
+      >
+        {formData.step1.owner ? "Owner *" : "Owner * (search and select a user)"}
+      </label>
+      <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+        {formData.step1.owner && (
+          <button
+            type="button"
+            aria-label="Clear owner"
+            onClick={clearOwner}
+            className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+        <button
+          type="button"
+          aria-label="Search owner"
+          onClick={() => setIsOwnerPickerOpen(true)}
+          className="rounded p-1 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+      </div>
+      <UserPickerModal
+        open={isOwnerPickerOpen}
+        title="Select Owner"
+        onClose={() => setIsOwnerPickerOpen(false)}
+        onSelect={(user) => {
+          setFormData((prev) => ({
+            ...prev,
+            step1: { ...prev.step1, owner: user.username || user.email },
+          }));
+          setIsOwnerPickerOpen(false);
+        }}
+      />
+    </div>
+  );
+
   const renderStep = () => {
     if (currentStep === 1) {
       return (
@@ -873,31 +931,7 @@ export default function ManageApprovalPoliciesPage() {
                   )}
                 </div>
 
-                <div className="relative min-w-0">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" aria-hidden />
-                  <input
-                    type="text"
-                    value={formData.step1.owner}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        step1: { ...prev.step1, owner: e.target.value },
-                      }))
-                    }
-                    className="w-full pl-10 pr-9 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
-                    placeholder=" "
-                  />
-                  <label
-                    className={`absolute left-10 transition-all duration-200 pointer-events-none ${
-                      formData.step1.owner ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
-                    }`}
-                  >
-                    Owner *
-                  </label>
-                  {formData.step1.owner.trim() && (
-                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" aria-hidden />
-                  )}
-                </div>
+                {renderOwnerField()}
               </div>
 
               <div className="relative">
@@ -1399,31 +1433,7 @@ export default function ManageApprovalPoliciesPage() {
                   )}
                 </div>
 
-                <div className="relative min-w-0">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500 pointer-events-none" aria-hidden />
-                  <input
-                    type="text"
-                    value={formData.step1.owner}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        step1: { ...prev.step1, owner: e.target.value },
-                      }))
-                    }
-                    className="w-full pl-10 pr-9 pt-5 pb-1.5 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 no-underline"
-                    placeholder=" "
-                  />
-                  <label
-                    className={`absolute left-10 transition-all duration-200 pointer-events-none ${
-                      formData.step1.owner ? "top-0.5 text-xs text-blue-600" : "top-3.5 text-sm text-gray-500"
-                    }`}
-                  >
-                    Owner *
-                  </label>
-                  {formData.step1.owner.trim() && (
-                    <Check className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-green-600" aria-hidden />
-                  )}
-                </div>
+                {renderOwnerField()}
               </div>
 
               <div className="relative">

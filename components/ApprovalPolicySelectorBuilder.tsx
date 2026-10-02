@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState } from "react";
 import {
   AlertCircle,
   Check,
-  ChevronDown,
   Code2,
   Copy,
-  LayoutGrid,
+  CopyPlus,
+  Filter,
   ListChecks,
   Package,
   Plus,
-  Sparkles,
   Trash2,
+  UserRound,
   X,
 } from "lucide-react";
 
@@ -32,6 +32,8 @@ export interface SelectorCondition {
   value: string;
   /** UI-only: user picked "Custom path…" in the field dropdown */
   custom?: boolean;
+  /** UI-only: category picked in the first field dropdown before a field is chosen */
+  group?: string;
 }
 
 export interface SelectorBuilderState {
@@ -81,7 +83,6 @@ const OP_OPTIONS: { value: SelectorOp; label: string; symbol: string }[] = [
   { value: "contains", label: "contains", symbol: "contains" },
 ];
 
-const ACTION_TYPES = ["ADD", "REVOKE"];
 
 let idCounter = 0;
 const newId = () => `cond-${Date.now()}-${idCounter++}`;
@@ -103,50 +104,6 @@ export const createEmptySelectorState = (): SelectorBuilderState => ({
   matchType: "all",
   conditions: [newCondition()],
 });
-
-const TEMPLATES: { label: string; build: () => SelectorBuilderState }[] = [
-  {
-    label: "Application-wide",
-    build: () => ({ ...createEmptySelectorState(), scope: "APPLICATION", applicationName: "SAP_S4" }),
-  },
-  {
-    label: "Specific catalog item",
-    build: () => ({ ...createEmptySelectorState(), scope: "CATALOG", catalogValue: "AWS Administrator Access" }),
-  },
-  {
-    label: "Revoke action",
-    build: () => ({ ...createEmptySelectorState(), lineItemMode: "actionType", actionType: "REVOKE" }),
-  },
-  {
-    label: "Service account target",
-    build: () => ({
-      ...createEmptySelectorState(),
-      conditions: [newCondition("lineitem.targetAccount.accountType", "ieq", "SERVICE_ACCOUNT")],
-    }),
-  },
-  {
-    label: "Contractor in Finance",
-    build: () => ({
-      ...createEmptySelectorState(),
-      conditions: [
-        newCondition("requestedFor.userType", "ieq", "Contractor"),
-        newCondition("requestedFor.department", "ieq", "Finance"),
-      ],
-    }),
-  },
-  {
-    label: "Employee ADD to high-risk SAP",
-    build: () => ({
-      ...createEmptySelectorState(),
-      conditions: [
-        newCondition("lineitem.actionType", "ieq", "ADD"),
-        newCondition("requestedFor.userType", "ieq", "Employee"),
-        newCondition("catalog.applicationname", "ieq", "SAP_S4"),
-        newCondition("catalog.risk", "ieq", "HIGH"),
-      ],
-    }),
-  },
-];
 
 const conditionValue = (c: SelectorCondition): string | string[] =>
   c.op === "in"
@@ -246,7 +203,11 @@ export function parseSelectorJson(input: unknown): SelectorBuilderState | null {
 
   if (!Array.isArray(rawConditions)) {
     return typeof shorthandAction === "string"
-      ? { ...base, lineItemMode: "actionType", actionType: shorthandAction.toUpperCase() }
+      ? {
+          ...base,
+          lineItemMode: "conditions",
+          conditions: [newCondition("lineitem.actionType", "ieq", shorthandAction.toUpperCase())],
+        }
       : null;
   }
 
@@ -286,40 +247,30 @@ export function describeSelector(state: SelectorBuilderState): string {
     .join(joiner);
 }
 
-const SCOPE_OPTIONS: {
-  value: SelectorScope;
-  title: string;
-  description: string;
-  evaluation: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  {
-    value: "APPLICATION",
-    title: "Entire Application",
-    description: "All catalog items of one application",
-    evaluation: "catalog sync",
-    icon: LayoutGrid,
-  },
-  {
-    value: "CATALOG",
-    title: "Catalog Item",
-    description: "One catalog item by name or ID",
-    evaluation: "catalog sync",
-    icon: Package,
-  },
-  {
-    value: "LINEITEM",
-    title: "Request Line Item",
-    description: "Requester, action and target account",
-    evaluation: "request submission",
-    icon: ListChecks,
-  },
-];
-
 const controlClass =
   "h-9 w-full min-w-0 px-3 border border-gray-300 rounded-md text-sm bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
 
-const ROW_GRID = "md:grid-cols-[52px_minmax(0,1.3fr)_200px_minmax(0,1fr)_36px]";
+const ROW_GRID = "md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_170px_minmax(0,1.2fr)_72px]";
+
+const GROUP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  "Request Line Item": ListChecks,
+  "Requested For (Identity)": UserRound,
+  "Catalog Item": Package,
+};
+
+const splitValues = (v: string) =>
+  v
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+const conditionErrors = (c: SelectorCondition) => {
+  const errs: string[] = [];
+  if (!c.path.trim()) errs.push("Choose a field");
+  const v = conditionValue(c);
+  if (Array.isArray(v) ? !v.length : !v) errs.push("Enter a value");
+  return errs;
+};
 
 function Segmented<T extends string>({
   options,
@@ -331,16 +282,14 @@ function Segmented<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="inline-flex p-0.5 rounded-md bg-white border border-gray-300">
+    <div className="inline-flex p-0.5 rounded-md bg-gray-100 border border-gray-200">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
-          className={`px-3 h-7 text-xs font-medium rounded transition-colors ${
-            value === o.value
-              ? "bg-blue-600 text-white shadow-sm"
-              : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
+          className={`px-3 h-7 text-xs font-semibold rounded transition-colors ${
+            value === o.value ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 hover:bg-blue-50 hover:text-blue-700"
           }`}
         >
           {o.label}
@@ -350,43 +299,88 @@ function Segmented<T extends string>({
   );
 }
 
-function TemplatesMenu({ onPick }: { onPick: (s: SelectorBuilderState) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [open]);
+/** Multi-value input for the `in` operator; stores values as a comma separated string. */
+function TagInput({
+  value,
+  onChange,
+  suggestions,
+  invalid,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  suggestions?: string[];
+  invalid?: boolean;
+}) {
+  const [draft, setDraft] = useState("");
+  const tags = splitValues(value);
+  const addTags = (raw: string[]) => {
+    const next = [...tags];
+    raw.map((r) => r.trim()).forEach((t) => {
+      if (t && !next.includes(t)) next.push(t);
+    });
+    onChange(next.join(", "));
+  };
+  const remaining = (suggestions ?? []).filter((s) => !tags.includes(s));
 
   return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 h-8 px-3 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+    <div className="space-y-1.5">
+      <div
+        className={`flex flex-wrap items-center gap-1 min-h-9 px-1.5 py-1 border rounded-md bg-white focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 ${
+          invalid ? "border-amber-300" : "border-gray-300"
+        }`}
       >
-        <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-        Use a template
-        <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
-      {open && (
-        <div className="absolute right-0 z-30 mt-1 w-64 rounded-md border border-gray-200 bg-white shadow-lg py-1">
-          {TEMPLATES.map((t) => (
+        {tags.map((t) => (
+          <span
+            key={t}
+            className="inline-flex items-center gap-1 h-6 pl-2 pr-1 rounded bg-blue-50 text-blue-700 text-xs font-medium"
+          >
+            {t}
             <button
-              key={t.label}
               type="button"
-              onClick={() => {
-                onPick(t.build());
-                setOpen(false);
-              }}
-              className="block w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+              onClick={() => onChange(tags.filter((x) => x !== t).join(", "))}
+              className="p-0.5 rounded hover:bg-blue-100"
+              aria-label={`Remove ${t}`}
             >
-              {t.label}
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={draft}
+          onChange={(e) => {
+            const parts = e.target.value.split(",");
+            if (parts.length > 1) addTags(parts.slice(0, -1));
+            setDraft(parts[parts.length - 1]);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTags([draft]);
+              setDraft("");
+            } else if (e.key === "Backspace" && !draft && tags.length) {
+              onChange(tags.slice(0, -1).join(", "));
+            }
+          }}
+          onBlur={() => {
+            if (draft.trim()) addTags([draft]);
+            setDraft("");
+          }}
+          placeholder={tags.length ? "" : "Type and press Enter"}
+          className="flex-1 min-w-[80px] h-6 px-1 text-sm bg-transparent focus:outline-none"
+        />
+      </div>
+      {remaining.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {remaining.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => addTags([s])}
+              className="inline-flex items-center gap-0.5 h-5 px-1.5 rounded border border-dashed border-gray-300 text-[11px] text-gray-500 hover:border-blue-400 hover:text-blue-700"
+            >
+              <Plus className="w-2.5 h-2.5" />
+              {s}
             </button>
           ))}
         </div>
@@ -408,6 +402,8 @@ export default function ApprovalPolicySelectorBuilder({ value, onChange, showErr
   const jsonText = JSON.stringify(buildSelectorJson(value), null, 2);
   const errors = validateSelector(value);
   const connector = value.matchType === "all" ? "AND" : "OR";
+  const isLineItem = value.scope === "LINEITEM" && value.lineItemMode === "conditions";
+  const incompleteCount = value.conditions.filter((c) => conditionErrors(c).length).length;
 
   const update = (patch: Partial<SelectorBuilderState>) => onChange({ ...value, ...patch });
 
@@ -416,6 +412,14 @@ export default function ApprovalPolicySelectorBuilder({ value, onChange, showErr
 
   const removeCondition = (id: string) =>
     update({ conditions: value.conditions.filter((c) => c.id !== id) });
+
+  const duplicateCondition = (id: string) => {
+    const idx = value.conditions.findIndex((c) => c.id === id);
+    if (idx < 0) return;
+    const next = [...value.conditions];
+    next.splice(idx + 1, 0, { ...value.conditions[idx], id: newId() });
+    update({ conditions: next });
+  };
 
   const handleCopy = async () => {
     try {
@@ -428,58 +432,39 @@ export default function ApprovalPolicySelectorBuilder({ value, onChange, showErr
   };
 
   return (
-    <div className="space-y-5">
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900">Where should this policy apply?</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Choose a scope, then define what the policy should match.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4 border-b border-gray-100">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 text-blue-600 shrink-0">
+            <Filter className="w-4 h-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-gray-900">Conditions</h3>
+            <p className="text-xs text-gray-500">
+              {isLineItem
+                ? "The policy applies to request line items that satisfy these rules."
+                : "Define what this policy should match."}
+            </p>
+          </div>
         </div>
-        <TemplatesMenu onPick={onChange} />
+        {isLineItem && (
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <span>Request must match</span>
+            <Segmented
+              value={value.matchType}
+              onChange={(m) => update({ matchType: m })}
+              options={[
+                { value: "all", label: "All" },
+                { value: "any", label: "Any" },
+              ]}
+            />
+            <span>of the following</span>
+          </div>
+        )}
       </div>
 
-      {/* Scope */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {SCOPE_OPTIONS.map((s) => {
-          const isSelected = value.scope === s.value;
-          const Icon = s.icon;
-          return (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => update({ scope: s.value })}
-              className={`relative flex items-start gap-3 p-3 text-left border rounded-lg transition-all duration-200 ${
-                isSelected
-                  ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500/30"
-                  : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
-              }`}
-            >
-              <span
-                className={`flex items-center justify-center w-9 h-9 rounded-md shrink-0 ${
-                  isSelected ? "bg-blue-600 text-white" : "bg-gray-100 text-gray-500"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-              </span>
-              <span className="min-w-0 pr-4">
-                <span className={`block text-sm font-medium ${isSelected ? "text-blue-700" : "text-gray-900"}`}>
-                  {s.title}
-                </span>
-                <span className="block text-xs text-gray-500 mt-0.5">{s.description}</span>
-                <span className="block text-[11px] text-gray-400 mt-1">Evaluated on {s.evaluation}</span>
-              </span>
-              {isSelected && (
-                <span className="absolute top-2 right-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                  <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Scope-specific editor */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+      <div className="p-5">
         {value.scope === "APPLICATION" && (
           <div className="max-w-md">
             <label className="block text-xs font-medium text-gray-600 mb-1.5">Application Name *</label>
@@ -516,183 +501,226 @@ export default function ApprovalPolicySelectorBuilder({ value, onChange, showErr
           </div>
         )}
 
-        {value.scope === "LINEITEM" && (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <Segmented
-                value={value.lineItemMode}
-                onChange={(m) => update({ lineItemMode: m })}
-                options={[
-                  { value: "conditions", label: "Match conditions" },
-                  { value: "actionType", label: "Action type only" },
-                ]}
-              />
-              {value.lineItemMode === "conditions" && (
-                <div className="flex items-center gap-2 text-xs text-gray-600">
-                  <span>Match</span>
-                  <Segmented
-                    value={value.matchType}
-                    onChange={(m) => update({ matchType: m })}
-                    options={[
-                      { value: "all", label: "All" },
-                      { value: "any", label: "Any" },
-                    ]}
-                  />
-                  <span>of the conditions</span>
-                </div>
-              )}
+        {isLineItem && (
+          <div>
+            {/* Column labels */}
+            <div className="hidden md:flex gap-3 mb-2">
+              <span className="w-12 shrink-0" />
+              <div
+                className={`flex-1 grid ${ROW_GRID} gap-2 px-3 text-[11px] font-medium text-gray-500 uppercase tracking-wide`}
+              >
+                <span>Category</span>
+                <span>Field</span>
+                <span>Operator</span>
+                <span>Value</span>
+                <span />
+              </div>
             </div>
 
-            {value.lineItemMode === "actionType" ? (
-              <div className="max-w-xs">
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Action Type *</label>
-                <select
-                  value={value.actionType}
-                  onChange={(e) => update({ actionType: e.target.value })}
-                  className={controlClass}
-                >
-                  {ACTION_TYPES.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <div
-                  className={`hidden md:grid ${ROW_GRID} gap-2 px-2 text-[11px] font-medium text-gray-500 uppercase tracking-wide`}
-                >
-                  <span />
-                  <span>Field</span>
-                  <span>Operator</span>
-                  <span>Value</span>
-                  <span />
-                </div>
-
-                {value.conditions.map((c, index) => {
-                  const def = FIELD_DEFS.find((f) => f.path === c.path);
-                  const isCustom = !!c.custom || (!def && c.path !== "");
-                  const listId = `selector-suggestions-${c.id}`;
-                  return (
-                    <div
-                      key={c.id}
-                      className={`grid grid-cols-1 ${ROW_GRID} items-center gap-2 p-2 bg-white border border-gray-200 rounded-md`}
-                    >
+            <ol>
+              {value.conditions.map((c, index) => {
+                const def = FIELD_DEFS.find((f) => f.path === c.path);
+                const isCustom = !!c.custom || (!def && c.path !== "");
+                const group = def?.group ?? c.group ?? "";
+                const GroupIcon = isCustom ? Code2 : GROUP_ICONS[group];
+                const listId = `selector-suggestions-${c.id}`;
+                const rowErrors = showErrors ? conditionErrors(c) : [];
+                const invalid = rowErrors.length > 0;
+                return (
+                  <li key={c.id} className="relative flex gap-3 pb-3">
+                    {/* Connector rail */}
+                    <div className="relative flex flex-col items-center w-12 shrink-0 pt-4">
+                      {index > 0 && <span className="absolute top-0 h-4 w-px bg-gray-200" aria-hidden />}
                       <span
-                        className={`justify-self-start md:justify-self-center px-2 py-0.5 rounded text-[11px] font-semibold ${
-                          index === 0 ? "bg-gray-100 text-gray-600" : "bg-blue-100 text-blue-700"
+                        className={`relative inline-flex items-center justify-center min-w-[40px] h-6 px-2 rounded-full text-[11px] font-bold tracking-wide ${
+                          index === 0
+                            ? "bg-gray-900 text-white"
+                            : connector === "AND"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-violet-100 text-violet-700"
                         }`}
                       >
                         {index === 0 ? "IF" : connector}
                       </span>
+                      <span className="flex-1 w-px bg-gray-200 -mb-3" aria-hidden />
+                    </div>
 
-                      {isCustom ? (
-                        <div className="relative">
+                    <div
+                      className={`flex-1 min-w-0 rounded-lg border p-3 transition-colors ${
+                        invalid ? "border-amber-200 bg-amber-50/40" : "border-gray-200 bg-gray-50/60 hover:border-gray-300"
+                      }`}
+                    >
+                      <div className={`grid grid-cols-1 ${ROW_GRID} items-start gap-2`}>
+                        {/* Category */}
+                        <div className="relative min-w-0">
+                          {GroupIcon && (
+                            <GroupIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                          )}
+                          <select
+                            value={isCustom ? CUSTOM_PATH : group}
+                            aria-label="Category"
+                            onChange={(e) =>
+                              updateCondition(
+                                c.id,
+                                e.target.value === CUSTOM_PATH
+                                  ? { custom: true, group: undefined, path: "" }
+                                  : { custom: false, group: e.target.value, path: "" }
+                              )
+                            }
+                            className={`${controlClass} ${GroupIcon ? "pl-8" : ""} ${
+                              isCustom || group ? "" : "text-gray-400"
+                            }`}
+                          >
+                            <option value="" disabled>
+                              Select category…
+                            </option>
+                            {FIELD_GROUPS.map((g) => (
+                              <option key={g} value={g} className="text-gray-900">
+                                {g}
+                              </option>
+                            ))}
+                            <option value={CUSTOM_PATH} className="text-gray-900">
+                              Custom path…
+                            </option>
+                          </select>
+                        </div>
+
+                        {/* Field */}
+                        {isCustom ? (
                           <input
                             type="text"
                             value={c.path}
+                            aria-label="Custom path"
                             onChange={(e) => updateCondition(c.id, { path: e.target.value })}
-                            placeholder="Custom path, e.g. requestedFor.location"
-                            className={`${controlClass} pr-8 font-mono text-xs`}
+                            placeholder="e.g. requestedFor.location"
+                            title={c.path}
+                            className={`${controlClass} font-mono text-xs`}
                           />
+                        ) : (
+                          <select
+                            value={c.path}
+                            title={c.path}
+                            aria-label="Field"
+                            disabled={!group}
+                            onChange={(e) => updateCondition(c.id, { path: e.target.value })}
+                            className={`${controlClass} disabled:bg-gray-100 disabled:cursor-not-allowed ${
+                              c.path ? "" : "text-gray-400"
+                            }`}
+                          >
+                            <option value="" disabled>
+                              {group ? "Select field…" : "Pick a category first"}
+                            </option>
+                            {FIELD_DEFS.filter((f) => f.group === group).map((f) => (
+                              <option key={f.path} value={f.path} className="text-gray-900">
+                                {f.label}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+
+                        {/* Operator */}
+                        <select
+                          value={c.op}
+                          aria-label="Operator"
+                          onChange={(e) => {
+                            const op = e.target.value as SelectorOp;
+                            // Leaving the multi-value operator keeps only the first value.
+                            const nextValue =
+                              c.op === "in" && op !== "in" ? (splitValues(c.value)[0] ?? "") : c.value;
+                            updateCondition(c.id, { op, value: nextValue });
+                          }}
+                          className={`${controlClass} font-medium text-gray-700`}
+                        >
+                          {OP_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>
+                              {o.label}
+                            </option>
+                          ))}
+                        </select>
+
+                        {/* Value */}
+                        <div className="min-w-0">
+                          {c.op === "in" ? (
+                            <TagInput
+                              value={c.value}
+                              onChange={(v) => updateCondition(c.id, { value: v })}
+                              suggestions={def?.suggestions}
+                              invalid={invalid && !splitValues(c.value).length}
+                            />
+                          ) : (
+                            <>
+                              <input
+                                type="text"
+                                value={c.value}
+                                aria-label="Value"
+                                list={def?.suggestions ? listId : undefined}
+                                onChange={(e) => updateCondition(c.id, { value: e.target.value })}
+                                placeholder={def?.suggestions ? `e.g. ${def.suggestions[0]}` : "Value"}
+                                className={controlClass}
+                              />
+                              {def?.suggestions && (
+                                <datalist id={listId}>
+                                  {def.suggestions.map((s) => (
+                                    <option key={s} value={s} />
+                                  ))}
+                                </datalist>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {/* Row actions */}
+                        <div className="flex items-center justify-end gap-0.5 h-9">
                           <button
                             type="button"
-                            title="Choose from field list"
-                            onClick={() => updateCondition(c.id, { custom: false, path: "" })}
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700"
+                            onClick={() => duplicateCondition(c.id)}
+                            title="Duplicate condition"
+                            aria-label="Duplicate condition"
+                            className="flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-blue-600 hover:bg-blue-50"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <CopyPlus className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeCondition(c.id)}
+                            disabled={value.conditions.length === 1}
+                            title="Remove condition"
+                            aria-label="Remove condition"
+                            className="flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                      ) : (
-                        <select
-                          value={c.path}
-                          title={c.path}
-                          onChange={(e) =>
-                            updateCondition(
-                              c.id,
-                              e.target.value === CUSTOM_PATH
-                                ? { custom: true, path: "" }
-                                : { custom: false, path: e.target.value }
-                            )
-                          }
-                          className={`${controlClass} ${c.path ? "" : "text-gray-400"}`}
-                        >
-                          <option value="" disabled>
-                            Select field…
-                          </option>
-                          {FIELD_GROUPS.map((g) => (
-                            <optgroup key={g} label={g}>
-                              {FIELD_DEFS.filter((f) => f.group === g).map((f) => (
-                                <option key={f.path} value={f.path} className="text-gray-900">
-                                  {f.label}
-                                </option>
-                              ))}
-                            </optgroup>
-                          ))}
-                          <option value={CUSTOM_PATH} className="text-gray-900">
-                            Custom path…
-                          </option>
-                        </select>
-                      )}
-
-                      <select
-                        value={c.op}
-                        onChange={(e) => updateCondition(c.id, { op: e.target.value as SelectorOp })}
-                        className={controlClass}
-                      >
-                        {OP_OPTIONS.map((o) => (
-                          <option key={o.value} value={o.value}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      <div className="min-w-0">
-                        <input
-                          type="text"
-                          value={c.value}
-                          list={def?.suggestions ? listId : undefined}
-                          onChange={(e) => updateCondition(c.id, { value: e.target.value })}
-                          placeholder={c.op === "in" ? "Value1, Value2" : "Value"}
-                          className={controlClass}
-                        />
-                        {def?.suggestions && (
-                          <datalist id={listId}>
-                            {def.suggestions.map((s) => (
-                              <option key={s} value={s} />
-                            ))}
-                          </datalist>
-                        )}
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removeCondition(c.id)}
-                        disabled={value.conditions.length === 1}
-                        className="justify-self-end md:justify-self-center flex items-center justify-center w-8 h-8 rounded-md text-gray-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-gray-400"
-                        aria-label="Remove condition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {invalid && (
+                        <p className="mt-2 flex items-center gap-1.5 text-[11px] text-amber-700">
+                          <AlertCircle className="w-3 h-3 shrink-0" />
+                          {rowErrors.join(" · ")}
+                        </p>
+                      )}
                     </div>
-                  );
-                })}
+                  </li>
+                );
+              })}
+            </ol>
 
-                <button
-                  type="button"
-                  onClick={() => update({ conditions: [...value.conditions, newCondition()] })}
-                  className="w-full flex items-center justify-center gap-1.5 h-9 text-sm font-medium text-blue-700 border border-dashed border-blue-300 rounded-md bg-white hover:bg-blue-50"
-                >
-                  <Plus className="w-4 h-4" /> Add condition
-                </button>
-              </div>
-            )}
+            <div className="flex gap-3">
+              <span className="w-12 shrink-0 flex justify-center" aria-hidden>
+                <span className="w-px h-3 bg-gray-200" />
+              </span>
+              <button
+                type="button"
+                onClick={() => update({ conditions: [...value.conditions, newCondition()] })}
+                className="inline-flex items-center gap-1.5 h-9 px-3 text-sm font-medium text-blue-700 border border-dashed border-blue-300 rounded-md bg-white hover:bg-blue-50 hover:border-blue-400"
+              >
+                <Plus className="w-4 h-4" /> Add condition
+              </button>
+            </div>
           </div>
         )}
 
-        {showErrors && errors.length > 0 && (
+        {showErrors && !isLineItem && errors.length > 0 && (
           <div className="mt-3 flex items-start gap-2 text-xs text-amber-700">
             <AlertCircle className="w-3.5 h-3.5 mt-px shrink-0" />
             <span>{errors.join(" ")}</span>
@@ -700,23 +728,53 @@ export default function ApprovalPolicySelectorBuilder({ value, onChange, showErr
         )}
       </div>
 
-      {/* Summary + JSON */}
-      <div className="rounded-lg border border-gray-200 overflow-hidden">
-        <div className="flex items-start justify-between gap-3 px-4 py-3 bg-white">
+      {/* Preview */}
+      <div className="border-t border-gray-100 bg-gray-50/70">
+        <div className="flex items-start justify-between gap-3 px-5 py-3">
           <div className="min-w-0">
-            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Applies to</div>
-            <p className="text-sm text-gray-800 mt-0.5 break-words">
-              {errors.length ? (
-                <span className="text-gray-400">Complete the selector above</span>
-              ) : (
-                describeSelector(value)
-              )}
-            </p>
+            <div className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">Applies to</div>
+            {errors.length ? (
+              <p className="text-sm text-gray-400">
+                {isLineItem && incompleteCount
+                  ? `${incompleteCount} of ${value.conditions.length} condition${
+                      value.conditions.length === 1 ? "" : "s"
+                    } incomplete. Fill them in to see a preview.`
+                  : "Complete the selector above"}
+              </p>
+            ) : isLineItem ? (
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                {value.conditions.map((c, i) => {
+                  const op = OP_OPTIONS.find((o) => o.value === c.op)?.symbol ?? c.op;
+                  return (
+                    <React.Fragment key={c.id}>
+                      {i > 0 && (
+                        <span
+                          className={`px-1 font-bold text-[10px] ${
+                            connector === "AND" ? "text-blue-700" : "text-violet-700"
+                          }`}
+                        >
+                          {connector}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1">
+                        <span className="font-medium text-gray-800">{fieldLabel(c.path)}</span>
+                        <span className="font-mono text-gray-400">{op}</span>
+                        <span className="font-semibold text-blue-700">
+                          {c.op === "in" ? `[${splitValues(c.value).join(", ")}]` : `"${c.value.trim()}"`}
+                        </span>
+                      </span>
+                    </React.Fragment>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-800 break-words">{describeSelector(value)}</p>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setShowJson((v) => !v)}
-            className="inline-flex items-center gap-1 shrink-0 h-7 px-2 text-xs font-medium text-gray-600 rounded hover:bg-gray-100"
+            className="inline-flex items-center gap-1 shrink-0 h-7 px-2 text-xs font-medium text-gray-600 rounded hover:bg-gray-200/70"
           >
             <Code2 className="w-3.5 h-3.5" />
             {showJson ? "Hide JSON" : "View JSON"}
