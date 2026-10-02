@@ -546,17 +546,17 @@ function SortableFlowStepRow({
   return (
     <div ref={setNodeRef} style={style} className="relative">
       <div className="flex items-center gap-2.5 rounded-lg border border-blue-200 bg-white px-2.5 py-2 shadow-sm">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#1759e4] text-[11px] font-semibold leading-none text-white">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-blue-600 text-[11px] font-semibold leading-none text-white">
           {index + 1}
         </div>
         <div className="min-w-0 flex-1 py-0.5">
           <p className="truncate text-xs font-semibold leading-tight text-gray-900">{title}</p>
           {taskNameLine && (
-            <p className="mt-0.5 truncate text-[10px] leading-snug text-gray-500">{taskNameLine}</p>
+            <p className="mt-0.5 truncate text-[11px] leading-snug text-gray-500">{taskNameLine}</p>
           )}
-          <div className="mt-1 flex items-center gap-1 text-[9px] leading-none text-gray-500">
+          <div className="mt-1 flex items-center gap-1 text-[11px] leading-none text-gray-500">
             <Clock className="h-2.5 w-2.5 shrink-0" />
-            <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium leading-tight text-slate-600">{kind}</span>
+            <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium leading-tight text-gray-600">{kind}</span>
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-center justify-center gap-0.5 border-l border-gray-100 pl-2">
@@ -1046,10 +1046,10 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
   ) => {
     const tone =
       section === "approval"
-        ? "border-blue-200 bg-white text-blue-900 hover:bg-[#E5EEFC]"
+        ? "border-blue-200 bg-white text-blue-900 hover:bg-blue-50"
         : section === "fulfillment"
           ? "border-green-200 bg-white text-green-900 hover:bg-green-50"
-          : "border-blue-200 bg-white text-[#1759e4] hover:bg-[#E5EEFC]";
+          : "border-blue-200 bg-white text-blue-600 hover:bg-blue-50";
     return (
       <div data-add-step-menu className="relative mt-3">
         <button
@@ -1078,7 +1078,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                 }}
               >
                 <div className="text-xs font-semibold text-gray-900">{t.label}</div>
-                <div className="text-[10px] text-gray-500">{t.description}</div>
+                <div className="text-[11px] text-gray-500">{t.description}</div>
               </button>
             ))}
           </div>
@@ -1091,7 +1091,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
     const k = step.kind || "SYSTEM";
     if (k === "AI") {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#1759e4]">
+        <span className="inline-flex items-center gap-1 rounded-md bg-blue-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-blue-600">
           <Zap className="h-2.5 w-2.5 shrink-0" aria-hidden />
           AI agent
         </span>
@@ -1099,14 +1099,14 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
     }
     if (k === "HUMAN") {
       return (
-        <span className="inline-flex items-center gap-1 rounded-md bg-[#F4F5FA] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-slate-800">
+        <span className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-800">
           <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
           Human
         </span>
       );
     }
     return (
-      <span className="inline-flex items-center gap-1 rounded-md bg-[#E5EEFC] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-[#1759e4]">
+      <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-blue-600">
         <Clock className="h-2.5 w-2.5 shrink-0" aria-hidden />
         System
       </span>
@@ -1118,10 +1118,10 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
       <div className="relative ml-0.5 border-l-2 border-blue-200 pl-4">
         <div className="relative -mt-0.5 mb-3 flex min-h-[1.25rem] items-center">
           <span
-            className="absolute -left-[calc(1rem+1px)] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#1759e4] shadow-[0_0_0_2px_rgba(255,255,255,0.95)]"
+            className="absolute -left-[calc(1rem+1px)] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-blue-600 shadow-[0_0_0_2px_rgba(255,255,255,0.95)]"
             aria-hidden
           />
-          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#1759e4]">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-blue-600">
             Fork — all start together
           </span>
         </div>
@@ -1141,10 +1141,10 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                 <div className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 shadow-sm">
                   <div className="flex flex-wrap items-center gap-2">
                     {parallelFlowKindBadge(step)}
-                    <span className="text-xs font-bold uppercase tracking-tight text-slate-800">{title}</span>
+                    <span className="text-xs font-bold uppercase tracking-tight text-gray-800">{title}</span>
                   </div>
                   {taskNameLine && (
-                    <p className="mt-1 text-[10px] leading-snug text-gray-500">{taskNameLine}</p>
+                    <p className="mt-1 text-[11px] leading-snug text-gray-500">{taskNameLine}</p>
                   )}
                 </div>
               </li>
@@ -1154,7 +1154,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
 
         <div className="relative mt-4">
           <span
-            className="absolute -left-[calc(1rem+1px)] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#16a34a] shadow-[0_0_0_2px_rgba(255,255,255,0.95)]"
+            className="absolute -left-[calc(1rem+1px)] top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-green-600 shadow-[0_0_0_2px_rgba(255,255,255,0.95)]"
             aria-hidden
           />
           <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-green-800">
@@ -1163,7 +1163,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
         </div>
       </div>
 
-      <p className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-[10px] leading-relaxed text-slate-600 shadow-sm">
+      <p className="mt-4 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-[11px] leading-relaxed text-gray-600 shadow-sm">
         All steps run simultaneously. The stage completes when every step finishes.
       </p>
     </div>
@@ -1199,13 +1199,13 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
       <div className={`grid gap-3 ${showFlow ? "lg:grid-cols-2" : "grid-cols-1"}`}>
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
               Available steps
             </span>
             <button
               type="button"
               onClick={() => setShowFlow((s) => !s)}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[9px] font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
             >
               {showFlow ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               {showFlow ? "Hide flow" : "Show flow"}
@@ -1224,7 +1224,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                 >
                   <div className="min-w-0">
                     <span className="text-xs font-semibold text-gray-900">{t.label}</span>
-                    <p className="mt-0.5 text-[10px] leading-snug text-gray-500">{t.description}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-gray-500">{t.description}</p>
                   </div>
                   <ToggleSwitch
                     checked
@@ -1238,12 +1238,12 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                 .map((st: any) => (
                   <div
                     key={st.id}
-                    className="flex items-start justify-between gap-2 rounded-lg border border-blue-200 bg-[#E5EEFC]/50 px-2.5 py-2"
+                    className="flex items-start justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50/50 px-2.5 py-2"
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-900">{st.label}</span>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600">
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
                           Custom
                         </span>
                       </div>
@@ -1273,7 +1273,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-900">{st.label}</span>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600">
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
                           Custom
                         </span>
                       </div>
@@ -1305,11 +1305,11 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                           <span className="text-xs font-semibold text-gray-900">
                             {tmpl?.label ?? st.label}
                           </span>
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600">
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
                             System
                           </span>
                         </div>
-                        <p className="mt-0.5 text-[10px] text-gray-500">{tmpl?.description}</p>
+                        <p className="mt-0.5 text-[11px] text-gray-500">{tmpl?.description}</p>
                       </div>
                       <button
                         type="button"
@@ -1331,15 +1331,15 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
         {showFlow && (
           <div className="min-h-[180px] rounded-xl border border-gray-100 bg-white/60 p-2.5 lg:border-l lg:pl-3">
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                 Execution flow
               </span>
-              <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-[9px] font-semibold">
+              <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-[11px] font-semibold">
                 <button
                   type="button"
                   onClick={() => setParallel(false)}
                   className={`rounded-md px-2 py-1 ${
-                    !parallel ? "bg-[#1759e4] text-white shadow-sm" : "text-gray-500"
+                    !parallel ? "bg-blue-600 text-white shadow-sm" : "text-gray-500"
                   }`}
                 >
                   Sequential
@@ -1349,7 +1349,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                   onClick={() => setParallel(true)}
                   className={`inline-flex items-center gap-1 rounded-md px-2 py-1 ${
                     parallel
-                      ? "bg-[#1759e4] text-white shadow-sm"
+                      ? "bg-blue-600 text-white shadow-sm"
                       : "text-gray-500"
                   }`}
                 >
@@ -1373,7 +1373,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                   }
                   onMoveStep={(i, delta) => moveStepInStage(stage.id, i, delta)}
                 />
-                <p className="mt-2 rounded-md bg-gray-50 px-2 py-1 text-[10px] leading-snug text-gray-600">
+                <p className="mt-2 rounded-md bg-gray-50 px-2 py-1 text-[11px] leading-snug text-gray-600">
                   Drag the grip to reorder with the mouse, or use the arrows.
                 </p>
               </div>
@@ -1387,12 +1387,12 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
   const renderApprovalBody = () => {
     if (approvalStages.length === 0) {
       return (
-        <div className="rounded-lg border border-dashed border-blue-200 bg-[#E5EEFC]/30 p-4 text-center">
+        <div className="rounded-lg border border-dashed border-blue-200 bg-blue-50/30 p-4 text-center">
           <p className="text-xs text-gray-600">No approval stage yet.</p>
           <button
             type="button"
             onClick={ensureApprovalPipeline}
-            className="mt-2 rounded-lg bg-[#1759e4] px-3 py-1.5 text-xs font-medium text-white hover:brightness-95"
+            className="mt-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:brightness-95"
           >
             Add approval stage
           </button>
@@ -1408,13 +1408,13 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
       <div className={`grid gap-3 ${showFlow ? "lg:grid-cols-2" : "grid-cols-1"}`}>
         <div>
           <div className="mb-1.5 flex items-center justify-between gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
               Available steps
             </span>
             <button
               type="button"
               onClick={() => setShowFlow((s) => !s)}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[9px] font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-50"
             >
               {showFlow ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
               {showFlow ? "Hide flow" : "Show flow"}
@@ -1427,11 +1427,11 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
             {APPROVAL_TEMPLATES.filter((t) => approvalHasTemplate(t)).map((t) => (
               <div
                 key={t.id}
-                className="flex items-start justify-between gap-2 rounded-lg border border-blue-200 bg-[#E5EEFC]/80 px-2.5 py-2"
+                className="flex items-start justify-between gap-2 rounded-lg border border-blue-200 bg-blue-50/80 px-2.5 py-2"
               >
                 <div className="min-w-0">
                   <span className="text-xs font-semibold text-gray-900">{t.label}</span>
-                  <p className="mt-0.5 text-[10px] text-gray-500">{t.description}</p>
+                  <p className="mt-0.5 text-[11px] text-gray-500">{t.description}</p>
                 </div>
                 <ToggleSwitch checked onChange={(on) => toggleApprovalTemplate(t, on)} />
               </div>
@@ -1451,12 +1451,12 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold text-gray-900">{step.label}</span>
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-medium text-slate-600">
+                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium text-gray-600">
                           Custom
                         </span>
                       </div>
                       {taskNameLine && (
-                        <p className="mt-0.5 text-[10px] leading-snug text-gray-500">{taskNameLine}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-gray-500">{taskNameLine}</p>
                       )}
                     </div>
                     <button
@@ -1482,15 +1482,15 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
         {showFlow && (
           <div className="min-h-[180px] rounded-xl border border-gray-100 bg-white/60 p-2.5 lg:border-l lg:pl-3">
             <div className="mb-1.5 flex items-center justify-between gap-2">
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-gray-500">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
                 Execution flow
               </span>
-              <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-[9px] font-semibold">
+              <div className="inline-flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-[11px] font-semibold">
                 <button
                   type="button"
                   onClick={() => setStageParallel(displayStageId, false)}
                   className={`rounded-md px-2 py-1 ${
-                    !parallelApproval ? "bg-[#1759e4] text-white shadow-sm" : "text-gray-500"
+                    !parallelApproval ? "bg-blue-600 text-white shadow-sm" : "text-gray-500"
                   }`}
                 >
                   Sequential
@@ -1500,7 +1500,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                   onClick={() => setStageParallel(displayStageId, true)}
                   className={`inline-flex items-center gap-1 rounded-md px-2 py-1 ${
                     parallelApproval
-                      ? "bg-[#1759e4] text-white shadow-sm"
+                      ? "bg-blue-600 text-white shadow-sm"
                       : "text-gray-500"
                   }`}
                 >
@@ -1522,7 +1522,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
                   onReorderById={reorderApprovalByIds}
                   onMoveStep={(i, delta) => moveApprovalFlat(i, delta)}
                 />
-                <p className="mt-2 rounded-md bg-gray-50 px-2 py-1 text-[10px] leading-snug text-gray-600">
+                <p className="mt-2 rounded-md bg-gray-50 px-2 py-1 text-[11px] leading-snug text-gray-600">
                   Drag the grip to reorder with the mouse, or use the arrows.
                 </p>
               </div>
@@ -1550,7 +1550,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
     const seqLabel = parallel ? "PARALLEL" : "SEQUENTIAL";
     const openRing =
       section === "validate"
-        ? "shadow-md shadow-blue-500/10 ring-2 ring-[#1759e4]/25"
+        ? "shadow-md shadow-blue-500/10 ring-2 ring-blue-600/25"
         : section === "approval"
           ? "shadow-md shadow-blue-500/10 ring-2 ring-blue-200"
           : "shadow-md shadow-green-500/10 ring-2 ring-green-200/90";
@@ -1564,7 +1564,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
           className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-2 rounded-t-2xl px-3.5 py-3 text-left"
         >
           <span
-            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-[#1759e4] bg-white text-[11px] font-bold text-[#1759e4] shadow-sm ${hasCollapsedPills ? "translate-y-[10px]" : ""}`}
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 border-blue-600 bg-white text-[11px] font-bold text-blue-600 shadow-sm ${hasCollapsedPills ? "translate-y-[10px]" : ""}`}
           >
             {section === "validate" ? 1 : section === "approval" ? 2 : 3}
           </span>
@@ -1575,10 +1575,10 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
               {title}
             </span>
             <span className="flex min-w-0 items-center justify-end gap-1.5">
-              <span className="whitespace-nowrap text-[10px] font-medium text-slate-600">
+              <span className="whitespace-nowrap text-[11px] font-medium text-gray-600">
                 {stepCount} step{stepCount !== 1 ? "s" : ""}
               </span>
-              <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full border border-blue-200 bg-[#E5EEFC] px-2 py-0.5 text-[9px] font-bold text-[#1759e4] shadow-sm">
+              <span className="inline-flex items-center gap-0.5 whitespace-nowrap rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[11px] font-bold text-blue-600 shadow-sm">
                 {parallel ? (
                   <GitBranch className="h-2.5 w-2.5" />
                 ) : (
@@ -1588,7 +1588,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
               </span>
             </span>
           </span>
-          <span className="text-slate-400">
+          <span className="text-gray-400">
             {isOpen ? <Minus className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </span>
         </button>
@@ -1613,13 +1613,13 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
     label: (findTemplateForStep(st, VALIDATE_TEMPLATES)?.shortLabel || st.label).toUpperCase(),
     tone:
       st.type === "AI AGENT"
-        ? "border border-blue-200 bg-blue-50 text-[#1759e4] shadow-sm"
-        : "border border-gray-200 bg-[#F4F5FA] text-slate-800 shadow-sm",
+        ? "border border-blue-200 bg-blue-50 text-blue-600 shadow-sm"
+        : "border border-gray-200 bg-gray-50 text-gray-800 shadow-sm",
   }));
 
   const approvalPills = approvalStepsFlat.map(({ step }: { step: any }, i: number) => ({
     label: (findTemplateForStep(step, APPROVAL_TEMPLATES)?.shortLabel || step.label).toUpperCase(),
-    tone: "border border-blue-200 bg-[#E5EEFC] text-[#1759e4] shadow-sm",
+    tone: "border border-blue-200 bg-blue-50 text-blue-600 shadow-sm",
   }));
 
   const fulfillmentPills = (fulfillmentStage?.steps || []).map((st: any) => ({
@@ -1630,23 +1630,23 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
   }));
 
   return (
-    <div className="w-full space-y-4 text-xs text-slate-800">
+    <div className="w-full space-y-4 text-xs text-gray-800">
       <div className="space-y-3">
         {accordion(
           "validate",
           "Validate",
-          "text-[#1759e4]",
-          "bg-[#E5EEFC]",
+          "text-blue-600",
+          "bg-blue-50",
           "border-blue-200",
-          "bg-gradient-to-br from-[#E5EEFC]/50 via-white to-white",
+          "bg-gradient-to-br from-blue-50/50 via-white to-white",
           validateStage?.steps?.length ?? 0,
           parallelValidate,
           validatePills,
           renderSectionBody("validate", validateStage, VALIDATE_TEMPLATES, validateAddMenu, {
             accent: "blue",
             border: "border-blue-200",
-            bg: "bg-[#E5EEFC]/60",
-            labelClass: "text-slate-800",
+            bg: "bg-blue-50/60",
+            labelClass: "text-gray-800",
           })
         )}
 
@@ -1656,7 +1656,7 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
           "text-blue-900",
           "bg-blue-100",
           "border-blue-200",
-          "bg-gradient-to-br from-white via-[#F4F5FA]/40 to-white",
+          "bg-gradient-to-br from-white via-gray-50/40 to-white",
           approvalStepsFlat.length,
           parallelApproval,
           approvalPills,
@@ -1682,20 +1682,20 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
         )}
       </div>
 
-      <div className="mt-1 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-gray-200 bg-[#F4F5FA] py-2.5">
-        <span className="rounded-full border border-blue-200 bg-[#E5EEFC] px-3 py-1 text-[10px] font-bold tracking-wide text-[#1759e4]">
+      <div className="mt-1 flex flex-wrap items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 py-2.5">
+        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-bold tracking-wide text-blue-600">
           VALIDATE
         </span>
         <span className="text-gray-400" aria-hidden>
           →
         </span>
-        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-bold tracking-wide text-blue-900">
+        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[11px] font-bold tracking-wide text-blue-900">
           APPROVAL
         </span>
         <span className="text-gray-400" aria-hidden>
           →
         </span>
-        <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-[10px] font-bold tracking-wide text-green-800">
+        <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-[11px] font-bold tracking-wide text-green-800">
           FULFILLMENT
         </span>
       </div>

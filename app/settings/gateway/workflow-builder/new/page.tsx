@@ -15,9 +15,11 @@ import {
   Settings,
   ShieldCheck,
   Bell,
+  Search,
   SquarePen,
   X,
 } from "lucide-react";
+import UserPickerModal from "@/components/UserPickerModal";
 import { useForm, Control, FieldValues, UseFormSetValue, UseFormWatch } from "react-hook-form";
 import MultiSelect from "@/components/MultiSelect";
 import { loadUsers, customOption, loadIspmApps } from "@/components/MsAsyncData";
@@ -626,8 +628,8 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
     <div className="w-full">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h3 className="text-base font-bold tracking-tight text-[#1759e4]">Configure workflow steps</h3>
-          <p className="mt-1 text-xs leading-relaxed text-slate-600">
+          <h3 className="text-base font-semibold text-gray-900">Configure workflow steps</h3>
+          <p className="mt-1 text-xs leading-relaxed text-gray-600">
             {policyUiTab === "guided"
               ? "Toggle steps on or off, then arrange their execution order in the flow panel."
               : "Select a stage, then add steps from the palette to build your workflow."}
@@ -645,8 +647,8 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
             onClick={() => setPolicyUiTab("guided")}
             className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
               policyUiTab === "guided"
-                ? "bg-[#1759e4] text-white shadow-sm ring-1 ring-blue-300"
-                : "text-[#1759e4]/80 hover:bg-[#E5EEFC] hover:text-[#1759e4]"
+                ? "bg-blue-600 text-white shadow-sm ring-1 ring-blue-300"
+                : "text-blue-600/80 hover:bg-blue-50 hover:text-blue-600"
             }`}
           >
             <Compass className="h-3.5 w-3.5 shrink-0" />
@@ -659,8 +661,8 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
             onClick={() => setPolicyUiTab("advanced")}
             className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
               policyUiTab === "advanced"
-                ? "bg-[#1759e4] text-white shadow-sm ring-1 ring-blue-300"
-                : "text-[#1759e4]/80 hover:bg-[#E5EEFC] hover:text-[#1759e4]"
+                ? "bg-blue-600 text-white shadow-sm ring-1 ring-blue-300"
+                : "text-blue-600/80 hover:bg-blue-50 hover:text-blue-600"
             }`}
           >
             <Settings className="h-3.5 w-3.5 shrink-0" />
@@ -710,7 +712,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
                 </div>
               ))}
             </div>
-            <p className="text-[10px] text-gray-500 mt-2 pt-2 border-t border-gray-200 leading-tight">
+            <p className="text-[11px] text-gray-500 mt-2 pt-2 border-t border-gray-200 leading-tight">
               Select a stage, then click a chip to add that step. This prototype runs entirely in the browser.
             </p>
           </div>
@@ -870,7 +872,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
         {selectedStep && (
         <div className="w-72 bg-gray-50 border border-gray-200 rounded-lg p-3 overflow-y-auto shrink-0">
           <div className="flex items-center justify-between gap-2 mb-3">
-            <h3 className="text-xs font-semibold text-slate-900 px-2 py-1 rounded-md bg-slate-200">
+            <h3 className="text-xs font-semibold text-gray-900 px-2 py-1 rounded-md bg-gray-200">
               Step Configuration
             </h3>
             <button
@@ -1109,7 +1111,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
                               width: 18px;
                               height: 18px;
                               border-radius: 50%;
-                              background: #3b82f6;
+                              background: #2563eb;
                               cursor: pointer;
                               border: 2px solid white;
                               box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -1120,7 +1122,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
                               width: 18px;
                               height: 18px;
                               border-radius: 50%;
-                              background: #3b82f6;
+                              background: #2563eb;
                               cursor: pointer;
                               border: 2px solid white;
                               box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -1279,7 +1281,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
                       {stepConfig?.approverResolver === "custom-lookup" && (
                         <div className="mt-2">
                           <span className="mb-1 block text-xs font-medium text-gray-700">Task name</span>
-                          <div className="rounded border border-gray-300 bg-slate-50 px-2.5 py-2 text-xs leading-snug text-slate-900 min-h-[2.25rem]">
+                          <div className="rounded border border-gray-300 bg-gray-50 px-2.5 py-2 text-xs leading-snug text-gray-900 min-h-[2.25rem]">
                             {String(stepConfig?.taskName ?? "").trim() || "—"}
                           </div>
                         </div>
@@ -1936,8 +1938,8 @@ function ReviewSectionHeader({
   return (
     <div className="mb-3 flex items-center justify-between gap-2">
       <div className="flex items-center gap-2">
-        <Icon className={`h-4 w-4 shrink-0 ${iconClassName ?? "text-sky-600"}`} />
-        <h3 className="text-sm font-semibold tracking-tight text-sky-700">{title}</h3>
+        <Icon className={`h-4 w-4 shrink-0 ${iconClassName ?? "text-blue-600"}`} />
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
       </div>
       {action}
     </div>
@@ -1955,10 +1957,10 @@ function formatStep1Owners(s1: any): string {
 }
 
 const STAGE_HEADER_TONES = [
-  "bg-slate-800 text-white",
+  "bg-gray-800 text-white",
   "bg-amber-500 text-white",
   "bg-blue-600 text-white",
-  "bg-emerald-600 text-white",
+  "bg-green-600 text-white",
   "bg-violet-600 text-white",
   "bg-rose-600 text-white",
 ];
@@ -2085,12 +2087,12 @@ function WorkflowReviewSubmit({
         ) : (
           <div className="w-full min-w-0 overflow-x-auto">
             <div className="w-max min-w-full flex flex-nowrap items-center gap-1.5 sm:gap-2">
-              <div className="h-18 w-18 shrink-0 rounded-full border-2 border-slate-200 bg-white text-center flex items-center justify-center px-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
+              <div className="h-18 w-18 shrink-0 rounded-full border-2 border-gray-200 bg-white text-center flex items-center justify-center px-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 leading-tight">
                   Request Submitted
                 </span>
               </div>
-              <span className="text-slate-400 text-base shrink-0 self-center">→</span>
+              <span className="text-gray-400 text-base shrink-0 self-center">→</span>
 
               {stages.map((stage: any, idx: number) => {
                 const stepsList = stage.steps || [];
@@ -2106,21 +2108,21 @@ function WorkflowReviewSubmit({
                       </div>
                       <div className="mt-2 space-y-2">
                         {stepsList.length === 0 ? (
-                          <p className="text-[10px] text-gray-400 text-center">No steps in this stage.</p>
+                          <p className="text-[11px] text-gray-400 text-center">No steps in this stage.</p>
                         ) : (
                           stepsList.map((step: any, stepIdx: number) => (
                             <div
                               key={step.id ?? `${stage.id ?? idx}-step-${stepIdx}`}
                               className={`rounded-md border px-2.5 py-2 text-center ${
                                 idx % 2 === 0
-                                  ? "border-slate-200 bg-white"
+                                  ? "border-gray-200 bg-white"
                                   : "border-amber-200 bg-amber-50/40"
                               }`}
                             >
-                              <div className="text-xs font-semibold text-slate-700 leading-tight">
+                              <div className="text-xs font-semibold text-gray-700 leading-tight">
                                 {String(step.label || `Step ${stepIdx + 1}`).toUpperCase()}
                               </div>
-                              <div className="mt-1 inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-emerald-800">
+                              <div className="mt-1 inline-flex rounded-full border border-green-200 bg-green-50 px-1.5 py-0.5 text-[11px] font-medium uppercase tracking-wide text-green-800">
                                 {step.code || "N/A"}
                               </div>
                             </div>
@@ -2128,13 +2130,13 @@ function WorkflowReviewSubmit({
                         )}
                       </div>
                     </div>
-                    <span className="text-slate-400 text-base shrink-0 self-center">→</span>
+                    <span className="text-gray-400 text-base shrink-0 self-center">→</span>
                   </React.Fragment>
                 );
               })}
 
-              <div className="h-18 w-18 shrink-0 rounded-full border-2 border-slate-200 bg-white text-center flex items-center justify-center px-1.5">
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-700 leading-tight">
+              <div className="h-18 w-18 shrink-0 rounded-full border-2 border-gray-200 bg-white text-center flex items-center justify-center px-1.5">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 leading-tight">
                   Request Completed
                 </span>
               </div>
@@ -2182,11 +2184,11 @@ function WorkflowReviewSubmit({
             <li key={p.id} className="flex items-center justify-between gap-4 py-2.5 text-sm">
               <span className="font-mono text-xs font-medium text-gray-800">{p.label}</span>
               {p.enabled ? (
-                <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                <span className="rounded-md bg-green-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-green-800">
                   Enabled
                 </span>
               ) : (
-                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-slate-500">
+                <span className="rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-gray-500">
                   Disabled
                 </span>
               )}
@@ -2205,7 +2207,7 @@ function WorkflowReviewSubmit({
           {jsonOpen ? "Hide" : "Show"} Workflow-as-Code (JSON)
         </button>
         {jsonOpen && (
-          <pre className="mt-3 max-h-[min(28rem,50vh)] overflow-auto rounded-xl border border-gray-200 bg-slate-950 p-4 text-left text-[11px] leading-relaxed text-emerald-100">
+          <pre className="mt-3 max-h-[min(28rem,50vh)] overflow-auto rounded-xl border border-gray-200 bg-gray-950 p-4 text-left text-[11px] leading-relaxed text-green-100">
             {JSON.stringify(buildWorkflowJsonPreview(formData), null, 2)}
           </pre>
         )}
@@ -2270,6 +2272,8 @@ export default function WorkflowBuilderCreatePage() {
   const excludeUsersIsChecked = watch("excludeUsersIsChecked");
   const selectData = watch("selectData");
   const workflowType = watch("workflowType");
+  const ownerValue = watch("owner");
+  const [isOwnerPickerOpen, setIsOwnerPickerOpen] = useState(false);
   const editPolicyId = searchParams.get("id");
   const isViewMode = searchParams.get("view") === "1" && Boolean(editPolicyId);
   const isEditFromView = isViewMode && searchParams.get("edit") === "1";
@@ -2595,139 +2599,166 @@ export default function WorkflowBuilderCreatePage() {
     }
   };
 
+  const basicInputClass =
+    "h-10 w-full rounded-lg border border-gray-300 bg-white px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30";
+
+  const renderFieldError = (message: unknown) =>
+    typeof message === "string" && message ? <p className="mt-1 text-xs text-red-600">{message}</p> : null;
+
   const renderBasicInfo = (sideBySide: boolean) => (
-    <div className={sideBySide ? "w-full" : "w-full max-w-3xl mx-auto"}>
-          <div className={sideBySide ? "grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2" : "space-y-5"}>
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <ReviewSectionHeader icon={Layers} title="General Details" />
-              <p className="mb-4 text-xs text-gray-500">
-                Name this workflow and describe the process it automates.
+    <div className="w-full">
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+        {!sideBySide && (
+          <div className="flex items-center gap-3 border-b border-gray-100 px-6 py-4">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <Layers className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-gray-900">Basic Information</h2>
+              <p className="text-xs text-gray-500">
+                Name the workflow, describe what it automates, and set who owns it.
               </p>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Standard Access Request"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  {...register("certificationTemplate", { required: true })}
-                />
-                {errors.certificationTemplate?.message &&
-                  typeof errors.certificationTemplate.message === "string" && (
-                    <p className="mt-1 text-red-500 text-xs">
-                      {errors.certificationTemplate.message}
-                    </p>
-                  )}
-              </div>
-
-              <div className="mt-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  placeholder="Explain when this workflow runs and what it's for"
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
-                  rows={3}
-                  {...register("description", { required: true })}
-                />
-                {errors.description?.message &&
-                  typeof errors.description.message === "string" && (
-                    <p className="mt-1 text-red-500 text-xs">
-                      {errors.description.message}
-                    </p>
-                  )}
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <ReviewSectionHeader icon={ShieldCheck} title="Ownership & Classification" />
-              <p className="mb-4 text-xs text-gray-500">
-                Assign who's accountable for this workflow, tag it for discovery, and classify what kind of process it is.
-              </p>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Owners <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. jane.doe@company.com"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    {...register("owner", { required: true })}
-                  />
-                  {errors.owner?.message &&
-                    typeof errors.owner.message === "string" && (
-                      <p className="mt-1 text-red-500 text-xs">
-                        {errors.owner.message}
-                      </p>
-                    )}
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tags
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. finance, sox"
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    {...register("tags")}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Workflow Type <span className="text-red-500">*</span>
-                  </label>
-                  <select
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    {...register("workflowType", { required: true })}
-                  >
-                    <option value="">Select workflow type</option>
-                    <option value="Access Request">Access Request</option>
-                    <option value="Access Review">Access Review</option>
-                    <option value="Assurance Event">Assurance Event</option>
-                  </select>
-                  {errors.workflowType?.message &&
-                    typeof errors.workflowType.message === "string" && (
-                      <p className="mt-1 text-red-500 text-xs">
-                        {errors.workflowType.message}
-                      </p>
-                    )}
-                </div>
-
-                {workflowType === "Assurance Event" && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Select Event Type <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                      {...register("eventType", { required: workflowType === "Assurance Event" })}
-                    >
-                      <option value="">Select event type</option>
-                      {INITIAL_EVENT_DEFINITIONS.map((event) => (
-                        <option key={event.id} value={event.id}>
-                          {event.id} - {event.name}
-                        </option>
-                      ))}
-                    </select>
-                    {errors.eventType?.message &&
-                      typeof errors.eventType.message === "string" && (
-                        <p className="mt-1 text-red-500 text-xs">
-                          {errors.eventType.message}
-                        </p>
-                      )}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 lg:divide-x lg:divide-gray-100">
+          {/* General details */}
+          <div className="flex flex-col gap-4 p-6">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <Layers className="h-3.5 w-3.5 text-blue-600" />
+              General Details
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Standard Access Request"
+                className={basicInputClass}
+                {...register("certificationTemplate", { required: true })}
+              />
+              {renderFieldError(errors.certificationTemplate?.message)}
+            </div>
+
+            <div className="flex flex-1 flex-col">
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Description <span className="text-red-500">*</span>
+              </label>
+              <textarea
+                placeholder="Explain when this workflow runs and what it's for"
+                rows={4}
+                className="w-full flex-1 min-h-[96px] resize-none rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                {...register("description", { required: true })}
+              />
+              {renderFieldError(errors.description?.message)}
+            </div>
+          </div>
+
+          {/* Ownership & classification */}
+          <div className="flex flex-col gap-4 border-t border-gray-100 p-6 lg:border-t-0">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
+              <ShieldCheck className="h-3.5 w-3.5 text-blue-600" />
+              Ownership &amp; Classification
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Owner <span className="text-red-500">*</span>
+              </label>
+              <input type="hidden" {...register("owner", { required: true })} />
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsOwnerPickerOpen(true)}
+                  className="flex h-10 w-full min-w-0 items-center rounded-lg border border-gray-300 bg-white pl-3 pr-16 text-left text-sm hover:border-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                >
+                  <span className={`truncate ${ownerValue ? "text-gray-900" : "text-gray-400"}`}>
+                    {ownerValue || "Search and select an owner"}
+                  </span>
+                </button>
+                <div className="absolute right-2 top-1/2 flex -translate-y-1/2 items-center gap-1">
+                  {ownerValue && (
+                    <button
+                      type="button"
+                      aria-label="Clear owner"
+                      onClick={() => setValue("owner", "", { shouldValidate: true, shouldDirty: true })}
+                      className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    aria-label="Search owner"
+                    onClick={() => setIsOwnerPickerOpen(true)}
+                    className="rounded p-1 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <UserPickerModal
+                open={isOwnerPickerOpen}
+                title="Select Owner"
+                onClose={() => setIsOwnerPickerOpen(false)}
+                onSelect={(user) => {
+                  setValue("owner", user.username || user.email, { shouldValidate: true, shouldDirty: true });
+                  setIsOwnerPickerOpen(false);
+                }}
+              />
+              {renderFieldError(errors.owner?.message)}
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Tags</label>
+              <input
+                type="text"
+                placeholder="e.g. finance, sox"
+                className={basicInputClass}
+                {...register("tags")}
+              />
+            </div>
+
+            <div className={`grid grid-cols-1 gap-4 ${workflowType === "Assurance Event" ? "sm:grid-cols-2" : ""}`}>
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Workflow Type <span className="text-red-500">*</span>
+                </label>
+                <select className={basicInputClass} {...register("workflowType", { required: true })}>
+                  <option value="">Select workflow type</option>
+                  <option value="Access Request">Access Request</option>
+                  <option value="Access Review">Access Review</option>
+                  <option value="Assurance Event">Assurance Event</option>
+                </select>
+                {renderFieldError(errors.workflowType?.message)}
+              </div>
+
+              {workflowType === "Assurance Event" && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                    Event Type <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    className={basicInputClass}
+                    {...register("eventType", { required: workflowType === "Assurance Event" })}
+                  >
+                    <option value="">Select event type</option>
+                    {INITIAL_EVENT_DEFINITIONS.map((event) => (
+                      <option key={event.id} value={event.id}>
+                        {event.id} - {event.name}
+                      </option>
+                    ))}
+                  </select>
+                  {renderFieldError(errors.eventType?.message)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
@@ -2767,7 +2798,7 @@ export default function WorkflowBuilderCreatePage() {
 
   if (isViewMode && isEditFromView) {
     return (
-      <div className="relative min-h-screen bg-gradient-to-b from-slate-50 to-gray-100">
+      <div className="relative min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
         <div className="w-full">
           <div className="space-y-4 px-6 pb-10">
             <div className="rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm">
@@ -2817,7 +2848,7 @@ export default function WorkflowBuilderCreatePage() {
 
   if (isViewMode && !isEditFromView) {
     return (
-      <div className="relative min-h-screen bg-gradient-to-b from-slate-50 to-gray-100">
+      <div className="relative min-h-screen bg-gradient-to-b from-gray-50 to-gray-100">
         <div className="w-full">
           <div className="space-y-4 px-6">
             <div className="rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm">
@@ -2876,9 +2907,9 @@ export default function WorkflowBuilderCreatePage() {
                     <div
                       className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                         currentStep > step.id
-                          ? "bg-[#1759e4] text-white"
+                          ? "bg-blue-600 text-white"
                           : currentStep === step.id
-                            ? "border-2 border-[#1759e4] bg-white text-[#1759e4]"
+                            ? "border-2 border-blue-600 bg-white text-blue-600"
                             : "border-2 border-blue-300 bg-white text-blue-500"
                       }`}
                     >
@@ -2891,7 +2922,7 @@ export default function WorkflowBuilderCreatePage() {
                   {index < steps.length - 1 && (
                     <div
                       className={`mx-2 h-0.5 flex-1 ${
-                        currentStep > step.id ? "bg-[#1759e4]" : "bg-gray-200"
+                        currentStep > step.id ? "bg-blue-600" : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -2907,7 +2938,7 @@ export default function WorkflowBuilderCreatePage() {
               className={`flex items-center rounded-md px-4 py-2 text-sm font-medium ${
                 !isStepValid(currentStep)
                   ? "cursor-not-allowed bg-gray-100 text-gray-400"
-                  : "bg-[#1759e4] text-white hover:brightness-95"
+                  : "bg-blue-600 text-white hover:brightness-95"
               }`}
             >
               Next
@@ -2916,7 +2947,7 @@ export default function WorkflowBuilderCreatePage() {
           ) : (
             <button
               onClick={handleSubmit}
-              className="flex items-center rounded-md bg-[#1759e4] px-4 py-2 text-sm font-medium text-white hover:brightness-95"
+              className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:brightness-95"
             >
               Submit
             </button>
@@ -2931,12 +2962,8 @@ export default function WorkflowBuilderCreatePage() {
           {renderStepContent()}
         </div>
       ) : (
-        // Step 1: centered form layout
-        <div className="max-w-6xl mx-auto px-6 pb-10">
-          <div className="w-full mb-6 min-h-[400px]">
-            <div className="flex justify-center">{renderStepContent()}</div>
-          </div>
-        </div>
+        // Step 1: compact full-width form that fits without scrolling
+        <div className="px-4 pt-4 pb-4">{renderStepContent()}</div>
       )}
     </div>
   );
