@@ -166,6 +166,19 @@ function catalogAttributesToFields(attributes: any): Record<string, any> {
   return out;
 }
 
+/** Sidebar display keys whose catalog attribute is marked `displayOnly: true` (shown but not editable). */
+function catalogDisplayOnlyKeys(record: any): Set<string> {
+  const out = new Set<string>();
+  const attrs: any[] = Array.isArray(record?.attributes) ? record.attributes : [];
+  for (const [displayKey, apiKeys] of Object.entries(CATALOG_EDITABLE_FIELD_KEYS)) {
+    const lowerKeys = apiKeys.map((k) => k.toLowerCase());
+    const attr = attrs.find((a) => lowerKeys.includes(String(a?.columnName ?? "").toLowerCase()));
+    const flag = attr?.value?.displayOnly ?? attr?.displayOnly;
+    if (flag === true || String(flag ?? "").trim().toLowerCase() === "true") out.add(displayKey);
+  }
+  return out;
+}
+
 /**
  * Body for PUT .../update/{catalogid}: only the sidebar values that changed, keyed by the catalog
  * column name under `attributes`, e.g. `{ "attributes": { "description": "..." } }`. The key is the record's matching attribute
@@ -178,8 +191,10 @@ function buildCatalogUpdatePatch(
   edited: any
 ): { attributes: Record<string, any> } | null {
   const attrs: any[] = Array.isArray(record?.attributes) ? record.attributes : [];
+  const displayOnly = catalogDisplayOnlyKeys(record);
   const patch: Record<string, any> = {};
   for (const [displayKey, apiKeys] of Object.entries(CATALOG_EDITABLE_FIELD_KEYS)) {
+    if (displayOnly.has(displayKey)) continue;
     const next = edited?.[displayKey];
     if (next === undefined || String(next ?? "") === String(original?.[displayKey] ?? "")) continue;
     const lowerKeys = apiKeys.map((k) => k.toLowerCase());
@@ -1159,6 +1174,11 @@ export default function ApplicationDetailPage() {
         () => (catalogItem ? mapCatalogItemToRow(catalogItem, baseData) : baseData),
         [catalogItem]
       );
+      // Fields whose catalog attribute has displayOnly: true are shown read-only in edit mode
+      const displayOnlyKeys = useMemo(() => catalogDisplayOnlyKeys(catalogItem), [catalogItem]);
+      const editInputClass =
+        "w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
+      const readOnlyInputClass = "bg-gray-100 text-gray-500 cursor-not-allowed focus:ring-0 focus:border-gray-300";
 
       // PUT the edited entitlement to the catalog update API, then refresh the sidebar and grid row
       const saveEntitlementEdits = async () => {
@@ -1482,7 +1502,9 @@ export default function ApplicationDetailPage() {
         if (localEditMode) {
           const inputType1 = isDate1 ? "date" : "text";
           const inputType2 = isDate2 ? "date" : "text";
-          
+          const readOnly1 = !!fieldKey1 && displayOnlyKeys.has(fieldKey1);
+          const readOnly2 = !!fieldKey2 && displayOnlyKeys.has(fieldKey2);
+
           return (
             <div className="flex space-x-4 text-sm">
               <div className="flex-1">
@@ -1490,15 +1512,17 @@ export default function ApplicationDetailPage() {
                 <input
                   type={inputType1}
                   value={val1?.toString() || ""}
+                  readOnly={readOnly1}
+                  title={readOnly1 ? "Display only" : undefined}
                   onChange={(e) => {
-                    if (fieldKey1) {
+                    if (fieldKey1 && !readOnly1) {
                       setLocalEditableData((prev: any) => ({
                         ...prev,
                         [fieldKey1]: e.target.value,
                       }));
                     }
                   }}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`${editInputClass} ${readOnly1 ? readOnlyInputClass : ""}`}
                 />
               </div>
               <div className="flex-1">
@@ -1506,15 +1530,17 @@ export default function ApplicationDetailPage() {
                 <input
                   type={inputType2}
                   value={val2?.toString() || ""}
+                  readOnly={readOnly2}
+                  title={readOnly2 ? "Display only" : undefined}
                   onChange={(e) => {
-                    if (fieldKey2) {
+                    if (fieldKey2 && !readOnly2) {
                       setLocalEditableData((prev: any) => ({
                         ...prev,
                         [fieldKey2]: e.target.value,
                       }));
                     }
                   }}
-                  className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`${editInputClass} ${readOnly2 ? readOnlyInputClass : ""}`}
                 />
               </div>
             </div>
@@ -1540,21 +1566,24 @@ export default function ApplicationDetailPage() {
         const val = fieldKey ? currentData?.[fieldKey] : value;
 
         if (localEditMode) {
+          const readOnly = !!fieldKey && displayOnlyKeys.has(fieldKey);
           return (
             <div className="text-sm">
               <label className="block text-xs text-gray-500 mb-1 font-medium">{label}:</label>
               <input
                 type="text"
                 value={val?.toString() || ""}
+                readOnly={readOnly}
+                title={readOnly ? "Display only" : undefined}
                 onChange={(e) => {
-                  if (fieldKey) {
+                  if (fieldKey && !readOnly) {
                     setLocalEditableData((prev: any) => ({
                       ...prev,
                       [fieldKey]: e.target.value,
                     }));
                   }
                 }}
-                className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className={`${editInputClass} ${readOnly ? readOnlyInputClass : ""}`}
               />
             </div>
           );
@@ -1960,14 +1989,19 @@ export default function ApplicationDetailPage() {
                         localEditableData?.entitlementName ||
                         "") as string
                     }
+                    readOnly={displayOnlyKeys.has("Ent Name")}
+                    title={displayOnlyKeys.has("Ent Name") ? "Display only" : undefined}
                     onChange={(e) => {
+                      if (displayOnlyKeys.has("Ent Name")) return;
                       setLocalEditableData((prev: any) => ({
                         ...prev,
                         "Ent Name": e.target.value,
                         entitlementName: e.target.value,
                       }));
                     }}
-                    className="w-full px-2 py-1.5 border border-gray-300 rounded text-md font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className={`w-full px-2 py-1.5 border border-gray-300 rounded text-md font-semibold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                      displayOnlyKeys.has("Ent Name") ? readOnlyInputClass : ""
+                    }`}
                   />
                 )}
                 <div className={`bg-gray-50 border border-gray-200 rounded-lg p-3 ${localEditMode ? "mt-2" : ""}`}>
@@ -2001,7 +2035,10 @@ export default function ApplicationDetailPage() {
                           localEditableData?.description ||
                           "") as string
                       }
+                      readOnly={displayOnlyKeys.has("Ent Description")}
+                      title={displayOnlyKeys.has("Ent Description") ? "Display only" : undefined}
                       onChange={(e) => {
+                        if (displayOnlyKeys.has("Ent Description")) return;
                         setLocalEditableData((prev: any) => ({
                           ...prev,
                           "Ent Description": e.target.value,
@@ -2009,7 +2046,9 @@ export default function ApplicationDetailPage() {
                         }));
                       }}
                       rows={3}
-                      className="w-full px-2 py-1.5 border border-gray-300 rounded text-sm mt-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y bg-white"
+                      className={`w-full px-2 py-1.5 border border-gray-300 rounded text-sm mt-1 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y ${
+                        displayOnlyKeys.has("Ent Description") ? readOnlyInputClass : "bg-white"
+                      }`}
                     />
                   ) : (
                     <p className="text-sm text-gray-700 break-words whitespace-pre-wrap max-w-full mt-1">
