@@ -1,5 +1,6 @@
 'use client';
 
+import { stripBasePath, withBasePath } from "@/lib/basePath";
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import {
@@ -98,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         setAuthError(null);
-        const path = pathname ?? window.location.pathname;
+        const path = pathname ?? stripBasePath(window.location.pathname);
 
         const pathTenant = parseTenantFromPathname(path);
         if (pathTenant) {
@@ -146,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setAuthType('OAUTH');
             syncAuthTypeToSession('OAUTH', 'IDCS');
             applySessionToState(setIsAuthenticated, setUser, afterSession);
-            window.location.replace('/');
+            window.location.replace(withBasePath('/'));
             return;
           } catch (oauthError) {
             console.error('AuthContext: OAuth callback failed:', oauthError);
@@ -186,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           syncAuthTypeToSession(resolvedAuthType);
           applySessionToState(setIsAuthenticated, setUser, serverSession);
           if (oauthCallback || isTenantAuthPath(path) || path.startsWith('/oauth/callback')) {
-            window.location.replace('/');
+            window.location.replace(withBasePath('/'));
           }
           return;
         }
@@ -256,7 +257,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setIsLoading(true);
     try {
-      const path = pathname ?? (typeof window !== 'undefined' ? window.location.pathname : '');
+      const path = pathname ?? (typeof window !== 'undefined' ? stripBasePath(window.location.pathname) : '');
       const loginApp = getActiveTenantId() ?? parseTenantFromPathname(path);
       if (!loginApp) {
         throw new Error('Open the app at /YOUR_TENANT_ID (e.g. /ACMECOM or /KFPRODOCI).');

@@ -1,4 +1,5 @@
 'use client';
+import { withBasePath } from "@/lib/basePath";
 import React, { JSX, useEffect, useState } from "react";
 import dynamic from 'next/dynamic';
 const Select = dynamic(() => import('react-select'), { ssr: false });
@@ -70,7 +71,7 @@ function MultiSelect<FormValues extends FieldValues>({
         />
         {"image" in (props.data as Record<string, unknown>) && (
           <Image
-            src={(props.data as { image: string }).image}
+            src={withBasePath((props.data as { image: string }).image)}
             alt={props.label}
             width={32} 
             height={32}

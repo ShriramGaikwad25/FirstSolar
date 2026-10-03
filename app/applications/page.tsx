@@ -1,5 +1,6 @@
 "use client";
 
+import { withBasePath } from "@/lib/basePath";
 import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
@@ -140,7 +141,7 @@ export default function Application() {
             return (
               <div className="flex items-center h-full">
                 <img
-                  src={getLogoSrc(name)}
+                  src={withBasePath(getLogoSrc(name))}
                   alt={`${name} logo`}
                   width={28}
                   height={28}
@@ -168,7 +169,7 @@ export default function Application() {
           return (
             <div className="flex items-center h-full">
               <img
-                src={getLogoSrc(name)}
+                src={withBasePath(getLogoSrc(name))}
                 alt={`${name} logo`}
                 width={28}
                 height={28}

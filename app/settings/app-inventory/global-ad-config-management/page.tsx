@@ -1,5 +1,6 @@
 "use client";
 
+import { withBasePath } from "@/lib/basePath";
 import React, { useEffect, useRef } from "react";
 import ValidationsPanel from "./ValidationsPanel";
 
@@ -90,7 +91,7 @@ const TAIL_HTML = `
         <div class="bulk-file-row">
           <div class="bulk-file-icon template"><span>⬇</span></div>
           <div class="bulk-file-text"><strong>Bulk invite template</strong><span>Download the sample file and fill in your invitation list</span></div>
-          <a class="btn small" href="/global-ad-config-management/bulk-invite-sample.xlsx" download>Download</a>
+          <a class="btn small" href="${withBasePath("/global-ad-config-management/bulk-invite-sample.xlsx")}" download>Download</a>
         </div>
         <div class="bulk-file-divider"></div>
         <div class="bulk-file-row">
@@ -116,7 +117,7 @@ export default function GlobalAdConfigManagementPage() {
   useEffect(() => {
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "/global-ad-config-management/styles.css";
+    link.href = withBasePath("/global-ad-config-management/styles.css");
     document.head.appendChild(link);
 
     const script = document.createElement("script");

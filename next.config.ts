@@ -1,8 +1,14 @@
 import type { NextConfig } from "next";
+import { BASE_PATH } from "./lib/basePath";
 
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: false,
+  // Whole app is served under /kfidp (sign-in: /kfidp/{TenantId})
+  basePath: BASE_PATH,
+  async redirects() {
+    return [{ source: "/", destination: BASE_PATH, basePath: false, permanent: false }];
+  },
   // All images are served from /public; no remote hosts are allowed through the optimizer.
   async headers() {
     return [

@@ -1,4 +1,5 @@
 "use client";
+import { withBasePath } from "@/lib/basePath";
 import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { themeQuartz } from "ag-grid-community";
@@ -782,7 +783,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 <div className="flex items-center justify-center w-10 h-10 bg-gray-300 rounded overflow-hidden shrink-0">
                   {roleType(role) === "applicationinstance" ? (
                     <img
-                      src={getLogoSrc(getApplicationName(role) || role.name)}
+                      src={withBasePath(getLogoSrc(getApplicationName(role) || role.name))}
                       alt=""
                       className="w-10 h-10 object-contain"
                     />
@@ -1070,7 +1071,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 <div className="flex items-center justify-center w-10 h-10 bg-gray-300 rounded overflow-hidden shrink-0">
                   {roleType(role) === "applicationinstance" ? (
                     <img
-                      src={getLogoSrc(getApplicationName(role) || role.name)}
+                      src={withBasePath(getLogoSrc(getApplicationName(role) || role.name))}
                       alt=""
                       className="w-10 h-10 object-contain"
                     />

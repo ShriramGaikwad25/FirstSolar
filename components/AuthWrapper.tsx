@@ -1,5 +1,6 @@
 'use client';
 
+import { withBasePath } from "@/lib/basePath";
 import { useAuth } from '@/contexts/AuthContext';
 import { isLogoutRedirectPending } from '@/lib/auth';
 import {
@@ -44,7 +45,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
     }
 
     if (pendingLoggedOut) {
-      window.location.replace('/logged-out');
+      window.location.replace(withBasePath('/logged-out'));
       return;
     }
 

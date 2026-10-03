@@ -1,4 +1,5 @@
 // Authentication API endpoints and utilities
+import { withBasePath } from "@/lib/basePath";
 import {
   clearActiveTenantId,
   getActiveTenantId,
@@ -195,7 +196,7 @@ export async function fetchServerSession(): Promise<ServerSessionCheck> {
     };
   }
   try {
-    const response = await fetch('/api/auth/session', {
+    const response = await fetch(withBasePath('/api/auth/session'), {
       method: 'GET',
       credentials: 'include',
       cache: 'no-store',
@@ -322,7 +323,7 @@ export function clearAllAuthCookies(options?: { preserveLogoutRedirect?: boolean
 export async function clearAuthCookiesOnServer(): Promise<void> {
   if (typeof window === 'undefined') return;
   try {
-    await fetch('/api/auth/logout', {
+    await fetch(withBasePath('/api/auth/logout'), {
       method: 'POST',
       credentials: 'include',
       cache: 'no-store',
@@ -576,7 +577,7 @@ export async function completeOAuthCallback(
   const params = new URLSearchParams({ code, state });
   const tenant = registeredAppNameOrNull();
   if (tenant) params.set('registeredAppName', tenant);
-  const response = await fetch(`/api/auth/oauth/callback?${params.toString()}`, {
+  const response = await fetch(withBasePath(`/api/auth/oauth/callback?${params.toString()}`), {
     method: 'GET',
     headers: { Accept: 'application/json' },
     cache: 'no-store',
@@ -800,7 +801,7 @@ export function performUserLogout(
   }
 
   // Navigate immediately so AuthWrapper cannot redirect to tenant login first.
-  window.location.replace(target);
+  window.location.replace(withBasePath(target));
 
   void clearAuthCookiesOnServer();
 }
@@ -859,7 +860,7 @@ export async function fetchApplicationAuthType(
   }
   const useProxy = typeof window !== 'undefined';
   const response = useProxy
-    ? await fetch('/api/auth/application-type', {
+    ? await fetch(withBasePath('/api/auth/application-type'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ registeredAppName: appName }),

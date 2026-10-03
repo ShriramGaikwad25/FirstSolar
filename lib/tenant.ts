@@ -1,4 +1,4 @@
-
+import { withBasePath } from "@/lib/basePath";
 /** Cookie name matches Keyforge `registeredAppName` (also used by API routes). */
 export const REGISTERED_APP_COOKIE = 'registeredAppName';
 
@@ -147,7 +147,7 @@ export function getTenantLoginPath(tenantId?: string | null): string {
 export function redirectToTenantLogin(tenantId?: string | null): void {
   if (typeof window === 'undefined') return;
   const target = getTenantLoginPath(tenantId);
-  window.location.replace(target);
+  window.location.replace(withBasePath(target));
 }
 
 /** @deprecated Use isTenantAuthPath */

@@ -1,5 +1,6 @@
 "use client";
 
+import { withBasePath } from "@/lib/basePath";
 import React, { useState, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -275,7 +276,7 @@ function parseSavedApplicationConfig(app: Record<string, unknown>): {
   };
 }
 
-const CEL_EXPRESSIONS_BASE = "/api/celmodule/expressions";
+const CEL_EXPRESSIONS_BASE = withBasePath("/api/celmodule/expressions");
 /** Same endpoint as Schema Mapping Source Attribute list. */
 function buildScimAttributesUrl(): string {
   return `https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`;

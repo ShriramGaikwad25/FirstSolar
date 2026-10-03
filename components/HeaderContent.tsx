@@ -1,4 +1,5 @@
 "use client";
+import { withBasePath } from "@/lib/basePath";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
@@ -389,7 +390,7 @@ const HeaderContent = () => {
     return (
       <div className="relative" style={{ width: size, height: size }}>
         <Image
-          src={src}
+          src={withBasePath(src)}
           alt={`Profile picture of ${userName}`}
           width={size}
           height={size}

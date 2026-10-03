@@ -1,4 +1,5 @@
 import { LineItemDetail } from "@/types/lineItem";
+import { withBasePath } from "@/lib/basePath";
 import { PaginatedResponse, CertAnalyticsResponse } from "@/types/api";
 import { string } from "yup";
 import { apiRequestWithAuth, checkTokenExpiredError, getCookie, COOKIE_NAMES } from "./auth";
@@ -209,7 +210,7 @@ export interface ModifyAccessPayload {
 /** Uses same-origin proxy to avoid CORS when calling KeyForge certification API */
 function getCertificationProxyUrl(path: string): string {
   if (typeof window !== "undefined") {
-    return `${window.location.origin}/api/certification/${path}`;
+    return `${window.location.origin}${withBasePath(`/api/certification/${path}`)}`;
   }
   return `${BASE_URL()}/${path}`;
 }
@@ -3408,7 +3409,7 @@ export async function getAllSupportedApplicationTypesViaProxy(): Promise<any> {
     "X-Requested-With": "XMLHttpRequest",
   };
 
-  const res = await fetch(`/api/supported-objects`, {
+  const res = await fetch(withBasePath(`/api/supported-objects`), {
     headers,
     cache: "no-store",
     credentials: "include",

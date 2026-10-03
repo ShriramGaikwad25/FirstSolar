@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { withBasePath } from "@/lib/basePath";
 import { executeQuery } from '@/lib/api';
 
 // Load users from ISPM API using executeQuery
@@ -209,7 +210,7 @@ export const customOption = (props: { data: OptionData; innerRef: React.Ref<HTML
   return (
     <div ref={innerRef} {...innerProps} className="flex items-center p-2 hover:bg-[#DEEBFF]">
       <Image
-        src={imageSrc}
+        src={withBasePath(imageSrc)}
         alt={data.label || "Option"}
         width={32}
         height={32}

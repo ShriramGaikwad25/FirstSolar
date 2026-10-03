@@ -1,5 +1,6 @@
 'use client';
 
+import { withBasePath } from "@/lib/basePath";
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,7 +34,7 @@ export function TenantLoginForm({ tenantId }: TenantLoginFormProps) {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
     const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
     if (accessToken && jwtToken && isAuthenticated) {
-      window.location.replace('/');
+      window.location.replace(withBasePath('/'));
       return;
     }
     setIsCheckingToken(false);
@@ -46,7 +47,7 @@ export function TenantLoginForm({ tenantId }: TenantLoginFormProps) {
     try {
       const success = await login(userid, password);
       if (success) {
-        window.location.href = '/';
+        window.location.href = withBasePath('/');
       } else {
         setError('Invalid user ID or password');
       }
@@ -113,7 +114,7 @@ export function TenantLoginForm({ tenantId }: TenantLoginFormProps) {
         <div className="w-full max-w-md relative z-10">
           <div className="text-center mb-8">
             <div className="flex items-center justify-center">
-              <Image src="/MainLogo.svg" alt="Logo" width={260} height={80} />
+              <Image src={withBasePath("/MainLogo.svg")} alt="Logo" width={260} height={80} />
             </div>
           </div>
 

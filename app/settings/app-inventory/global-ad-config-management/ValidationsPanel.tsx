@@ -1,12 +1,13 @@
 "use client";
 
+import { withBasePath } from "@/lib/basePath";
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { Code2, Pencil, Trash2, X } from "lucide-react";
 import ClientOnlyAgGrid from "@/components/ClientOnlyAgGrid";
 import "@/lib/ag-grid-setup";
 
-const VARIABLES_FETCH_URL = "/api/celmodule/variables";
+const VARIABLES_FETCH_URL = withBasePath("/api/celmodule/variables");
 
 type CelModuleVariable = {
   id: number;
