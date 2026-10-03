@@ -4,6 +4,14 @@ import { BASE_PATH } from "./lib/basePath";
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: false,
+  // Self-contained server bundle (.next/standalone) for offline deployment: no npm install on the target.
+  output: "standalone",
+  // Serve /public images as-is: avoids the native `sharp` dependency so a bundle built on Windows runs on Linux.
+  images: { unoptimized: true },
+  // ...and keep sharp's OS-specific binaries out of the standalone bundle (never loaded with unoptimized images).
+  outputFileTracingExcludes: {
+    "*": ["node_modules/sharp/**", "node_modules/@img/**"],
+  },
   // Whole app is served under /kfidp (sign-in: /kfidp/{TenantId})
   basePath: BASE_PATH,
   async redirects() {

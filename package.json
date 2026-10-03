@@ -11,6 +11,7 @@
     "start": "next start",
     "start:prod": "next build --webpack && next start",
     "lint": "eslint .",
+    "package:offline": "node scripts/package-offline.mjs",
     "clean": "node -e \"const fs=require('fs');const path=require('path');function rm(p){try{if(fs.existsSync(p)){fs.rmSync(p,{recursive:true,force:true,maxRetries:3});console.log('Removed:',p);}}catch(e){console.warn('Could not remove:',p);}}rm('.next');rm('tsconfig.tsbuildinfo');\""
   },
   "dependencies": {
