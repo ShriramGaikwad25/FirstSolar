@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useEffect, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Edit3 } from "lucide-react";
 import { getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
@@ -80,7 +81,7 @@ const PolicyRiskDetails: React.FC<PolicyRiskDetailsProps> = ({ entitlementData }
       const entitlementId = entitlementData?.entitlementId;
       if (entitlementId) {
         const resp = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/policyrisk/entitlement/${encodeURIComponent(entitlementId)}`,
+          `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/policyrisk/entitlement/${encodeURIComponent(entitlementId)}`,
           { headers: getJwtAuthHeaders() }
         );
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);

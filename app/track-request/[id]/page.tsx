@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -248,7 +249,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
       return;
     }
 
-    const url = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
+    const url = `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
       String(reviewerId).trim()
     )}/${encodeURIComponent(String(id).trim())}`;
     setLoading(true);
@@ -1403,7 +1404,7 @@ const TrackRequestDetailPage = ({ params }: { params: Promise<{ id: string }> })
                   setAnswerError(null);
                   try {
                     const response = await fetch(
-                      `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/provide/${String(reviewerId).trim()}`,
+                      `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/provide/${String(reviewerId).trim()}`,
                       {
                         method: "POST",
                         headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),

@@ -1,4 +1,5 @@
 "use client";
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useState, useEffect } from "react";
 import { Search, Check } from "lucide-react";
 import { useSelectedUsers, User } from "@/contexts/SelectedUsersContext";
@@ -59,7 +60,7 @@ const UserSearchTab: React.FC<UserSearchTabProps> = ({ singleSelect = false }) =
       const query = `SELECT firstname, lastname, email, username, employeeid, department, title,userid FROM usr`;
 
       const response = await fetch(
-        `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
+        `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
         {
           method: "POST",
           headers: {

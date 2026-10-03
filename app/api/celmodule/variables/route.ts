@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
+import { getBackendOriginFromRequest, getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
 
 function upstreamUrl(request: NextRequest): string {
   return (
     process.env.CELMODULE_VARIABLES_URL ??
-    `https://preview.keyforge.ai/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/variables`
+    `${getBackendOriginFromRequest(request)}/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/variables`
   );
 }
 

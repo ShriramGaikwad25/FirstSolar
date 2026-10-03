@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -856,7 +857,7 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
         payload.OldAPIToken = oldToken;
       }
 
-      const url = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/updateApp/${encodeURIComponent(appId)}`;
+      const url = `${getBackendOrigin()}/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/updateApp/${encodeURIComponent(appId)}`;
 
       const resp = await fetch(url, {
         method: "PUT",
@@ -914,7 +915,7 @@ export default forwardRef<ApplicationEditTabHandle, ApplicationEditTabProps>(
         return;
       }
 
-      const url = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/regenerateClientSecret/${encodeURIComponent(appId)}`;
+      const url = `${getBackendOrigin()}/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/regenerateClientSecret/${encodeURIComponent(appId)}`;
       const resp = await fetch(url, {
         method: "POST",
         headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },

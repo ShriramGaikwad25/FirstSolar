@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Mail, Calendar, User, FileText, Edit } from "lucide-react";
@@ -66,7 +67,7 @@ export default function EmailTemplateDetailPage() {
         setError(null);
 
         const response = await fetch(
-          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
+          `${getBackendOrigin()}/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
           { headers: getJwtAuthHeaders() }
         );
 

@@ -1,4 +1,5 @@
 "use client";
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { withBasePath } from "@/lib/basePath";
 import React, { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
@@ -1233,7 +1234,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
         const query = `SELECT firstname, lastname, email, username, employeeid, department, title, userid FROM usr`;
 
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
+          `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
           {
             method: "POST",
             headers: {
@@ -1359,7 +1360,7 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
       setMirrorAccessState(prev => ({ ...prev, isRetrieving: true, retrieveError: null }));
       try {
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
+          `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },

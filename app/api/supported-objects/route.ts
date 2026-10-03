@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAccessTokenFromRequest, getTenantIdFromRequest, withRegisterScimAuthHeader, withTenantHeader } from '@/lib/serverAuth';
+import { getAccessTokenFromRequest, getBackendOriginFromRequest, getTenantIdFromRequest, withRegisterScimAuthHeader, withTenantHeader } from '@/lib/serverAuth';
 import { mergeSupportedObjectsExtensions } from '@/lib/supported-objects-extensions';
 
 export async function GET(request: NextRequest) {
@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supportedObjectsUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(getTenantIdFromRequest(request))}/getAllSupportedObjects`;
+    const supportedObjectsUrl = `${getBackendOriginFromRequest(request)}/registerscimapp/registerfortenant/${encodeURIComponent(getTenantIdFromRequest(request))}/getAllSupportedObjects`;
 
     const response = await fetch(supportedObjectsUrl, {
       method: 'GET',

@@ -1,4 +1,5 @@
 "use client";
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -135,7 +136,7 @@ const TrackRequest: React.FC = () => {
     }
 
     const trimmedReviewerId = String(reviewerId).trim();
-    const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
+    const baseUrl = `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
       trimmedReviewerId
     )}`;
     setLoading(true);
@@ -166,7 +167,7 @@ const TrackRequest: React.FC = () => {
 
     /** wfInstanceId set for requests with an open clarification question, for the "C" badge. */
     const fetchClarificationWfInstanceIds = apiRequestWithAuth<any>(
-      `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/inbox/${encodeURIComponent(
+      `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/inbox/${encodeURIComponent(
         trimmedReviewerId
       )}`,
       { method: "GET" }

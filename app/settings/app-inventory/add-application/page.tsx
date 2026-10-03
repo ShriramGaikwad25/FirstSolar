@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -1292,7 +1293,7 @@ export default function AddApplicationPage() {
   const fetchScimAttributes = async () => {
     setIsLoadingAttributes(true);
     try {
-      const response = await fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
+      const response = await fetch(`${getBackendOrigin()}/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
         method: "GET",
         headers: {
           ...getJwtAuthHeaders(),

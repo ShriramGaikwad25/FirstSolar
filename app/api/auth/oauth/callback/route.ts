@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRegisteredAppFromCookies } from '@/lib/tenant-server';
+import { getBackendOriginFromRequest } from '@/lib/serverAuth';
 
-const AUTH_BASE_URL = 'https://preview.keyforge.ai/RequestJWTToken/TokenProvider';
+const authBaseUrl = (request: NextRequest) =>
+  `${getBackendOriginFromRequest(request)}/RequestJWTToken/TokenProvider`;
 
 /** Server proxy for OAuth code exchange (avoids browser CORS). */
 export async function GET(request: NextRequest) {
@@ -32,7 +34,7 @@ export async function GET(request: NextRequest) {
       state,
       registeredAppName,
     });
-    const response = await fetch(`${AUTH_BASE_URL}/oauth/callback?${params.toString()}`, {
+    const response = await fetch(`${authBaseUrl(request)}/oauth/callback?${params.toString()}`, {
       method: 'GET',
       headers: { Accept: 'application/json', 'X-Tenant-Id': registeredAppName },
       cache: 'no-store',

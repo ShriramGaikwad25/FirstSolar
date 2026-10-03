@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { withBasePath } from "@/lib/basePath";
 import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -55,7 +56,7 @@ export default function Application() {
       try {
         const reviewerID = getReviewerId() || "";
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getApplications/${reviewerID}?page=1&page_size=1000`,
+          `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/getApplications/${reviewerID}?page=1&page_size=1000`,
           { headers: getJwtAuthHeaders() }
         );
         // Fire parallel background requests alongside getApplications
@@ -65,11 +66,11 @@ export default function Application() {
           headers.set('Authorization', `Bearer ${accessToken}`);
           headers.set('X-Tenant-Id', resolveTenantIdForHeader());
           const originalFetch = typeof window !== 'undefined' ? getOriginalFetch() : fetch;
-          void originalFetch(`https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`, {
+          void originalFetch(`${getBackendOrigin()}/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`, {
             headers: headers,
           }).catch(() => null);
         }
-        void fetch(`https://preview.keyforge.ai/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/16APLDOY`, {
+        void fetch(`${getBackendOrigin()}/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/16APLDOY`, {
           headers: getJwtAuthHeaders(),
         }).catch(() => null);
         const data = await response.json();
@@ -251,7 +252,7 @@ export default function Application() {
       try {
         const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
         if (!accessToken) return;
-        const keyforgeAllUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`;
+        const keyforgeAllUrl = `${getBackendOrigin()}/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`;
         const headers = new Headers();
         headers.set('Authorization', `Bearer ${accessToken}`);
         headers.set('X-Tenant-Id', resolveTenantIdForHeader());
@@ -268,7 +269,7 @@ export default function Application() {
         const applicationID = match?.ApplicationID;
         if (!applicationID) return;
         try { localStorage.setItem("keyforgeApplicationID", applicationID); } catch {}
-        const keyforgeGetAppUrl = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getApp/${encodeURIComponent(applicationID)}`;
+        const keyforgeGetAppUrl = `${getBackendOrigin()}/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getApp/${encodeURIComponent(applicationID)}`;
         void fetch(keyforgeGetAppUrl, { method: "GET", keepalive: true, headers }).catch(() => null);
       } catch {
         // ignore background errors

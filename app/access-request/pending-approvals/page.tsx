@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
@@ -124,7 +125,7 @@ async function fetchPendingApprovals(): Promise<PendingApproval[]> {
   }
 
   const trimmedReviewerId = String(reviewerId).trim();
-  const baseUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/${encodeURIComponent(
+  const baseUrl = `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/${encodeURIComponent(
     trimmedReviewerId
   )}`;
 
@@ -212,7 +213,7 @@ async function resolveApproverActionIds(
     throw new Error("Missing request identifier for this item.");
   }
 
-  const detailUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/detail/${encodeURIComponent(
+  const detailUrl = `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/detail/${encodeURIComponent(
     row.requestUuid
   )}`;
   const data = await apiRequestWithAuth<any>(detailUrl, { method: "GET" });
@@ -429,7 +430,7 @@ const PendingApprovalsPage: React.FC = () => {
         };
 
         const response = await fetch(
-          `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${row.reviewerId}`,
+          `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${row.reviewerId}`,
           {
             method: "POST",
             headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
@@ -465,7 +466,7 @@ const PendingApprovalsPage: React.FC = () => {
       try {
         const parsedTaskId = Number(row.taskId);
         const response = await fetch(
-          `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/claim/${row.reviewerId}`,
+          `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/task/claim/${row.reviewerId}`,
           {
             method: "POST",
             headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
@@ -520,7 +521,7 @@ const PendingApprovalsPage: React.FC = () => {
           };
 
           const response = await fetch(
-            `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${row.reviewerId}`,
+            `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${row.reviewerId}`,
             {
               method: "POST",
               headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),

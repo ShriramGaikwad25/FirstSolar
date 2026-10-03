@@ -1,4 +1,5 @@
 // Authentication API endpoints and utilities
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { withBasePath } from "@/lib/basePath";
 import {
   clearActiveTenantId,
@@ -44,7 +45,7 @@ function pickHttpErrorBodyMessage(errorJson: unknown, fallback: string): string 
   return fallback;
 }
 
-const AUTH_BASE_URL = 'https://preview.keyforge.ai/RequestJWTToken/TokenProvider';
+const authBaseUrl = () => `${getBackendOrigin()}/RequestJWTToken/TokenProvider`;
 
 export const AUTH_SESSION_KEYS = {
   AUTH_TYPE: 'kf_auth_type',
@@ -866,7 +867,7 @@ export async function fetchApplicationAuthType(
         body: JSON.stringify({ registeredAppName: appName }),
         cache: 'no-store',
       })
-    : await fetch(`${AUTH_BASE_URL}/applicationType`, {
+    : await fetch(`${authBaseUrl()}/applicationType`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ registeredAppName: appName }),
@@ -901,7 +902,7 @@ export async function requestToken(
   }
 
   try {
-    const response = await fetch(`${AUTH_BASE_URL}/requestToken`, {
+    const response = await fetch(`${authBaseUrl()}/requestToken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -948,7 +949,7 @@ export async function verifyToken(
 
 export async function requestJWTToken(accessToken: string): Promise<JWTTokenResponse> {
   try {
-    const response = await fetch(`${AUTH_BASE_URL}/requestJWTToken`, {
+    const response = await fetch(`${authBaseUrl()}/requestJWTToken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -986,7 +987,7 @@ export function extractJWTToken(jwtResponse: JWTTokenResponse): string | null {
 // Generate JWT token using the new authservice API
 export async function generateJWTToken(accessToken: string): Promise<JWTTokenResponse> {
   try {
-    const response = await fetch(`https://preview.keyforge.ai/authservice/api/v1/${registeredAppName()}/generateJWTToken`, {
+    const response = await fetch(`${getBackendOrigin()}/authservice/api/v1/${registeredAppName()}/generateJWTToken`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

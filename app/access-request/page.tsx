@@ -1,4 +1,5 @@
 "use client";
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, X, ShoppingCart } from "lucide-react";
@@ -649,7 +650,7 @@ const AccessRequest: React.FC = () => {
 
     try {
       const res = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/submitrequest/splitmode/${reviewerId}`,
+        `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/submitrequest/splitmode/${reviewerId}`,
         {
           method: "POST",
           headers: {
@@ -752,7 +753,7 @@ const AccessRequest: React.FC = () => {
   // Fetch Application Instances list for dropdown when on step 2
   React.useEffect(() => {
     if (currentStep !== 2) return;
-    const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
+    const url = `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`;
     fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
@@ -823,7 +824,7 @@ const AccessRequest: React.FC = () => {
 
       Promise.all(
         targetUserIds.map((userId) =>
-          fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
+          fetch(`${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
             method: "POST",
             headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
             body: JSON.stringify({
@@ -925,7 +926,7 @@ const AccessRequest: React.FC = () => {
                   parameters: [],
                 };
 
-    fetch(`https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
+    fetch(`${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...getJwtAuthHeaders() },
       body: JSON.stringify(body),

@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { useState, useEffect, useRef } from "react";
 import {
   Play,
@@ -24,7 +25,7 @@ import {
 import { apiRequestWithAuth, resolveTenantIdForHeader } from "@/lib/auth";
 
 const jobsEndpoint = () =>
-  `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs`;
+  `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs`;
 import "./SchedulerManager.css";
 
 // The scheduler API returns an array on success but may return an error object instead
@@ -253,7 +254,7 @@ export default function SchedulerManager() {
 
       // Call external scheduler API directly with auth
       const data = await apiRequestWithAuth<any>(
-        `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
+        `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
           groupName
         )}/${encodeURIComponent(jobName)}`
       );
@@ -372,7 +373,7 @@ export default function SchedulerManager() {
 
       // Call external scheduler history API directly with auth
       const data = await apiRequestWithAuth<any[] & SchedulerErrorFields>(
-        `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/history/${encodeURIComponent(
+        `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/history/${encodeURIComponent(
           groupName
         )}/${encodeURIComponent(jobName)}`
       );
@@ -419,7 +420,7 @@ export default function SchedulerManager() {
       setIsUpdatingJson(true);
 
       const resumeResult = await apiRequestWithAuth<any>(
-        `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
+        `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
           groupName
         )}/${encodeURIComponent(jobName)}/resume`,
         { method: "POST" }
@@ -447,7 +448,7 @@ export default function SchedulerManager() {
       setIsUpdatingJson(true);
 
       const pauseResult = await apiRequestWithAuth<any>(
-        `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
+        `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
           groupName
         )}/${encodeURIComponent(jobName)}/pause`,
         { method: "POST" }
@@ -475,7 +476,7 @@ export default function SchedulerManager() {
       setIsUpdatingJson(true); // Reuse loading state for now
 
       const triggerResult = await apiRequestWithAuth<any>(
-        `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
+        `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
           groupName
         )}/${encodeURIComponent(jobName)}/trigger`,
         { method: "POST" }
@@ -518,7 +519,7 @@ export default function SchedulerManager() {
 
       // Make API call to update the job data directly on external scheduler
       const updatedData = await apiRequestWithAuth<any>(
-        `https://preview.keyforge.ai/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
+        `${getBackendOrigin()}/kfscheduler/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/jobs/${encodeURIComponent(
           selectedSchedule.groupName
         )}/${encodeURIComponent(selectedSchedule.name)}`,
         {

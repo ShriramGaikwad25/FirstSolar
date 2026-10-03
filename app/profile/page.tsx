@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,7 +43,7 @@ export default function ProfilePage() {
       try {
         setIsLoading(true);
         setError(null);
-        const endpoint = `https://preview.keyforge.ai/entities/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/executeQuery`;
+        const endpoint = `${getBackendOrigin()}/entities/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/executeQuery`;
 
         const searchTerm = (searchIdentifier || "").trim();
         const reviewerTerm = (reviewerId || "").trim();

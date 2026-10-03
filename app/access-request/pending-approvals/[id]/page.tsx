@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -742,14 +743,14 @@ const PendingApprovalDetailPage = ({
     setError(null);
 
     const trimmedReviewerId = String(reviewerId).trim();
-    const url = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/detail/${encodeURIComponent(
+    const url = `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/detail/${encodeURIComponent(
       String(id).trim(),
     )}`;
 
     // assigneeType / claimable / claimedBy live on the task-list endpoint's rows, not on this
     // detail endpoint's tasks[] — fetch it in parallel and match by requestUuid so the Claim /
     // Release affordances can reflect the same queue-assignment state the list page shows.
-    const listUrl = `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/${encodeURIComponent(
+    const listUrl = `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/task/approvals/${encodeURIComponent(
       trimmedReviewerId,
     )}`;
     const fetchListPage = (page: number) =>
@@ -1326,7 +1327,7 @@ const PendingApprovalDetailPage = ({
       // assignee_id currently is (for a QUEUE task that's a group placeholder, not "me").
       const submittingReviewerId = getReviewerId();
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
+        `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/approveraction/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
         {
           method: "POST",
           headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
@@ -1366,7 +1367,7 @@ const PendingApprovalDetailPage = ({
     try {
       const parsedTaskId = Number(request.taskId);
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/release/${String(reviewerId).trim()}`,
+        `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/task/release/${String(reviewerId).trim()}`,
         {
           method: "POST",
           headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
@@ -1402,7 +1403,7 @@ const PendingApprovalDetailPage = ({
     try {
       const parsedTaskId = Number(request.taskId);
       const response = await fetch(
-        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/claim/${String(reviewerId).trim()}`,
+        `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/task/claim/${String(reviewerId).trim()}`,
         {
           method: "POST",
           headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
@@ -2073,7 +2074,7 @@ const PendingApprovalDetailPage = ({
                     setAnswerError(null);
                     try {
                       const response = await fetch(
-                        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/provide/${String(submittingReviewerId).trim()}`,
+                        `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/provide/${String(submittingReviewerId).trim()}`,
                         {
                           method: "POST",
                           headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
@@ -2390,7 +2391,7 @@ const PendingApprovalDetailPage = ({
 
                       const submittingReviewerId = getReviewerId();
                       const response = await fetch(
-                        `https://preview.keyforge.ai/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/request/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
+                        `${getBackendOrigin()}/workflow/api/v1/${resolveTenantIdForHeader()}/task/clarification/request/${String(submittingReviewerId ?? request.reviewerId).trim()}`,
                         {
                           method: "POST",
                           headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),

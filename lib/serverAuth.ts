@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAMES } from "@/lib/auth";
 import { REGISTERED_APP_COOKIE } from "@/lib/tenant";
+import { DEV_BACKEND_ORIGIN } from "@/lib/backendOrigin";
 
 export function getJwtTokenFromRequest(request: NextRequest): string | null {
   try {
@@ -79,3 +80,15 @@ export function withTenantHeader(
   return headerBag;
 }
 
+
+/**
+ * Backend origin for server-side calls. Production: the host the user typed (from the proxy's X-Forwarded-*
+ * headers or Host), without the /kfidp UI prefix. Development (`npm run dev`): DEV_BACKEND_ORIGIN.
+ */
+export function getBackendOriginFromRequest(request: NextRequest): string {
+  if (process.env.NODE_ENV === "development") return DEV_BACKEND_ORIGIN;
+  const first = (v: string | null) => v?.split(",")[0]?.trim() || "";
+  const proto = first(request.headers.get("x-forwarded-proto")) || request.nextUrl.protocol.replace(/:$/, "");
+  const host = first(request.headers.get("x-forwarded-host")) || first(request.headers.get("host")) || request.nextUrl.host;
+  return `${proto}://${host}`;
+}

@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Pencil } from "lucide-react";
 import CustomPagination from "@/components/agTable/CustomPagination";
@@ -57,7 +58,7 @@ export default function GatewayNativeUsersSettings() {
       try {
         setIsLoading(true);
         setError(null);
-        const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/getalluser`, { signal: controller.signal, headers: getJwtAuthHeaders() });
+        const res = await fetch(`${getBackendOrigin()}/nativeusers/api/v1/${resolveTenantIdForHeader()}/getalluser`, { signal: controller.signal, headers: getJwtAuthHeaders() });
         if (!res.ok) throw new Error(`Request failed: ${res.status}`);
         const data: Array<{ id: string; userName: string; firstName: string; lastName: string; email: string; displayName?: string; adminRoles?: string[]; }> = await res.json();
         setRows(data.map(u => ({ id: u.id, userName: u.userName, firstName: u.firstName, lastName: u.lastName, email: u.email, displayName: u.displayName, adminRoles: u.adminRoles })));
@@ -119,7 +120,7 @@ export default function GatewayNativeUsersSettings() {
             adminRoles: [adminRole],
           };
 
-          const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/createuser`, {
+          const res = await fetch(`${getBackendOrigin()}/nativeusers/api/v1/${resolveTenantIdForHeader()}/createuser`, {
             method: "POST",
             headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify(payload),
@@ -236,7 +237,7 @@ export default function GatewayNativeUsersSettings() {
             email: email.trim(),
             adminRoles: role ? [role] : [],
           };
-          const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/updateuser`, {
+          const res = await fetch(`${getBackendOrigin()}/nativeusers/api/v1/${resolveTenantIdForHeader()}/updateuser`, {
             method: "POST",
             headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify(payload),
@@ -257,7 +258,7 @@ export default function GatewayNativeUsersSettings() {
         setResetError(null);
         try {
           setResetSubmitting(true);
-          const res = await fetch(`https://preview.keyforge.ai/nativeusers/api/v1/${resolveTenantIdForHeader()}/changepassword`, {
+          const res = await fetch(`${getBackendOrigin()}/nativeusers/api/v1/${resolveTenantIdForHeader()}/changepassword`, {
             method: "POST",
             headers: getJwtAuthHeaders({ "Content-Type": "application/json" }),
             body: JSON.stringify({ userName: row.userName, password: newPassword }),

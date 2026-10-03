@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -59,7 +60,7 @@ export default function DashboardPage() {
           await Promise.all([
             // Same request as the Applications page so the count matches it
             fetch(
-              `https://preview.keyforge.ai/entities/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/getApplications/${reviewerId}?page=1&page_size=1000`,
+              `${getBackendOrigin()}/entities/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/getApplications/${reviewerId}?page=1&page_size=1000`,
               { headers: getJwtAuthHeaders() }
             )
               .then((res) => (res.ok ? res.json() : null))
@@ -73,7 +74,7 @@ export default function DashboardPage() {
               [reviewerId]
             ).catch(() => null),
             apiRequestWithAuth<any>(
-              `https://preview.keyforge.ai/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
+              `${getBackendOrigin()}/workflow/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/request/raisedby/${encodeURIComponent(
                 String(reviewerId).trim()
               )}?page=0&size=1`,
               { method: "GET" }

@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { ChevronDown, Bold, Italic, Underline, Strikethrough, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Link, Image, Table, Code, Quote, Minus, Maximize2, HelpCircle } from "lucide-react";
@@ -366,7 +367,7 @@ export default function EditEmailTemplatePage() {
         setError(null);
 
         const response = await fetch(
-          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
+          `${getBackendOrigin()}/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getall`,
           { headers: getJwtAuthHeaders() }
         );
 
@@ -466,7 +467,7 @@ export default function EditEmailTemplatePage() {
 
       // Call API to update template
       const response = await fetch(
-        `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/update`,
+        `${getBackendOrigin()}/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/update`,
         {
           method: "PUT",
           headers: getJwtAuthHeaders({
@@ -501,7 +502,7 @@ export default function EditEmailTemplatePage() {
         setAttributesError(null);
         
         const response = await fetch(
-          `https://preview.keyforge.ai/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getallattributes`,
+          `${getBackendOrigin()}/kfmailserver/templates/api/v1/${resolveTenantIdForHeader()}/getallattributes`,
           { headers: getJwtAuthHeaders() }
         );
 

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRegisteredAppFromCookies } from '@/lib/tenant-server';
+import { getBackendOriginFromRequest } from '@/lib/serverAuth';
 
-const AUTH_BASE_URL = 'https://preview.keyforge.ai/RequestJWTToken/TokenProvider';
+const authBaseUrl = (request: NextRequest) =>
+  `${getBackendOriginFromRequest(request)}/RequestJWTToken/TokenProvider`;
 
 /** Server proxy for applicationType (avoids browser CORS). */
 export async function POST(request: NextRequest) {
@@ -27,7 +29,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${AUTH_BASE_URL}/applicationType`, {
+    const response = await fetch(`${authBaseUrl(request)}/applicationType`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': registeredAppName },
       body: JSON.stringify({ registeredAppName }),

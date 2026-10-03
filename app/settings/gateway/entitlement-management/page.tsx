@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   ShieldCheck,
@@ -103,7 +104,7 @@ function splitListValues(raw: string): string[] {
 }
 
 const CATALOG_METADATA_BASE_URL = () =>
-  `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/catalog-metadata`;
+  `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/catalog-metadata`;
 const CATALOG_METADATA_URL = () => `${CATALOG_METADATA_BASE_URL()}/list`;
 
 function pickStr(...vals: unknown[]): string | undefined {
@@ -590,7 +591,7 @@ export default function EntitlementManagementSettings() {
               type="text"
               value={cfg.apiEndpoint}
               onChange={(e) => updateField(field, { apiEndpoint: e.target.value })}
-              placeholder="API endpoint, e.g. https://preview.keyforge.ai/..."
+              placeholder="API endpoint, e.g. https://<host>/..."
               aria-label={`API endpoint — ${field}`}
               className="w-full h-8 px-2.5 border border-blue-200 rounded-md text-xs font-mono bg-white shadow-sm placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />

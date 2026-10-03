@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
+import { getBackendOriginFromRequest, getTenantIdFromRequest, requireSession, withTenantHeader } from "@/lib/serverAuth";
 
 type UpdateExpressionBody = {
   name?: unknown;
@@ -13,7 +13,7 @@ type UpdateExpressionBody = {
 function itemUpstream(id: string, request: NextRequest): string {
   const collectionUpstream =
     process.env.CELMODULE_EXPRESSIONS_URL ??
-    `https://preview.keyforge.ai/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/expressions`;
+    `${getBackendOriginFromRequest(request)}/celmodule/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/expressions`;
   return `${collectionUpstream.replace(/\/$/, "")}/${encodeURIComponent(id)}`;
 }
 

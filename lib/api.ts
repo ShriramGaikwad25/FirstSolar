@@ -1,3 +1,4 @@
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { LineItemDetail } from "@/types/lineItem";
 import { withBasePath } from "@/lib/basePath";
 import { PaginatedResponse, CertAnalyticsResponse } from "@/types/api";
@@ -8,11 +9,11 @@ import { mergeSupportedObjectsExtensions } from "./supported-objects-extensions"
 import { getActiveTenantId } from "./tenant";
 
 function BASE_URL(): string {
-  return `https://preview.keyforge.ai/certification/api/v1/${resolveEntitiesTenant()}`;
+  return `${getBackendOrigin()}/certification/api/v1/${resolveEntitiesTenant()}`;
 }
 
 function BASE_URL2(): string {
-  return `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}`;
+  return `${getBackendOrigin()}/entities/api/v1/${resolveEntitiesTenant()}`;
 }
 
 // Uses apiRequestWithAuth so JWT expire -> refresh via access token -> retry once; access token expire -> logout
@@ -331,14 +332,14 @@ applicationinstanceid:string
 export async function getAllRegisteredApps(
   reviewerId: string
 ): Promise<{ items: Array<{ applicationId: string; applicationName: string; scimurl: string; filter: string }>; executionStatus: string }> {
-  const endpoint = `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}/getAllRegisteredApp/${reviewerId}`;
+  const endpoint = `${getBackendOrigin()}/entities/api/v1/${resolveEntitiesTenant()}/getAllRegisteredApp/${reviewerId}`;
   return fetchApi(endpoint);
 }
 
 export async function searchUsers(
   payload: { filter: string; applicationId: string; scimurl: string; applicationName: string }
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}/search/user`;
+  const endpoint = `${getBackendOrigin()}/entities/api/v1/${resolveEntitiesTenant()}/search/user`;
   return apiRequestWithAuth<any>(endpoint, {
     method: 'POST',
     headers: {
@@ -356,7 +357,7 @@ export async function getAPPOCertificationDetailsWithFilter<T>(
   pageSize?: number,
   pageNumber?: number
 ): Promise<PaginatedResponse<T>> {
-  const endpoint = `https://preview.keyforge.ai/certification/api/v1/${resolveEntitiesTenant()}/getAPPOCertificationDetails/${reviewerId}/${certificationId}`;
+  const endpoint = `${getBackendOrigin()}/certification/api/v1/${resolveEntitiesTenant()}/getAPPOCertificationDetails/${reviewerId}/${certificationId}`;
   
   const url = new URL(endpoint);
   url.searchParams.append("filter", filter);
@@ -450,7 +451,7 @@ export async function getEntitlementDetails(
   appInstanceId: string,
   entitlementId: string
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/catalog/api/v1/${resolveEntitiesTenant()}/app/${appInstanceId}/entitlement/${entitlementId}`;
+  const endpoint = `${getBackendOrigin()}/catalog/api/v1/${resolveEntitiesTenant()}/app/${appInstanceId}/entitlement/${entitlementId}`;
   
   // Use apiRequestWithAuth to automatically handle token refresh and authentication
   return apiRequestWithAuth<any>(endpoint, {
@@ -467,7 +468,7 @@ export async function getCatalogEntitlements<T>(
   reviewerId: string,
 
 ): Promise<T> {
-  const endpoint = `https://preview.keyforge.ai/catalog/api/v1/${resolveEntitiesTenant()}/app/${appInstanceId}/entitlement`;
+  const endpoint = `${getBackendOrigin()}/catalog/api/v1/${resolveEntitiesTenant()}/app/${appInstanceId}/entitlement`;
   
   const url = new URL(endpoint);
   url.searchParams.append("filter", `appownerid eq ${reviewerId}`);
@@ -490,7 +491,7 @@ export async function executeQuery<T>(
   query: string,
   parameters: any[]
 ): Promise<T> {
-  const endpoint = `https://preview.keyforge.ai/entities/api/v1/${resolveEntitiesTenant()}/executeQuery`;
+  const endpoint = `${getBackendOrigin()}/entities/api/v1/${resolveEntitiesTenant()}/executeQuery`;
   
   const payload = {
     query,
@@ -575,7 +576,7 @@ export async function updateCampaignSchedule(payload: {
     periodValue: string;
   };
 }): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/kfscheduler/api/v1/${resolveEntitiesTenant()}/jobs/updateschedule/campaign`;
+  const endpoint = `${getBackendOrigin()}/kfscheduler/api/v1/${resolveEntitiesTenant()}/jobs/updateschedule/campaign`;
   
   // apiRequestWithAuth already handles token expiration and refresh internally
   const result = await apiRequestWithAuth<any>(endpoint, {
@@ -593,7 +594,7 @@ export async function updateCampaignSchedule(payload: {
 
 // Get all supported application types for registration (registerscimapp uses access token)
 export async function getAllSupportedApplicationTypes(): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getAllSupportedObjects`;
+  const endpoint = `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getAllSupportedObjects`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "GET",
@@ -627,7 +628,7 @@ export interface GetAllApplicationsResponse {
 }
 
 export async function getAllApplications(): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getAllApplications`;
+  const endpoint = `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getAllApplications`;
 
   try {
     // Use Headers object to ensure accessToken is used (not JWT from global patch)
@@ -679,7 +680,7 @@ export async function registerScimAppNewApp(payload: {
   ApplicationType: string;
   ApplicationDetails: Record<string, string>;
 }): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/newApp`;
+  const endpoint = `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/newApp`;
   const body = {
     ApplicationName: payload.ApplicationName,
     ApplicationType: payload.ApplicationType,
@@ -998,7 +999,7 @@ export function attributeMappingsFromFetchSchemaJson(json: unknown): WizardSchem
 
 /** POST gatewayassist schemamapper db fetch-schema (after test-connection session_id). */
 export async function fetchDatabaseSchema(payload: DatabaseFetchSchemaPayload): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/fetch-schema`;
+  const endpoint = `${getBackendOrigin()}/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/fetch-schema`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1106,7 +1107,7 @@ export async function fetchRestUsersSchema(
   tenantId?: string
 ): Promise<unknown> {
   const tenant = tenantId?.trim() || resolveEntitiesTenant();
-  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(tenant)}/schemamapper/rest/users`;
+  const endpoint = `${getBackendOrigin()}/gatewayassist/api/v1/${encodeURIComponent(tenant)}/schemamapper/rest/users`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1680,7 +1681,7 @@ export function attributeMappingsFromSuggestMappingJson(
 export async function fetchDatabaseSuggestMapping(
   payload: DatabaseSuggestMappingPayload
 ): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/suggest-mapping`;
+  const endpoint = `${getBackendOrigin()}/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/suggest-mapping`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1788,7 +1789,7 @@ export function buildDatabaseConfirmMappingDecisions(
 export async function confirmDatabaseMapping(
   payload: DatabaseConfirmMappingPayload
 ): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/confirm-mapping`;
+  const endpoint = `${getBackendOrigin()}/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/confirm-mapping`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1969,7 +1970,7 @@ export function isDatabaseTestConnectionPayloadComplete(
 export async function testDatabaseConnection(
   payload: DatabaseTestConnectionPayload
 ): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/test-connection`;
+  const endpoint = `${getBackendOrigin()}/gatewayassist/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/schemamapper/db/test-connection`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -1999,7 +2000,7 @@ export async function testDatabaseConnection(
 export async function testScreenScrappingConnection(
   payload: Record<string, string>
 ): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/screenagent/testconnection`;
+  const endpoint = `${getBackendOrigin()}/aiagentcontroller/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/screenagent/testconnection`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -2029,7 +2030,7 @@ export async function testScreenScrappingConnection(
 export async function testRestServiceConnection(
   payload: Record<string, string>
 ): Promise<unknown> {
-  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/restagent/testconnection`;
+  const endpoint = `${getBackendOrigin()}/aiagentcontroller/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/restagent/testconnection`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -2082,7 +2083,7 @@ export async function fetchScreenUsersSchema(
   tenantId?: string
 ): Promise<unknown> {
   const tenant = tenantId?.trim() || resolveEntitiesTenant();
-  const endpoint = `https://preview.keyforge.ai/gatewayassist/api/v1/${encodeURIComponent(tenant)}/schemamapper/screen/users`;
+  const endpoint = `${getBackendOrigin()}/gatewayassist/api/v1/${encodeURIComponent(tenant)}/schemamapper/screen/users`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(endpoint, {
     method: "POST",
@@ -2118,7 +2119,7 @@ export async function fetchScreenUsersSchema(
 
 /** GET schemamapper getmappedschema — provisioning/reconciliation maps for an application id. */
 export async function getMappedSchema(tenantId: string, applicationId: string): Promise<unknown> {
-  const url = `https://preview.keyforge.ai/schemamapper/getmappedschema/${encodeURIComponent(tenantId)}/${encodeURIComponent(applicationId)}`;
+  const url = `${getBackendOrigin()}/schemamapper/getmappedschema/${encodeURIComponent(tenantId)}/${encodeURIComponent(applicationId)}`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(url, {
     method: "GET",
@@ -2256,7 +2257,7 @@ export async function mapSchemaFields(
   applicationId: string,
   payload: MapFieldsPayload
 ): Promise<void> {
-  const url = `https://preview.keyforge.ai/schemamapper/mapfields/${encodeURIComponent(tenantId)}/${encodeURIComponent(applicationId)}`;
+  const url = `${getBackendOrigin()}/schemamapper/mapfields/${encodeURIComponent(tenantId)}/${encodeURIComponent(applicationId)}`;
   const fetchFn = typeof window !== "undefined" ? getOriginalFetch() : fetch;
   const response = await fetchFn(url, {
     method: "POST",
@@ -2780,7 +2781,7 @@ export function parseSchemaMappingFromItAssetSubmitRequestResponse(
 
 /** Fetches applications that are In Progress from the IT Asset API. Returns null on failure so the main app list still loads. */
 export async function getInProgressApplications(loginremote_user: string = "ACMEADMIN"): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getallapp`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getallapp`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2832,7 +2833,7 @@ export async function getInProgressApplications(loginremote_user: string = "ACME
 
 /** Fetches flatfile app metadata users - getappmetadata/ACME_FlatfileLoad/users. Used on Flatfile File Upload step. */
 export async function getFlatfileAppMetadataUsers(loginremote_user: string = "ACMEADMIN"): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getappmetadata/ACME_FlatfileLoad/users`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getappmetadata/ACME_FlatfileLoad/users`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2884,7 +2885,7 @@ export async function getAppMetadataUsers(
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
   const encodedApp = encodeURIComponent(applicationName);
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getappmetadata/${encodedApp}/users`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getappmetadata/${encodedApp}/users`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2936,7 +2937,7 @@ export async function uploadAndGetSchemaUsers(
   basicDefinition: { tenantId: string; applicationName: string; fieldDelimiter: string; multivalueDelimiter: string },
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/uploadandgetschema/users`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/uploadandgetschema/users`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -2993,7 +2994,7 @@ export async function uploadAndGetSchemaForField(
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
   const encodedField = encodeURIComponent(fieldName);
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/uploadandgetschema/${encodedField}`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/uploadandgetschema/${encodedField}`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -3046,7 +3047,7 @@ export async function saveBaseMetadataUsers(
   payload: any,
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/savebasemetadata/users`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/savebasemetadata/users`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3090,7 +3091,7 @@ export async function saveBaseMetadataUsers(
 /** Fetches a single application by id/name from IT Asset getapp. Used in Edit mode to show application details. */
 export async function getItAssetApp(appIdOrName: string, loginremote_user: string = "ACMEADMIN"): Promise<any> {
   const encoded = encodeURIComponent(appIdOrName);
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getapp/${encoded}`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/getapp/${encoded}`;
 
   try {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
@@ -3143,7 +3144,7 @@ export async function saveBaseMetadataForField(
   loginremote_user: string = "ACMEADMIN"
 ): Promise<any> {
   const encodedField = encodeURIComponent(fieldName);
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/savebasemetadata/${encodedField}`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/savebasemetadata/${encodedField}`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3195,7 +3196,7 @@ export async function saveAppDetails(payload: {
   connectionDetails?: Record<string, unknown>;
   [key: string]: unknown;
 }): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/saveappdetails`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/saveappdetails`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3238,7 +3239,7 @@ export async function saveAppDetails(payload: {
 
 /** Onboards application (edit mode) - IT Asset onboardapp. */
 export async function onboardApp(payload: { tenantId?: string; appid?: string; [key: string]: unknown }): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/itasset/${encodeURIComponent(resolveEntitiesTenant())}/onboardapp`;
+  const endpoint = `${getBackendOrigin()}/itasset/${encodeURIComponent(resolveEntitiesTenant())}/onboardapp`;
 
   const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
   if (!accessToken) {
@@ -3280,7 +3281,7 @@ export async function onboardApp(payload: { tenantId?: string; appid?: string; [
 }
 
 export async function regenerateApiToken(oldApiToken: string, applicationId: string): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/regenerateToken/${applicationId}`;
+  const endpoint = `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/regenerateToken/${applicationId}`;
 
   const headers = itAssetAuthHeaders();
 
@@ -3316,7 +3317,7 @@ export async function getApplicationDetails(
   apiToken: string,
   applicationName?: string
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getApp/${applicationId}`;
+  const endpoint = `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/getApp/${applicationId}`;
 
   const headers = itAssetAuthHeaders();
 
@@ -3358,7 +3359,7 @@ export async function updateAppConfig(
   oldApiToken: string,
   applicationConfig: Record<string, unknown>
 ): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/updateApp/${applicationId}`;
+  const endpoint = `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(resolveEntitiesTenant())}/updateApp/${applicationId}`;
 
   const headers = itAssetAuthHeaders();
 
@@ -3397,7 +3398,7 @@ export async function updateAppConfig(
 // Get all applications for a user (AI Assist) - requires JWT in Authorization header
 export async function getAllAppsForUserWithAI(loginId: string): Promise<any> {
   const encoded = encodeURIComponent(loginId);
-  const endpoint = `https://preview.keyforge.ai/aiagentcontroller/api/v1/${resolveEntitiesTenant()}/getallapps/${encoded}`;
+  const endpoint = `${getBackendOrigin()}/aiagentcontroller/api/v1/${resolveEntitiesTenant()}/getallapps/${encoded}`;
   // Use authenticated request to include JWT token
   return apiRequestWithAuth<any>(endpoint, { method: 'GET' });
 }
@@ -4049,7 +4050,7 @@ export function describeAdvancedSettingSlotValue(val: unknown): string {
 
 // Validate password for sign-off
 export async function validatePassword(userName: string, password: string): Promise<boolean> {
-  const endpoint = `https://preview.keyforge.ai/nativeusers/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/validatepassword`;
+  const endpoint = `${getBackendOrigin()}/nativeusers/api/v1/${encodeURIComponent(resolveEntitiesTenant())}/validatepassword`;
 
   try {
     const response = await fetch(endpoint, {
@@ -4125,7 +4126,7 @@ export async function scheduleCampaign(payload: {
     periodValue: string;
   };
 }): Promise<any> {
-  const endpoint = `https://preview.keyforge.ai/kfscheduler/api/v1/${resolveEntitiesTenant()}/jobs/schedule/campaign`;
+  const endpoint = `${getBackendOrigin()}/kfscheduler/api/v1/${resolveEntitiesTenant()}/jobs/schedule/campaign`;
   
   // apiRequestWithAuth already handles token expiration and refresh internally
   const result = await apiRequestWithAuth<any>(endpoint, {

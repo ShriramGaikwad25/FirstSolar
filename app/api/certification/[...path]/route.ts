@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from "@/lib/serverAuth";
+import { getBackendOriginFromRequest, getJwtTokenFromRequest, getTenantIdFromRequest, withAuthHeader, withTenantHeader } from "@/lib/serverAuth";
 
 export async function POST(
   request: NextRequest,
@@ -31,7 +31,7 @@ export async function POST(
       );
     }
 
-    const url = `https://preview.keyforge.ai/certification/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/${path}`;
+    const url = `${getBackendOriginFromRequest(request)}/certification/api/v1/${encodeURIComponent(getTenantIdFromRequest(request))}/${path}`;
     let body: string | undefined;
     try {
       body = await request.text();

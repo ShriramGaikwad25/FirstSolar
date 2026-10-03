@@ -1,4 +1,5 @@
 "use client";
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import Accordion from "@/components/Accordion";
 import ChartComponent from "@/components/ChartComponent";
 import HorizontalTabs from "@/components/HorizontalTabs";
@@ -750,7 +751,7 @@ export default function ApplicationDetailPage() {
     try {
       const applicationID = localStorage.getItem("keyforgeApplicationID");
       if (!applicationID) return;
-      const url = `https://preview.keyforge.ai/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/${encodeURIComponent(
+      const url = `${getBackendOrigin()}/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/${encodeURIComponent(
         applicationID
       )}`;
       (async () => {
@@ -1202,7 +1203,7 @@ export default function ApplicationDetailPage() {
         setSaveError(null);
         try {
           const res = await fetch(
-            `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/update/${encodeURIComponent(
+            `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/update/${encodeURIComponent(
               catalogId
             )}`,
             {
@@ -1250,7 +1251,7 @@ export default function ApplicationDetailPage() {
         (async () => {
           try {
             const res = await fetch(
-              `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/get/${encodeURIComponent(
+              `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/get/${encodeURIComponent(
                 catalogId
               )}`,
               { headers: getJwtAuthHeaders() }
@@ -1323,7 +1324,7 @@ export default function ApplicationDetailPage() {
           setAssociatedLoading(true);
           setAssociatedError(null);
           try {
-            const url = `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
+            const url = `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
               catalogId
             )}`;
             const res = await fetch(url, { headers: getJwtAuthHeaders() });
@@ -1387,7 +1388,7 @@ export default function ApplicationDetailPage() {
           setAssignmentError(null);
           try {
             const res = await fetch(
-              `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
+              `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/executeQuery`,
               {
                 method: "POST",
                 headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
@@ -1600,7 +1601,7 @@ export default function ApplicationDetailPage() {
       const callMappingRemoveApi = async (contextCatalogId: string, mappingId: string) => {
         const removedBy =
           pickString(reviewerId) || "f558e3b2-348b-4ff3-be4c-a3c5dc8b5a91";
-        const url = `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
+        const url = `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
           contextCatalogId
         )}/remove`;
         const res = await fetch(url, {
@@ -1680,7 +1681,7 @@ export default function ApplicationDetailPage() {
         try {
           const entReviewerId =
             reviewerId?.trim() || "ec527a50-0944-4b31-b239-05518c87a743";
-          const url = `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppEntitlements/${encodeURIComponent(
+          const url = `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/getAppEntitlements/${encodeURIComponent(
             entReviewerId
           )}/${encodeURIComponent(id)}`;
           const res = await fetch(url, { headers: getJwtAuthHeaders() });
@@ -1792,7 +1793,7 @@ export default function ApplicationDetailPage() {
           }
           mappings.push(entry);
         }
-        const url = `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
+        const url = `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/mapping/${CATALOG_MAPPING_SCOPE_ID}/${encodeURIComponent(
           contextCatalogId
         )}/add`;
         const res = await fetch(url, {
@@ -2667,7 +2668,7 @@ export default function ApplicationDetailPage() {
 
     try {
       const response = await fetch(
-        `https://preview.keyforge.ai/certification/api/v1/${resolveTenantIdForHeader()}/updateAction/${reviewerId}/CERT_ID`,
+        `${getBackendOrigin()}/certification/api/v1/${resolveTenantIdForHeader()}/updateAction/${reviewerId}/CERT_ID`,
         {
           method: "POST",
           headers: {
@@ -2837,7 +2838,7 @@ export default function ApplicationDetailPage() {
     const fetchData = async () => {
       try {
         const response = await fetch(
-          `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getAppAccounts/${reviewerId || "430ea9e6-3cff-449c-a24e-59c057f81e3d"}/${id}`,
+          `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/getAppAccounts/${reviewerId || "430ea9e6-3cff-449c-a24e-59c057f81e3d"}/${id}`,
           { headers: getJwtAuthHeaders() }
         );
         const data = await response.json();
@@ -2959,7 +2960,7 @@ export default function ApplicationDetailPage() {
         if (applicationName) params.set("applicationName", applicationName);
         if (appliedEntSearch) params.set("search", appliedEntSearch);
         const response = await fetch(
-          `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/list?${params.toString()}`,
+          `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/list?${params.toString()}`,
           { headers: getJwtAuthHeaders() }
         );
         if (!response.ok) {
@@ -4316,7 +4317,7 @@ export default function ApplicationDetailPage() {
                     const params = new URLSearchParams({ dryRun: "false" });
                     const applicationName = getStoredApplicationName();
                     if (applicationName) params.set("applicationName", applicationName);
-                    return `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/import?${params.toString()}`;
+                    return `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/import?${params.toString()}`;
                   }}
                   onImported={() => setEntReloadKey((k) => k + 1)}
                 />
@@ -4327,7 +4328,7 @@ export default function ApplicationDetailPage() {
                     const params = new URLSearchParams({ format });
                     const applicationName = getStoredApplicationName();
                     if (applicationName) params.set("applicationName", applicationName);
-                    return `https://preview.keyforge.ai/catalog/api/v1/${resolveTenantIdForHeader()}/export?${params.toString()}`;
+                    return `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/export?${params.toString()}`;
                   }}
                 />
               </div>
@@ -4589,7 +4590,7 @@ export default function ApplicationDetailPage() {
               setLoading(true);
               setError(null);
               const keyforgeUrl =
-                `https://preview.keyforge.ai/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`;
+                `${getBackendOrigin()}/registerscimapp/registerfortenant/${resolveTenantIdForHeader()}/getAllApplications`;
 
               const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
               const headers = accessToken ? new Headers() : null;

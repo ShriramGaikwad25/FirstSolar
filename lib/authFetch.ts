@@ -1,4 +1,5 @@
 import { COOKIE_NAMES, getCookie, refreshJWTToken, forceLogout } from "@/lib/auth";
+import { isBackendUrl } from "@/lib/backendOrigin";
 
 let fetchPatched = false;
 let originalFetch: typeof window.fetch | null = null;
@@ -8,7 +9,7 @@ const RETRY_HEADER = "X-Internal-Token-Retry";
 
 function isKeyforgeRequest(input: RequestInfo | URL): boolean {
   const url = typeof input === "string" ? input : input instanceof URL ? input.href : (input as Request).url;
-  return typeof url === "string" && url.includes("keyforge.ai");
+  return typeof url === "string" && isBackendUrl(url);
 }
 
 function isTokenExpiredBody(data: unknown): boolean {

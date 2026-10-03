@@ -1,3 +1,4 @@
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import Image from 'next/image';
 import { withBasePath } from "@/lib/basePath";
 import { executeQuery } from '@/lib/api';
@@ -176,7 +177,7 @@ export const loadIspmApps = async (inputValue: string): Promise<App[]> => {
       return [];
     }
     const response = await fetch(
-      `https://preview.keyforge.ai/entities/api/v1/${resolveTenantIdForHeader()}/getApplications/${reviewerId}`,
+      `${getBackendOrigin()}/entities/api/v1/${resolveTenantIdForHeader()}/getApplications/${reviewerId}`,
       { headers: getJwtAuthHeaders() }
     );
     if (!response.ok) throw new Error("Failed to fetch applications");

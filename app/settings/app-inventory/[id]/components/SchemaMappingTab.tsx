@@ -1,5 +1,6 @@
 "use client";
 
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Edit, Trash2, Info, ChevronDown, X, Search, Key, ArrowLeftRight, Plus } from "lucide-react";
@@ -115,12 +116,12 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
             : "";
 
         const [scimRes, mappedRes, configRes, appDetails] = await Promise.all([
-          fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
+          fetch(`${getBackendOrigin()}/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
             method: "GET",
             headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
           }),
           fetch(
-            `https://preview.keyforge.ai/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}`,
+            `${getBackendOrigin()}/schemamapper/getmappedschema/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}`,
             { headers: { ...getJwtAuthHeaders() } }
           ),
           executeQuery<{ errorMessage?: string; resultSet?: Array<{ configuration?: Record<string, string> }> }>(
@@ -277,12 +278,12 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
     setHelpModalLoading(true);
     try {
       const [scimResp, schemasResp] = await Promise.all([
-        fetch(`https://preview.keyforge.ai/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
+        fetch(`${getBackendOrigin()}/schemamapper/getscim/${resolveTenantIdForHeader()}`, {
           method: "GET",
           headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
         }),
         applicationId
-          ? fetch(`https://preview.keyforge.ai/scim/v2/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}/Schemas`, {
+          ? fetch(`${getBackendOrigin()}/scim/v2/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}/Schemas`, {
               method: "GET",
               headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
             })
@@ -515,7 +516,7 @@ export default function SchemaMappingTab({ applicationId, onCancel }: SchemaMapp
                     provisioningAttrMap,
                     reconcilliationAttrMap: {},
                   };
-                  const url = `https://preview.keyforge.ai/schemamapper/mapfields/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}`;
+                  const url = `${getBackendOrigin()}/schemamapper/mapfields/${resolveTenantIdForHeader()}/${encodeURIComponent(applicationId)}`;
                   const resp = await fetch(url, {
                     method: "POST",
                     headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
