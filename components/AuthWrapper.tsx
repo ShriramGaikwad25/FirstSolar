@@ -54,7 +54,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
       router.push(getTenantLoginPath());
     } else if (isAuthenticated && isTenantAuthPath(pathname ?? '')) {
       setIsRedirecting(true);
-      router.push('/');
+      router.push('/dashboard');
     } else {
       setIsRedirecting(false);
     }

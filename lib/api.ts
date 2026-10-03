@@ -1,4 +1,4 @@
-import { getBackendOrigin } from "@/lib/backendOrigin";
+import { getBackendOrigin, USE_SERVER_PROXY } from "@/lib/backendOrigin";
 import { LineItemDetail } from "@/types/lineItem";
 import { withBasePath } from "@/lib/basePath";
 import { PaginatedResponse, CertAnalyticsResponse } from "@/types/api";
@@ -208,9 +208,9 @@ export interface ModifyAccessPayload {
   addAccess: ModifyAccessAddItem[];
 }
 
-/** Uses same-origin proxy to avoid CORS when calling KeyForge certification API */
+/** Certification API URL: the app's /kfidp/api proxy in dev (CORS), the backend directly in production. */
 function getCertificationProxyUrl(path: string): string {
-  if (typeof window !== "undefined") {
+  if (typeof window !== "undefined" && USE_SERVER_PROXY) {
     return `${window.location.origin}${withBasePath(`/api/certification/${path}`)}`;
   }
   return `${BASE_URL()}/${path}`;
@@ -3403,8 +3403,29 @@ export async function getAllAppsForUserWithAI(loginId: string): Promise<any> {
   return apiRequestWithAuth<any>(endpoint, { method: 'GET' });
 }
 
-// Client-safe proxy call (avoids CORS by using Next.js API route)
+// Supported application types: the app's /kfidp/api proxy in dev (CORS), the backend directly in production.
 export async function getAllSupportedApplicationTypesViaProxy(): Promise<any> {
+  if (!USE_SERVER_PROXY) {
+    const tenant = resolveEntitiesTenant();
+    const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
+    const res = await fetch(
+      `${getBackendOrigin()}/registerscimapp/registerfortenant/${encodeURIComponent(tenant)}/getAllSupportedObjects`,
+      {
+        headers: {
+          "X-Requested-With": "XMLHttpRequest",
+          "X-Tenant-Id": tenant,
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
+        cache: "no-store",
+      }
+    );
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new Error(`Supported objects fetch failed: ${res.status} ${res.statusText}\n${errorBody}`);
+    }
+    return mergeSupportedObjectsExtensions(await res.json());
+  }
+
   const headers = {
     "Content-Type": "application/json",
     "X-Requested-With": "XMLHttpRequest",

@@ -1,5 +1,5 @@
 // Authentication API endpoints and utilities
-import { getBackendOrigin } from "@/lib/backendOrigin";
+import { getBackendOrigin, USE_SERVER_PROXY } from "@/lib/backendOrigin";
 import { withBasePath } from "@/lib/basePath";
 import {
   clearActiveTenantId,
@@ -578,11 +578,17 @@ export async function completeOAuthCallback(
   const params = new URLSearchParams({ code, state });
   const tenant = registeredAppNameOrNull();
   if (tenant) params.set('registeredAppName', tenant);
-  const response = await fetch(withBasePath(`/api/auth/oauth/callback?${params.toString()}`), {
-    method: 'GET',
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  });
+  const response = USE_SERVER_PROXY
+    ? await fetch(withBasePath(`/api/auth/oauth/callback?${params.toString()}`), {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+        cache: 'no-store',
+      })
+    : await fetch(`${authBaseUrl()}/oauth/callback?${params.toString()}`, {
+        method: 'GET',
+        headers: { Accept: 'application/json', ...(tenant ? { 'X-Tenant-Id': tenant } : {}) },
+        cache: 'no-store',
+      });
 
   const rawText = await response.text();
   let data: unknown;
@@ -859,7 +865,7 @@ export async function fetchApplicationAuthType(
   if (!appName) {
     throw new Error('Tenant is required for applicationType');
   }
-  const useProxy = typeof window !== 'undefined';
+  const useProxy = typeof window !== 'undefined' && USE_SERVER_PROXY;
   const response = useProxy
     ? await fetch(withBasePath('/api/auth/application-type'), {
         method: 'POST',
@@ -869,8 +875,9 @@ export async function fetchApplicationAuthType(
       })
     : await fetch(`${authBaseUrl()}/applicationType`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Tenant-Id': appName },
         body: JSON.stringify({ registeredAppName: appName }),
+        cache: 'no-store',
       });
 
   if (!response.ok) {

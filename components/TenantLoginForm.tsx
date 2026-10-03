@@ -34,7 +34,7 @@ export function TenantLoginForm({ tenantId }: TenantLoginFormProps) {
     const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
     const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
     if (accessToken && jwtToken && isAuthenticated) {
-      window.location.replace(withBasePath('/'));
+      window.location.replace(withBasePath('/dashboard'));
       return;
     }
     setIsCheckingToken(false);
@@ -47,7 +47,7 @@ export function TenantLoginForm({ tenantId }: TenantLoginFormProps) {
     try {
       const success = await login(userid, password);
       if (success) {
-        window.location.href = withBasePath('/');
+        window.location.href = withBasePath('/dashboard');
       } else {
         setError('Invalid user ID or password');
       }

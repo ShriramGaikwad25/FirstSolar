@@ -15,7 +15,11 @@ const nextConfig: NextConfig = {
   // Whole app is served under /kfidp (sign-in: /kfidp/{TenantId})
   basePath: BASE_PATH,
   async redirects() {
-    return [{ source: "/", destination: BASE_PATH, basePath: false, permanent: false }];
+    return [
+      { source: "/", destination: BASE_PATH, basePath: false, permanent: false },
+      // Server-side 307 (not the prerendered client redirect of app/page.tsx), so post-login lands on the dashboard
+      { source: "/", destination: "/dashboard", permanent: false },
+    ];
   },
   // All images are served from /public; no remote hosts are allowed through the optimizer.
   async headers() {

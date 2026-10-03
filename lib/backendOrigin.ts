@@ -15,6 +15,13 @@ export function getBackendOrigin(): string {
   return "";
 }
 
+/**
+ * Dev only: route some calls through the app's own /kfidp/api/* proxies, because the dev backend
+ * (DEV_BACKEND_ORIGIN) is another origin and the browser would block it (CORS). In production the
+ * backend is the same origin, so the browser calls it directly and the proxies are not used.
+ */
+export const USE_SERVER_PROXY = process.env.NODE_ENV === "development";
+
 /** True for a request to the backend services (not the UI's own /kfidp pages and API routes). */
 export function isBackendUrl(url: string): boolean {
   if (typeof window === "undefined") return false;

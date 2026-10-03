@@ -147,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setAuthType('OAUTH');
             syncAuthTypeToSession('OAUTH', 'IDCS');
             applySessionToState(setIsAuthenticated, setUser, afterSession);
-            window.location.replace(withBasePath('/'));
+            window.location.replace(withBasePath('/dashboard'));
             return;
           } catch (oauthError) {
             console.error('AuthContext: OAuth callback failed:', oauthError);
@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           syncAuthTypeToSession(resolvedAuthType);
           applySessionToState(setIsAuthenticated, setUser, serverSession);
           if (oauthCallback || isTenantAuthPath(path) || path.startsWith('/oauth/callback')) {
-            window.location.replace(withBasePath('/'));
+            window.location.replace(withBasePath('/dashboard'));
           }
           return;
         }

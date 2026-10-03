@@ -1,6 +1,6 @@
 "use client";
 
-import { getBackendOrigin } from "@/lib/backendOrigin";
+import { getBackendOrigin, USE_SERVER_PROXY } from "@/lib/backendOrigin";
 import { withBasePath } from "@/lib/basePath";
 import React, { useState, useEffect, useMemo, useCallback, forwardRef, useImperativeHandle, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -277,7 +277,16 @@ function parseSavedApplicationConfig(app: Record<string, unknown>): {
   };
 }
 
-const CEL_EXPRESSIONS_BASE = withBasePath("/api/celmodule/expressions");
+/** CEL expressions: the app's /kfidp/api proxy in dev (CORS), the backend directly in production. */
+const celExpressionsBase = () =>
+  USE_SERVER_PROXY
+    ? withBasePath("/api/celmodule/expressions")
+    : `${getBackendOrigin()}/celmodule/api/v1/${encodeURIComponent(resolveTenantIdForHeader())}/expressions`;
+const celRequestInit = (signal: AbortSignal): RequestInit => ({
+  signal,
+  headers: { Accept: "application/json", "X-Tenant-Id": resolveTenantIdForHeader() },
+  cache: "no-store",
+});
 /** Same endpoint as Schema Mapping Source Attribute list. */
 function buildScimAttributesUrl(): string {
   return `${getBackendOrigin()}/schemamapper/getscim/${resolveTenantIdForHeader()}`;
@@ -289,13 +298,13 @@ function buildCelExpressionsUrl(appId: string, applicationType: string): string 
   const params = new URLSearchParams();
   params.append("category", appId.trim());
   params.append("category", applicationType.trim());
-  return `${CEL_EXPRESSIONS_BASE}?${params.toString()}`;
+  return `${celExpressionsBase()}?${params.toString()}`;
 }
 
 function buildOutboundExpressionsUrl(): string {
   const params = new URLSearchParams();
   params.append("category", "outBound");
-  return `${CEL_EXPRESSIONS_BASE}?${params.toString()}`;
+  return `${celExpressionsBase()}?${params.toString()}`;
 }
 
 function parseCelExpressionsList(data: unknown): CelExpressionOption[] {
@@ -596,7 +605,7 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
           : Promise.resolve(null);
 
         const expressionsPromise = expressionsUrl
-          ? fetch(expressionsUrl, { signal: controller.signal })
+          ? fetch(expressionsUrl, celRequestInit(controller.signal))
           : Promise.resolve(null);
 
         const [exprRes, scimRes, mappedData] = await Promise.all([
@@ -656,7 +665,7 @@ const AdvanceSettingTab = forwardRef<AdvanceSettingTabRef, AdvanceSettingTabProp
       setOutboundOptionsLoading(true);
       setOutboundOptionsError(null);
       try {
-        const res = await fetch(buildOutboundExpressionsUrl(), { signal: controller.signal });
+        const res = await fetch(buildOutboundExpressionsUrl(), celRequestInit(controller.signal));
         if (controller.signal.aborted) return;
         if (!res.ok) throw new Error(`Outbound expressions request failed (${res.status})`);
         const data: unknown = await res.json();
