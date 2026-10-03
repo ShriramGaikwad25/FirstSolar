@@ -806,28 +806,14 @@ const HeaderContent = () => {
             className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-2"
             aria-label="Navigate to Dashboard"
           >
-            {/* Icon-only logo (previous logo) */}
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 32 32"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="flex-shrink-0"
-            >
-              <path
-                d="M22.6616 6.01866L6.00958 22.6705C6.90371 23.9896 8.03687 25.1227 9.34707 25.9903L25.9725 9.3649C25.1049 8.04584 23.9718 6.91268 22.6527 6.02741L22.6616 6.01866Z"
-                fill="#58E5A1"
-              />
-              <path
-                d="M16.0043 4.00021C9.37365 4.00021 4 9.37375 4 16.0044C4 16.6064 4.04429 17.1995 4.13281 17.775L17.7749 4.13303C17.1994 4.0445 16.5975 4.00021 16.0043 4.00021Z"
-                fill="white"
-              />
-              <path
-                d="M27.8672 14.2426L14.2429 27.867C14.8183 27.9555 15.4114 27.9998 16.0045 27.9998C22.6352 27.9998 28 22.635 28 16.0043C28 15.4023 27.9557 14.8181 27.8672 14.2426Z"
-                fill="#58E5A1"
-              />
-            </svg>
+            <Image
+              src={withBasePath("/kf-logo.svg")}
+              alt=""
+              width={32}
+              height={32}
+              priority
+              className="flex-shrink-0 rounded-md ring-1 ring-white/30"
+            />
 
             {/* Brand name text */}
             <span className="text-xl md:text-2xl font-semibold tracking-tight text-white">

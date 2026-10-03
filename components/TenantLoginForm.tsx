@@ -113,8 +113,16 @@ export function TenantLoginForm({ tenantId }: TenantLoginFormProps) {
 
         <div className="w-full max-w-md relative z-10">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center">
-              <Image src={withBasePath("/MainLogo.svg")} alt="Logo" width={260} height={80} />
+            <div className="flex flex-col items-center justify-center gap-3">
+              <Image
+                src={withBasePath("/kf-logo.svg")}
+                alt=""
+                width={72}
+                height={72}
+                loading="eager"
+                className="rounded-2xl shadow-sm"
+              />
+              <span className="text-3xl font-semibold tracking-tight text-gray-900">KeyForge</span>
             </div>
           </div>
 

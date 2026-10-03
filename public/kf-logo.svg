@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="KeyForge">
+  <defs>
+    <linearGradient id="kf-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3FC66F"/>
+      <stop offset="0.55" stop-color="#1CB083"/>
+      <stop offset="1" stop-color="#0E9A9C"/>
+    </linearGradient>
+    <linearGradient id="kf-sheen" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.10"/>
+      <stop offset="0.75" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="56" fill="url(#kf-bg)"/>
+  <rect width="512" height="512" rx="56" fill="url(#kf-sheen)"/>
+
+  <g fill="#FFFFFF">
+    <!-- K stem: bottom cut at 45deg, in line with the arm -->
+    <polygon points="98,115 152,115 152,323 98,377"/>
+    <!-- K arm rising at 45deg into the F top bar; bar end cut at 45deg -->
+    <polygon points="152,243 262,133 412,133 360,185 290,185 152,323"/>
+    <!-- K leg, starting cleanly from the arm and running below the stem -->
+    <polygon points="160,313 207,268 338,432 264,432"/>
+    <!-- F middle bar: pointed left end beside the leg, end cut at 45deg -->
+    <polygon points="254,247 420,247 368,299 258,299 230,273"/>
+  </g>
+</svg>

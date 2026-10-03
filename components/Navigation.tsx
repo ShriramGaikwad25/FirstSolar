@@ -113,7 +113,6 @@ export function Navigation() {
     // App Inventory
     if (
       pathname === '/settings/app-inventory/add-application' ||
-      pathname === '/settings/app-inventory/global-ad-config-management' ||
       /^\/settings\/app-inventory\/[^/]+\/settings$/.test(pathname)
     ) {
       return { href: '/settings/app-inventory', label: 'Back to Integrations' };

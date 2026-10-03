@@ -98,7 +98,7 @@ function addDaysToCreatedOn(createdOn: string, days: number): string {
   return out.toISOString();
 }
 
-/** Any column that may wrap uses this so the row grows to fit (with domLayout autoHeight + resetRowHeights). */
+/** Any column that may wrap uses this so the row grows to fit (with domLayout autoHeight). */
 const wrappedTextCol: Partial<ColDef> = {
   wrapText: true,
   autoHeight: true,
@@ -706,7 +706,6 @@ const TrackRequest: React.FC = () => {
               const handleResize = () => {
                 try {
                   params.api.sizeColumnsToFit();
-                  params.api.resetRowHeights();
                 } catch {
                   // ignore
                 }
@@ -719,7 +718,6 @@ const TrackRequest: React.FC = () => {
             onGridSizeChanged={(params) => {
               try {
                 params.api.sizeColumnsToFit();
-                params.api.resetRowHeights();
               } catch {
                 // ignore
               }
@@ -727,14 +725,6 @@ const TrackRequest: React.FC = () => {
             onFirstDataRendered={(params) => {
               try {
                 params.api.sizeColumnsToFit();
-                params.api.resetRowHeights();
-              } catch {
-                // ignore
-              }
-            }}
-            onRowDataUpdated={(params) => {
-              try {
-                params.api.resetRowHeights();
               } catch {
                 // ignore
               }
