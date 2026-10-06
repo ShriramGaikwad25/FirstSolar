@@ -14,6 +14,7 @@ import {
 import { getReviewerId, apiRequestWithAuth, getJwtAuthHeaders, resolveTenantIdForHeader } from "@/lib/auth";
 import { getCertAnalytics, executeQuery } from "@/lib/api";
 import { navLinks } from "@/components/Navi";
+import { filterNavForRole, useRoleAccess } from "@/lib/roleAccess";
 
 interface DashboardStats {
   totalApplications: number;
@@ -46,6 +47,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
   const [stats, setStats] = useState<DashboardStats>(EMPTY_STATS);
+  const roleAccess = useRoleAccess();
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -216,7 +218,7 @@ export default function DashboardPage() {
 
       {/* Quick links — mirrors the left navigation sidebar's sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        {navLinks
+        {(roleAccess ? filterNavForRole(navLinks, roleAccess) : [])
           .filter((section) => section.subItems && section.subItems.length > 0)
           .map((section, index) => {
             const SectionIcon = section.icon;

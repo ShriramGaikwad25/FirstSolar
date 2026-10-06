@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, ChevronLeft, Search } from 'lucide-react';
 import {navLinks as allNavLinks, NavItem} from './Navi';
 import { useLeftSidebar } from '@/contexts/LeftSidebarContext';
 import { getReviewerId } from '@/lib/auth';
+import { filterNavForRole, useRoleAccess } from '@/lib/roleAccess';
 
 export function Navigation() {
   const pathname = usePathname();
@@ -15,7 +16,9 @@ export function Navigation() {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [searchTerm, setSearchTerm] = useState('');
   const { isVisible, setSidebarWidthPx } = useLeftSidebar();
-  const navigation = allNavLinks;
+  const roleAccess = useRoleAccess();
+  // Only the sections the signed-in user's admin role may open (empty until roles are read).
+  const navigation = roleAccess ? filterNavForRole(allNavLinks, roleAccess) : [];
 
   useEffect(() => {
     setSidebarWidthPx(isSidebarExpanded ? 280 : 64);
@@ -94,7 +97,7 @@ export function Navigation() {
   // Do not show back button on routes that are already first-class sidebar destinations.
   const sidebarRouteSet = useState(() => {
     const set = new Set<string>();
-    navigation.forEach((item) => {
+    allNavLinks.forEach((item) => {
       set.add(item.href);
       item.subItems?.forEach((subItem) => set.add(subItem.href));
     });

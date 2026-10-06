@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { Header } from '@/components/Header';
 import { Navigation } from '@/components/Navigation';
 import { useLeftSidebar } from '@/contexts/LeftSidebarContext';
+import { canAccessPath, useRoleAccess } from '@/lib/roleAccess';
 
 export function AuthWrapper({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isOAuthRedirecting, isCompletingOAuth, authType } = useAuth();
@@ -21,6 +22,7 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
+  const roleAccess = useRoleAccess();
 
   const pendingLoggedOut = isLogoutRedirectPending();
   const onLoggedOutPage = isLoggedOutPath(pathname ?? '');
@@ -60,6 +62,15 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
     }
   }, [isAuthenticated, pathname, router, isTenantSsoBootstrap, pendingLoggedOut, onLoggedOutPage, isPublicAuthRoute]);
 
+  // Role-based page access: Help Desk Administrators only reach Dashboard, My Workspace and
+  // Request Management; any other URL (typed or bookmarked) goes back to the dashboard.
+  const isRoleBlocked =
+    isAuthenticated && !isPublicAuthRoute && !!roleAccess && !canAccessPath(pathname ?? '', roleAccess);
+
+  useEffect(() => {
+    if (isRoleBlocked) router.replace('/dashboard');
+  }, [isRoleBlocked, router]);
+
   if (onLoggedOutPage) {
     return <>{children}</>;
   }
@@ -77,6 +88,14 @@ export function AuthWrapper({ children }: { children: React.ReactNode }) {
 
   if (!isAuthenticated) {
     return <>{children}</>;
+  }
+
+  if (!isPublicAuthRoute && (!roleAccess || isRoleBlocked)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    );
   }
 
   const isAppInventoryRoute =
