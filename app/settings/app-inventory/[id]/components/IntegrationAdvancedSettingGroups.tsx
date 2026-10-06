@@ -36,7 +36,9 @@ export default function IntegrationAdvancedSettingGroups({
     if (!key) return null;
     const label = key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
     const value = values[key] ?? "";
-    const isPasswordLike = /password|secret|token|passphrase/i.test(key);
+    // Token Endpoint / *Url / *Uri fields are URLs, not secrets — keep them visible.
+    const isPasswordLike =
+      /password|secret|token|passphrase/i.test(key) && !/(endpoint|url|uri)$/i.test(key.replace(/_/g, ""));
     return (
       <div key={key} className="relative min-w-0">
         <input

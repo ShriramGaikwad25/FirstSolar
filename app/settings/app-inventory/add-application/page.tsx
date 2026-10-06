@@ -993,61 +993,6 @@ export default function AddApplicationPage() {
       } finally {
         setSubmitRequestLoading(false);
       }
-    } else if (isCompleteIntegration && (currentStep === 3 || currentStep === 4)) {
-      setSubmitRequestError(null);
-      setSubmitRequestLoading(true);
-      try {
-        const ownerEmail = formData.step2.technicalOwnerEmail || formData.step2.businessOwnerEmail || "";
-        const step3 = formData.step3 || {};
-        // Build provisioningAttrMap from Schema Mapping step: { [target]: { variable: source } }
-        const provisioningAttrMap: Record<string, { variable: string }> = {};
-        attributeMappingData.forEach((mapping) => {
-          if (mapping.target?.trim()) {
-            provisioningAttrMap[mapping.target.trim()] = { variable: mapping.source?.trim() ?? "" };
-          }
-        });
-        const userSearchBaseVal = String(step3.userSearchBase ?? step3.user_searchBase ?? "").trim();
-        const groupSearchBaseVal = String(step3.groupSearchBase ?? step3.group_searchBase ?? "").trim();
-        const { userSearchBase: _u, groupSearchBase: _g, user_searchBase: _ub, group_searchBase: _gb, ...step3Rest } = step3 as Record<string, unknown>;
-        const connectionDetails: Record<string, unknown> = {
-          ...step3Rest,
-          hostname: step3.hostname ?? "",
-          port: step3.port ?? "",
-          username: step3.username ?? "",
-          password: step3.password ?? "",
-          user_searchBase: userSearchBaseVal,
-          group_searchBase: groupSearchBaseVal,
-        };
-        const savePayload = {
-          tenantId: resolveTenantIdForHeader(),
-          appid: appIdFromUrl || "",
-          serviceURL: "",
-          name: formData.step2.applicationName || "",
-          description: formData.step2.description || "",
-          category: formData.step1.type || "",
-          owner: { type: "User", value: ownerEmail },
-          status: "InProgress",
-          connectionDetails,
-          dicoveredOn: null,
-          integratedOn: null,
-          schemaMappingDetails: {
-            provisioningAttrMap,
-            reconcilliationAttrMap: {},
-          },
-          applicationConfigurationDetails: null,
-          iga: false,
-          lcm: false,
-          sso: false,
-          ...(appIdFromUrl && !Number.isNaN(Number(appIdFromUrl)) ? { key: Number(appIdFromUrl) } : {}),
-        };
-        await saveAppDetails(savePayload);
-        setCurrentStep(currentStep + 1);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "Failed to save application details";
-        setSubmitRequestError(message);
-      } finally {
-        setSubmitRequestLoading(false);
-      }
     } else if (
       isAiAgentWizard &&
       !isCompleteIntegration &&
@@ -2516,6 +2461,11 @@ export default function AddApplicationPage() {
                         }}
                       >
                         {mapping.target}
+                        {mapping.keyfieldMapping && (
+                          <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap align-middle">
+                            <Key className="w-3 h-3" /> Keyfield
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
                         {mapping.defaultValue || ""}
@@ -5629,7 +5579,9 @@ export default function AddApplicationPage() {
               if (!key) return null;
               const label = formatIntegrationFieldLabel(key);
               const value = (formData.step3 as any)[key] ?? "";
-              const isPasswordLike = /password|secret|token|passphrase/i.test(key);
+              // Token Endpoint / *Url / *Uri fields are URLs, not secrets — keep them visible.
+              const isPasswordLike =
+                /password|secret|token|passphrase/i.test(key) && !/(endpoint|url|uri)$/i.test(key.replace(/_/g, ""));
               return (
                 <div className="flex-1 relative min-w-0" key={key}>
                   <input
@@ -12217,6 +12169,11 @@ export default function AddApplicationPage() {
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap break-words break-all align-top" style={{ position: "static", whiteSpace: "pre-wrap", wordBreak: "break-word", overflowWrap: "anywhere" }}>
                             {mapping.target}
+                            {mapping.keyfieldMapping && (
+                              <span className="ml-2 inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap align-middle">
+                                <Key className="w-3 h-3" /> Keyfield
+                              </span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-500">
                             {mapping.defaultValue || ""}
@@ -12274,77 +12231,6 @@ export default function AddApplicationPage() {
                   </div>
                 </div>
 
-                {/* Action Buttons - Save calls saveappdetails API */}
-                <div className="flex space-x-3">
-                  <button
-                    type="button"
-                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                    disabled={submitRequestLoading}
-                    onClick={async () => {
-                      setSubmitRequestError(null);
-                      setSubmitRequestLoading(true);
-                      try {
-                        const ownerEmail = formData.step2.technicalOwnerEmail || formData.step2.businessOwnerEmail || "";
-                        const step3 = formData.step3 || {};
-                        const provisioningAttrMap: Record<string, { variable: string }> = {};
-                        attributeMappingData.forEach((mapping) => {
-                          if (mapping.target?.trim()) {
-                            provisioningAttrMap[mapping.target.trim()] = { variable: mapping.source?.trim() ?? "" };
-                          }
-                        });
-                        const userSearchBaseVal = String(step3.userSearchBase ?? step3.user_searchBase ?? "").trim();
-                        const groupSearchBaseVal = String(step3.groupSearchBase ?? step3.group_searchBase ?? "").trim();
-                        const { userSearchBase: _u2, groupSearchBase: _g2, user_searchBase: _ub2, group_searchBase: _gb2, ...step3Rest } = step3 as Record<string, unknown>;
-                        const connectionDetails: Record<string, unknown> = {
-                          ...step3Rest,
-                          hostname: step3.hostname ?? "",
-                          port: step3.port ?? "",
-                          username: step3.username ?? "",
-                          password: step3.password ?? "",
-                          user_searchBase: userSearchBaseVal,
-                          group_searchBase: groupSearchBaseVal,
-                        };
-                        const savePayload = {
-                          tenantId: resolveTenantIdForHeader(),
-                          appid: appIdFromUrl || "",
-                          serviceURL: "",
-                          name: formData.step2.applicationName || "",
-                          description: formData.step2.description || "",
-                          category: formData.step1.type || "",
-                          owner: { type: "User", value: ownerEmail },
-                          status: "InProgress",
-                          connectionDetails,
-                          dicoveredOn: null,
-                          integratedOn: null,
-                          schemaMappingDetails: {
-                            provisioningAttrMap,
-                            reconcilliationAttrMap: {},
-                          },
-                          applicationConfigurationDetails: null,
-                          iga: false,
-                          lcm: false,
-                          sso: false,
-                          ...(appIdFromUrl && !Number.isNaN(Number(appIdFromUrl)) ? { key: Number(appIdFromUrl) } : {}),
-                        };
-                        await saveAppDetails(savePayload);
-                      } catch (err) {
-                        const message = err instanceof Error ? err.message : "Failed to save application details";
-                        setSubmitRequestError(message);
-                      } finally {
-                        setSubmitRequestLoading(false);
-                      }
-                    }}
-                  >
-                    {submitRequestLoading ? "Saving…" : "Save"}
-                  </button>
-                  <button
-                    type="button"
-                    className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50"
-                    onClick={() => router.push("/settings/app-inventory")}
-                  >
-                    Cancel
-                  </button>
-                </div>
               </div>
 
               {/* Add New Attribute Form or Edit Attribute Form */}

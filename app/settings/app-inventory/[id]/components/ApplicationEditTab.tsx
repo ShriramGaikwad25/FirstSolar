@@ -36,6 +36,8 @@ interface ApplicationEditTabProps {
 /** Match API keys like Password, admin_password, PWD, Passphrase, etc. */
 function fieldKeyLooksSensitive(field: string): boolean {
   const n = field.replace(/^\uFEFF/, "").trim().toLowerCase().replace(/_/g, "");
+  // Token Endpoint / *Url / *Uri fields are URLs, not secrets — keep them visible.
+  if (/(endpoint|url|uri)$/.test(n)) return false;
   return (
     /password|passwd|secret|token|passphrase|credential|apikey|privatekey|clientsecret|adminpassword|refreshtoken|accesstoken|authorization/i.test(
       n

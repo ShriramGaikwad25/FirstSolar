@@ -86,7 +86,9 @@ export default function TabbedIntegrationOnboardGroups({
     if (!key) return null;
     const label = formatIntegrationFieldLabel(key);
     const value = values[key] ?? "";
-    const isPasswordLike = /password|secret|token|passphrase/i.test(key);
+    // Token Endpoint / *Url / *Uri fields are URLs, not secrets — keep them visible.
+    const isPasswordLike =
+      /password|secret|token|passphrase/i.test(key) && !/(endpoint|url|uri)$/i.test(key.replace(/_/g, ""));
     return (
       <div className="relative min-w-0" key={key}>
         <input
