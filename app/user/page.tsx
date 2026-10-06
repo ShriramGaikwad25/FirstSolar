@@ -23,7 +23,6 @@ interface UserData {
   status: string;
   tags: string;
   managerName?: string;
-  managerStatus?: string;
 }
 
 // Users Tab Component
@@ -43,28 +42,6 @@ function UsersTab() {
   const [pageNumber, setPageNumber] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-
-  // Default data for fallback
-  const defaultRowData: UserData[] = [
-    {
-      name: "Aamod Radwan",
-      email: "aamod.radwan@zillasecurity.io",
-      title: "Staff",
-      department: "Sales",
-      managerEmail: "charlene.brattka@zillasecurity.io",
-      status: "Active",
-      tags: "",
-    },
-    {
-      name: "Abdulah Thibadeau",
-      email: "abdulah.thibadeau@zillasecurity.io",
-      title: "Manager - IT & Security",
-      department: "IT & Security",
-      managerEmail: "huan.lortz@zillasecurity.io",
-      status: "Active",
-      tags: "",
-    },
-  ];
 
 
   // Run the search only when the user explicitly triggers it (button click or Enter)
@@ -133,15 +110,14 @@ function UsersTab() {
               user.displayname ||
               user.displayName ||
               [user.firstname, user.lastname].filter(Boolean).join(" ").trim() ||
-              "Unknown",
-            email: user.email?.work || user.customattributes?.emails?.[0]?.value || user.username || "Unknown",
-            title: user.title || user.customattributes?.title || "Unknown",
-            department: user.department || user.customattributes?.enterpriseUser?.department || "Unknown",
+              "",
+            email: user.email?.work || user.customattributes?.emails?.[0]?.value || user.username || "",
+            title: user.title || user.customattributes?.title || "",
+            department: user.department || user.customattributes?.enterpriseUser?.department || "",
             managerEmail: user.managername || user.customattributes?.enterpriseUser?.manager?.value || "",
             status: user.status || (user.customattributes?.active ? "Active" : "Inactive"),
             tags: user.employeetype || user.customattributes?.userType || "",
             managerName: user.managername || user.customattributes?.enterpriseUser?.manager?.value || "",
-            managerStatus: "Active" // Default status for manager
           }));
           setRowData(transformedData);
 
@@ -163,11 +139,6 @@ function UsersTab() {
             }
             localStorage.setItem("usersRawByKey", JSON.stringify(rawByKey));
           } catch {}
-        } else if (!appliedSearchTerm && pageNumber === 1) {
-          // Fallback to default data if the API returned nothing and there's no active search
-          setRowData(defaultRowData);
-          setTotalItems(defaultRowData.length);
-          setTotalPages(Math.ceil(defaultRowData.length / pageSize));
         } else {
           setRowData([]);
           setTotalItems(0);
@@ -190,10 +161,9 @@ function UsersTab() {
           setError(null); // Don't show error if user logged out
         } else {
           setError(err instanceof Error ? err.message : "Failed to fetch users");
-          // Fallback to default data on error
-          setRowData(defaultRowData);
-          setTotalItems(defaultRowData.length);
-          setTotalPages(Math.ceil(defaultRowData.length / pageSize));
+          setRowData([]);
+          setTotalItems(0);
+          setTotalPages(1);
         }
       } finally {
         setLoading(false);
@@ -217,7 +187,7 @@ const columnDefs = useMemo<ColDef[]>(
       field: "name",
       flex: 1.5,
       cellRenderer: (params: any) => {
-        const rawName = params.value == null ? "Unknown" : String(params.value);
+        const rawName = params.value == null ? "" : String(params.value);
         const initials = rawName
           .trim()
           .split(/\s+/)
@@ -261,15 +231,6 @@ const columnDefs = useMemo<ColDef[]>(
       headerName: "Manager",
       field: "managerName",
       flex: 1.5,
-      cellRenderer: (params: any) => {
-        const managerName = params.value || "N/A";
-        const managerStatus = params.data.managerStatus || "Unknown"; // Access managerStatus from data
-        return (
-          <span>
-            {managerName} ({managerStatus})
-          </span>
-        );
-      },
     },
     { headerName: "Tags", field: "tags", flex: 1 },
   ],
@@ -477,17 +438,6 @@ function UserGroupsTab() {
   const [totalItems, setTotalItems] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Dummy default data for User Groups (fallback)
-  const defaultGroupData: UserGroupData[] = [
-    {
-      userGroup: "Operations - Managers",
-      description: "Managers within the Operations department responsible for approvals and escalations.",
-      owner: "ops.manager@acme.com",
-      noOfUsers: 12,
-      tags: "Operations",
-    },
-  ];
-
   // Fetch user groups data from API
   useEffect(() => {
     const fetchUserGroups = async () => {
@@ -527,7 +477,7 @@ function UserGroupsTab() {
             const id = group.groupId ?? group.group_id ?? group.id ?? group.groupid;
             return {
               groupId: id != null ? String(id) : undefined,
-              userGroup: group.name || group.groupName || group.group_name || group.displayName || group.userGroup || "Unknown Group",
+              userGroup: group.name || group.groupName || group.group_name || group.displayName || group.userGroup || "",
               description: group.description || group.desc || "",
               owner: group.owner || group.ownerEmail || group.owner_email || group.created_by || group.createdBy || "",
               noOfUsers:
@@ -540,10 +490,9 @@ function UserGroupsTab() {
           setTotalItems(transformedData.length);
           setTotalPages(Math.ceil(transformedData.length / pageSize));
         } else {
-          // Fallback to default data if API response is empty
-          setRowData(defaultGroupData);
-          setTotalItems(defaultGroupData.length);
-          setTotalPages(Math.ceil(defaultGroupData.length / pageSize));
+          setRowData([]);
+          setTotalItems(0);
+          setTotalPages(1);
         }
       } catch (err) {
         console.error("Error fetching user groups:", err);
@@ -562,10 +511,9 @@ function UserGroupsTab() {
           setError(null); // Don't show error if user logged out
         } else {
           setError(err instanceof Error ? err.message : "Failed to fetch user groups");
-          // Fallback to default data on error
-          setRowData(defaultGroupData);
-          setTotalItems(defaultGroupData.length);
-          setTotalPages(Math.ceil(defaultGroupData.length / pageSize));
+          setRowData([]);
+          setTotalItems(0);
+          setTotalPages(1);
         }
       } finally {
         setLoading(false);

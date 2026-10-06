@@ -77,8 +77,8 @@ const buildUserFromStorage = (): ProfileUser => {
     const fullStr = localStorage.getItem("selectedUserRawFull");
     if (fullStr) {
       const u = JSON.parse(fullStr);
-      const displayName = u.displayname || u.displayName || `${u.firstname ?? ""} ${u.lastname ?? ""}`.trim() || u.username || "Unknown";
-      const email = u.email?.work || u.customattributes?.emails?.[0]?.value || u.username || "no-email@example.com";
+      const displayName = u.displayname || u.displayName || `${u.firstname ?? ""} ${u.lastname ?? ""}`.trim() || u.username || "";
+      const email = u.email?.work || u.customattributes?.emails?.[0]?.value || u.username || "";
       return {
         firstName: u.firstname || u.customattributes?.name?.givenName || displayName.split(" ")[0] || "",
         lastName: u.lastname || u.customattributes?.name?.familyName || displayName.split(" ").slice(1).join(" ") || "",
@@ -93,13 +93,13 @@ const buildUserFromStorage = (): ProfileUser => {
         managerEmail: u.managername || u.customattributes?.enterpriseUser?.manager?.value || "",
         location: u.location || u.customattributes?.location || "",
         dob: u.dob || u.customattributes?.birthdate || "",
-        tags: [u.employeetype || u.customattributes?.userType || "User"].filter(Boolean),
+        tags: [u.employeetype || u.customattributes?.userType || ""].filter(Boolean),
         status:
           u.status ||
           u.userstatus ||
           u.accountstatus ||
           u.customattributes?.status ||
-          "Active",
+          "",
       };
     }
   } catch {}
@@ -108,12 +108,12 @@ const buildUserFromStorage = (): ProfileUser => {
     const sel = localStorage.getItem("selectedUserRaw");
     if (sel) {
       const s = JSON.parse(sel);
-      const displayName = s.name || "Unknown";
+      const displayName = s.name || "";
       const [fn, ...rest] = displayName.split(" ");
       return {
         firstName: fn || "",
         lastName: rest.join(" "),
-        email: s.email || "no-email@example.com",
+        email: s.email || "",
         displayName,
         alias: s.email || displayName,
         phone: "",
@@ -124,8 +124,8 @@ const buildUserFromStorage = (): ProfileUser => {
         managerEmail: s.managerName || "",
         location: s.location || "",
         dob: "",
-        tags: [s.tags || "User"].filter(Boolean),
-        status: s.status || "Active",
+        tags: [s.tags || ""].filter(Boolean),
+        status: s.status || "",
       };
     }
   } catch {}
@@ -133,8 +133,8 @@ const buildUserFromStorage = (): ProfileUser => {
   return {
     firstName: "",
     lastName: "",
-    email: "no-email@example.com",
-    displayName: "Unknown",
+    email: "",
+    displayName: "",
     alias: "",
     phone: "",
     title: "",
@@ -144,8 +144,8 @@ const buildUserFromStorage = (): ProfileUser => {
     managerEmail: "",
     location: "",
     dob: "",
-    tags: ["User"],
-    status: "Active",
+    tags: [],
+    status: "",
   };
 };
 
@@ -196,50 +196,6 @@ function persistProfileUserToStorage(profile: ProfileUser) {
     // ignore
   }
 }
-
-// Sample access data
-const accessData = {
-  accounts: 20,
-  apps: 10,
-  entitlements: 60,
-  violations: 5,
-};
-
-// Sample account data
-const accountData = [
-  {
-    accountId: "ACC001",
-    accountStatus: "Active",
-    risk: "Low",
-    appName: "CRM App",
-    discoveryDate: "2023-06-01",
-    lastSyncDate: "2025-08-20",
-    lastAccessReview: "2025-07-15",
-    insights: "High usage",
-    mfa: "Enabled",
-    complianceViolation: "None",
-    entitlements: [
-      { entName: "CRM_READ", risk: "Low", description: "Read-only access to CRM", assignedOn: "2023-06-01", lastReviewed: "2025-07-15", tags: ["Read", "CRM"] },
-      { entName: "CRM_WRITE", risk: "Medium", description: "Write access to CRM", assignedOn: "2023-06-01", lastReviewed: "2025-07-15", tags: ["Write", "CRM"] },
-    ],
-  },
-  {
-    accountId: "ACC002",
-    accountStatus: "Suspended",
-    risk: "High",
-    appName: "HR Portal",
-    discoveryDate: "2023-05-10",
-    lastSyncDate: "2025-08-18",
-    lastAccessReview: "2025-06-30",
-    insights: "Inactive account",
-    mfa: "Disabled",
-    complianceViolation: "SoD Violation",
-    entitlements: [
-      { entName: "HR_ADMIN", risk: "High", description: "Admin access to HR Portal", assignedOn: "2023-05-10", lastReviewed: "2025-06-30", tags: ["Admin", "HR"] },
-    ],
-  },
-];
-
 
 export default function UserDetailPage() {
   const [isMounted, setIsMounted] = useState(false);
@@ -307,21 +263,18 @@ export default function UserDetailPage() {
       ...profileDraft,
       firstName: profileDraft.firstName?.trim() ?? "",
       lastName: profileDraft.lastName?.trim() ?? "",
-      email: profileDraft.email?.trim() || "no-email@example.com",
-      displayName: (profileDraft.displayName || "").trim() || "Unknown",
+      email: profileDraft.email?.trim() ?? "",
+      displayName: (profileDraft.displayName || "").trim(),
       alias: profileDraft.alias?.trim() ?? "",
       title: profileDraft.title?.trim() ?? "",
       department: profileDraft.department?.trim() ?? "",
       startDate: profileDraft.startDate?.trim() ?? "",
       userType: profileDraft.userType?.trim() ?? "",
       managerEmail: profileDraft.managerEmail?.trim() ?? "",
-      status: profileDraft.status || "Active",
+      status: profileDraft.status || "",
       tags: (profileDraft.tags || []).map((t) => String(t).trim()).filter(Boolean),
       dob: profileDraft.dob?.trim() || "",
     };
-    if (!next.tags.length) {
-      next.tags = ["User"];
-    }
     setUserData(next);
     persistProfileUserToStorage(next);
     setIsEditingProfile(false);
@@ -383,7 +336,7 @@ export default function UserDetailPage() {
 
     const headerFirstName = isEditingProfile ? profileDraft.firstName : userData.firstName;
     const headerLastName = isEditingProfile ? profileDraft.lastName : userData.lastName;
-    const headerStatus = isEditingProfile ? profileDraft.status || "Active" : userData.status || "Active";
+    const headerStatus = isEditingProfile ? profileDraft.status || "" : userData.status || "";
 
     const IconBox = ({
       icon: Icon,
@@ -446,15 +399,18 @@ export default function UserDetailPage() {
               {isEditingProfile ? (
                 <select
                   className="mt-1 text-xs font-semibold bg-white border border-gray-300 rounded-lg px-3 py-1.5 text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                  value={profileDraft.status || "Active"}
+                  value={profileDraft.status || ""}
                   onChange={(e) => setProfileDraft((d) => ({ ...d, status: e.target.value }))}
                   aria-label="Status"
                 >
+                  <option value="" disabled>
+                    Select status
+                  </option>
                   <option value="Active">Active</option>
                   <option value="Inactive">Inactive</option>
                   <option value="Disable">Disable</option>
                 </select>
-              ) : (
+              ) : headerStatus ? (
                 <span
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
                     headerStatus === "Active"
@@ -469,7 +425,7 @@ export default function UserDetailPage() {
                   />
                   {headerStatus}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
 
@@ -586,7 +542,7 @@ export default function UserDetailPage() {
                     aria-label="Start date"
                   />
                 ) : (
-                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.startDate || "N/A"}</p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{userData.startDate || "—"}</p>
                 )}
               </Field>
 
@@ -624,7 +580,7 @@ export default function UserDetailPage() {
               )}
 
               <Field icon={MapPin} bg="bg-rose-50" color="text-rose-500" label="Location">
-                <p className="text-sm font-semibold text-gray-900 mt-1">{userData.location || "N/A"}</p>
+                <p className="text-sm font-semibold text-gray-900 mt-1">{userData.location || "—"}</p>
               </Field>
             </div>
 
@@ -809,7 +765,7 @@ export default function UserDetailPage() {
           if (fullStr) {
             const u = JSON.parse(fullStr);
             return (
-              u.userid || u.id || u.userId || u.customattributes?.id || "0109868e-b00c-4f24-ae5f-258029cce1d6"
+              u.userid || u.id || u.userId || u.customattributes?.id || ""
             );
           }
         } catch {}
@@ -817,40 +773,19 @@ export default function UserDetailPage() {
           const sel = localStorage.getItem("selectedUserRaw");
           if (sel) {
             const s = JSON.parse(sel);
-            return s.id || s.userId || "0109868e-b00c-4f24-ae5f-258029cce1d6";
+            return s.id || s.userId || "";
           }
         } catch {}
-        return "0109868e-b00c-4f24-ae5f-258029cce1d6";
-      };
-
-      // Identify the currently selected user for conditional entitlements
-      const currentUser = buildUserFromStorage();
-
-      const maybeAugmentWithTraining = (rows: any[]): any[] => {
-        if (
-          currentUser.displayName &&
-          currentUser.displayName.trim().toLowerCase() === "alexander lane"
-        ) {
-          const primaryAccount =
-            rows.find((r) => r.accountName)?.accountName ?? "";
-
-          return [
-            ...rows,
-            {
-              entitlementName: "SEC-101: Information Security Awareness 2025",
-              entitlementType: "Training",
-              application: "CornerStone LMS",
-              accountName: primaryAccount,
-              lastLogin: null,
-            },
-          ];
-        }
-        return rows;
+        return "";
       };
 
       const fetchAllAccess = async () => {
         try {
           const userId = getUserIdFromStorage();
+          if (!userId) {
+            setRowData([]);
+            return;
+          }
           const res: any = await executeQuery<any>(
             "select * from vw_user_with_applications_entitlements where userid = ?::uuid",
             [userId]
@@ -874,9 +809,7 @@ export default function UserDetailPage() {
               }
             }
 
-            const finalRows = maybeAugmentWithTraining(flatEntRows);
-
-            setRowData(finalRows);
+            setRowData(flatEntRows);
 
             const desiredCols: ColDef[] = [
               { headerName: "Entitlement ", field: "entitlementName", flex: 1.5 },
@@ -910,8 +843,7 @@ export default function UserDetailPage() {
             }
             return [];
           })();
-          const finalRows = maybeAugmentWithTraining(items);
-          setRowData(finalRows);
+          setRowData(items);
           // Helper to resolve a value from multiple possible key aliases on each row
           const valueByAliases = (data: any, aliases: string[]) => {
             for (const a of aliases) {
