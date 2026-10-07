@@ -27,87 +27,6 @@ type WorkflowPolicyRow = {
   definition_json?: any | null;
 };
 
-// Demo records for the Agent Task workflows — not backed by kf_wf_template_t,
-// merged in client-side so the two sample flows are always available to open in the builder.
-const DUMMY_WORKFLOW_ROWS: WorkflowPolicyRow[] = [
-  {
-    id: "wf-dummy-ent-desc-gen",
-    name: "Agent task workflow for Entitlement description generation",
-    description:
-      "Workflow assigned to identity and generate descriptions for entitlements",
-    created_by: "tushar rao",
-    business_object_type: "Assurance_Event",
-    status: "Active",
-    code: "CCE-1001",
-    definition_json: {
-      stages: [
-        {
-          id: "stage-1",
-          name: "Validate",
-          order: 1,
-          steps: [{ code: "AGENT_TASK", name: "Entitlement Description Generator" }],
-        },
-        {
-          id: "stage-2",
-          name: "Approval",
-          order: 2,
-          steps: [
-            {
-              code: "APPROVAL_ENTITLEMENT_OWNER",
-              name: "Entitlement Owner Approval",
-              condition: { expression: "AgentTask.Confidence > 90" },
-            },
-          ],
-        },
-        {
-          id: "stage-3",
-          name: "Fulfillment",
-          order: 3,
-          steps: [{ code: "FULFILLMENT", name: "Fulfillment Event" }],
-        },
-      ],
-    },
-  },
-  {
-    id: "wf-dummy-svc-acct-owner",
-    name: "Agent task workflow for Service Account owner resolution",
-    description:
-      "Workflow assigned to find owners for service accounts with no current ownership",
-    created_by: "tushar rao",
-    business_object_type: "Assurance_Event",
-    status: "Active",
-    code: "CCE-1008",
-    definition_json: {
-      stages: [
-        {
-          id: "stage-1",
-          name: "Validate",
-          order: 1,
-          steps: [{ code: "AGENT_TASK", name: "Service Account Owner Resolver" }],
-        },
-        {
-          id: "stage-2",
-          name: "Approval",
-          order: 2,
-          steps: [
-            {
-              code: "APPROVAL_APPLICATION_OWNER",
-              name: "Application Owner Approval",
-              condition: { expression: "AgentTask.Confidence > 90" },
-            },
-          ],
-        },
-        {
-          id: "stage-3",
-          name: "Fulfillment",
-          order: 3,
-          steps: [{ code: "ITSM_CREATE_TICKET", name: "ITSM Create Ticket" }],
-        },
-      ],
-    },
-  },
-];
-
 export default function WorkflowBuilderPage() {
   const [rows, setRows] = useState<WorkflowPolicyRow[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -172,10 +91,11 @@ export default function WorkflowBuilderPage() {
           definition_json: row.definition_json ?? row.definitionJson ?? null,
         }));
 
-        setRows([...DUMMY_WORKFLOW_ROWS, ...normalized]);
+        setRows(normalized);
       } catch (e: any) {
         console.error("Failed to load workflow policies:", e);
-        setRows(DUMMY_WORKFLOW_ROWS);
+        setRows([]);
+        setError("Failed to load workflows.");
       } finally {
         setIsLoading(false);
       }
