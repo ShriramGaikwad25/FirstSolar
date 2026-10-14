@@ -28,6 +28,7 @@ import {
   Tags,
   Target,
   Wrench,
+  Database,
 } from "lucide-react";
 import { riskAnalysisSubItems } from "@/lib/risk-analysis-routes";
 
@@ -84,6 +85,7 @@ export const navLinks: NavItem[] = [
       { name: "Email Templates", href: "/settings/gateway/email-templates", icon: FileText },
       { name: "Entitlement management", href: "/settings/gateway/entitlement-management", icon: FileCode2 },
       { name: "Manage Native Users", href: "/settings/gateway/native-users", icon: Users },
+      { name: "Custom Schema", href: "/settings/gateway/custom-schema", icon: Database },
     ],
   },
 ];
