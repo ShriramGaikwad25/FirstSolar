@@ -9,6 +9,7 @@ import {
   redirectToTenantLogin,
 } from '@/lib/tenant';
 import { clearJitAccessHistoryStore } from '@/lib/jitAccessHistoryStorage';
+import { setHttpOnlySession, TOKEN_PLACEHOLDER, usesHttpOnlySession } from '@/lib/kfProxy';
 import appConfig from '@/config.json';
 
 /** Best-effort message from KeyForge / gateway / PG JSON error bodies. */
@@ -130,12 +131,13 @@ export function setCookie(name: string, value: string, days: number = 7): void {
   document.cookie = `${name}=${encodedValue};expires=${expires.toUTCString()};path=/;samesite=strict${secureFlag}`;
 }
 
-export function getCookie(name: string): string | null {
+/** A cookie JS can read, or null. Token cookies are HttpOnly, so this never returns a session token. */
+function readBrowserCookie(name: string): string | null {
   if (typeof document === 'undefined') return null;
-  
+
   const nameEQ = name + '=';
   const ca = document.cookie.split(';');
-  
+
   for (let i = 0; i < ca.length; i++) {
     let c = ca[i];
     while (c.charAt(0) === ' ') c = c.substring(1, c.length);
@@ -148,35 +150,76 @@ export function getCookie(name: string): string | null {
   return null;
 }
 
-const ACCESS_TOKEN_COOKIE_ALIASES = [
+/**
+ * Reads a cookie. accessToken / jwtToken are HttpOnly cookies JS cannot read: in a signed-in
+ * session they read as a placeholder, which callers attach as `Authorization: Bearer` exactly as
+ * before and the fetch layer swaps for the real token on the server (lib/kfProxy.ts).
+ */
+export function getCookie(name: string): string | null {
+  const value = readBrowserCookie(name);
+  if (value || !usesHttpOnlySession()) return value;
+  if (name === COOKIE_NAMES.ACCESS_TOKEN) return TOKEN_PLACEHOLDER.access;
+  if (name === COOKIE_NAMES.JWT_TOKEN) return TOKEN_PLACEHOLDER.jwt;
+  return null;
+}
+
+/** Cookie names a session token may be readable under: written by an older build, or by some SSO sign-ins. */
+const READABLE_TOKEN_COOKIES = [
   COOKIE_NAMES.ACCESS_TOKEN,
   'access_token',
   'AccessToken',
   'ACCESS_TOKEN',
-] as const;
-
-const JWT_TOKEN_COOKIE_ALIASES = [
   COOKIE_NAMES.JWT_TOKEN,
   'jwt_token',
   'JwtToken',
   'JWT_TOKEN',
 ] as const;
 
-function getCookieFromAliases(names: readonly string[]): string | null {
-  for (const name of names) {
-    const value = getCookie(name);
-    if (value) return value;
+/**
+ * Moves session tokens JS can still read into HttpOnly cookies (server-side), so none stays
+ * exposed to page scripts. True when there was one to move.
+ */
+export async function secureReadableTokenCookies(): Promise<boolean> {
+  if (!READABLE_TOKEN_COOKIES.some((name) => readBrowserCookie(name))) return false;
+  try {
+    const res = await fetch(withBasePath('/api/auth/secure-cookies'), {
+      method: 'POST',
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    return res.ok;
+  } catch {
+    return false;
   }
-  return null;
 }
 
-/** Map SSO cookie names into our standard cookies (client-readable only). */
-export function normalizeAuthCookiesFromBrowser(): boolean {
-  const accessToken = getCookieFromAliases(ACCESS_TOKEN_COOKIE_ALIASES);
-  const jwtToken = getCookieFromAliases(JWT_TOKEN_COOKIE_ALIASES);
-  if (accessToken) setCookie(COOKIE_NAMES.ACCESS_TOKEN, accessToken);
-  if (jwtToken) setCookie(COOKIE_NAMES.JWT_TOKEN, jwtToken);
-  return !!(accessToken && jwtToken);
+/** Claims of the session's JWT (user id, roles, tenant), as decoded by the server. */
+export interface SessionClaims {
+  userid?: string;
+  adminRoles?: string[] | string;
+  [key: string]: unknown;
+}
+
+// In-memory only, never persisted: the JWT is an HttpOnly cookie the page cannot decode, so the
+// server hands its claims over with /api/auth/session, sign-in and refresh.
+let sessionClaims: SessionClaims | null = null;
+const sessionClaimsListeners = new Set<() => void>();
+
+export function setSessionClaims(claims: SessionClaims | null | undefined): void {
+  sessionClaims = claims && typeof claims === 'object' ? claims : null;
+  sessionClaimsListeners.forEach((listener) => listener());
+}
+
+export function getSessionClaims(): SessionClaims | null {
+  return sessionClaims;
+}
+
+/** Calls `listener` whenever the session claims change; returns the unsubscribe function. */
+export function subscribeSessionClaims(listener: () => void): () => void {
+  sessionClaimsListeners.add(listener);
+  return () => {
+    sessionClaimsListeners.delete(listener);
+  };
 }
 
 export type ServerSessionCheck = {
@@ -184,6 +227,8 @@ export type ServerSessionCheck = {
   hasAccessToken: boolean;
   hasJwtToken: boolean;
   user: { email?: string; tenantId?: string; userid?: string } | null;
+  /** The JWT's claims; only for an authenticated session. */
+  claims?: SessionClaims | null;
 };
 
 /** Uses /api/auth/session so HttpOnly cookies set by Keyforge are detected. */
@@ -233,8 +278,7 @@ export function deleteCookie(name: string): void {
 /** All cookie names used by auth (for client + server logout). */
 export const AUTH_COOKIE_NAMES_TO_CLEAR = [
   ...Object.values(COOKIE_NAMES),
-  ...ACCESS_TOKEN_COOKIE_ALIASES,
-  ...JWT_TOKEN_COOKIE_ALIASES,
+  ...READABLE_TOKEN_COOKIES,
   REGISTERED_APP_COOKIE,
 ] as const;
 
@@ -315,6 +359,8 @@ export function clearAllAuthCookies(options?: { preserveLogoutRedirect?: boolean
     deleteCookie(name);
   }
 
+  setHttpOnlySession(false);
+  setSessionClaims(null);
   clearActiveTenantId();
   clearAuthSessionStorage(preserveLogoutRedirect);
   clearPersistedApplicationAuthType();
@@ -393,14 +439,6 @@ export async function checkTokenExpiredError(data: any): Promise<boolean> {
 /** Tenant from URL path or cookie only (e.g. /KFPRODOCI). Not used for standard /login. */
 function registeredAppNameOrNull(): string | null {
   return getActiveTenantId()?.trim() || null;
-}
-
-function registeredAppName(): string {
-  const fromUrl = registeredAppNameOrNull();
-  if (fromUrl) return fromUrl;
-  const fromUser = getCurrentUser()?.tenantId?.trim();
-  if (fromUser) return fromUser;
-  throw new Error('No tenant configured. Open /<your-tenant-id>.');
 }
 
 /** AuthType from applicationType API (defaults to LOCAL when missing). */
@@ -525,150 +563,83 @@ export function clearOAuthCallbackParamsFromUrl(): void {
   window.history.replaceState({}, '', url.pathname + (qs ? `?${qs}` : ''));
 }
 
-function parseAccessTokenFromAuthPayload(data: unknown): {
-  accessToken: string;
+/** What a sign-in returns to the page: the user's ids and the JWT's claims; the tokens are HttpOnly cookies. */
+export type SignInResult = {
   userUniqueID?: string;
-  userAdminRoles?: string;
   userid?: string;
-} {
-  if (data == null || typeof data !== 'object') {
-    throw new Error('Invalid OAuth callback response');
+  claims?: SessionClaims | null;
+};
+
+async function readSignInResponse(response: Response, label: string): Promise<SignInResult> {
+  const rawText = await response.text();
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = rawText ? (JSON.parse(rawText) as Record<string, unknown>) : null;
+  } catch {
+    throw new Error(`${label} returned non-JSON (${response.status}): ${rawText.slice(0, 200)}`);
   }
-  const root = data as Record<string, unknown>;
-  const tokenResponse =
-    root.tokenResponse && typeof root.tokenResponse === 'object'
-      ? (root.tokenResponse as Record<string, unknown>)
-      : null;
-
-  const accessToken = String(
-    tokenResponse?.accessToken ?? root.accessToken ?? ''
-  ).trim();
-  if (!accessToken) {
-    throw new Error('No access token in OAuth callback response');
+  if (!response.ok || data?.status === 'failed' || data?.status === 'error' || data?.STATUS === 'FAILED') {
+    throw new Error(
+      String(data?.statusMessage ?? data?.STATUSMESSAGE ?? (rawText || `${label} failed (${response.status})`))
+    );
   }
-
-  const userUniqueID = String(
-    tokenResponse?.userUniqueID ?? root.userUniqueID ?? ''
-  ).trim();
-  const userAdminRoles = String(
-    tokenResponse?.userAdminRoles ?? root.userAdminRoles ?? ''
-  ).trim();
-  const userid = String(
-    tokenResponse?.userid ?? root.userid ?? userUniqueID ?? ''
-  ).trim();
-
-  return {
-    accessToken,
-    userUniqueID: userUniqueID || undefined,
-    userAdminRoles: userAdminRoles || undefined,
-    userid: userid || undefined,
-  };
+  const text = (key: string) => (typeof data?.[key] === 'string' && (data[key] as string).trim()) || undefined;
+  const claims = data?.claims && typeof data.claims === 'object' ? (data.claims as SessionClaims) : null;
+  return { userUniqueID: text('userUniqueID'), userid: text('userid'), claims };
 }
 
-/** Exchange OAuth authorization code for an access token (Keyforge callback). */
-export async function completeOAuthCallback(
-  code: string,
-  state: string
-): Promise<{
-  accessToken: string;
-  userUniqueID?: string;
-  userAdminRoles?: string;
-  userid?: string;
-}> {
+/**
+ * Exchange the OAuth authorization code on the server, which stores the tokens as HttpOnly cookies.
+ * Always via our route (also with a same-origin backend): a direct call would hand the token to page JS.
+ */
+export async function completeOAuthCallback(code: string, state: string): Promise<SignInResult> {
   const params = new URLSearchParams({ code, state });
   const tenant = registeredAppNameOrNull();
   if (tenant) params.set('registeredAppName', tenant);
-  const response = USE_SERVER_PROXY
-    ? await fetch(withBasePath(`/api/auth/oauth/callback?${params.toString()}`), {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-        cache: 'no-store',
-      })
-    : await fetch(`${authBaseUrl()}/oauth/callback?${params.toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json', ...(tenant ? { 'X-Tenant-Id': tenant } : {}) },
-        cache: 'no-store',
-      });
-
-  const rawText = await response.text();
-  let data: unknown;
-  try {
-    data = rawText ? JSON.parse(rawText) : null;
-  } catch {
-    throw new Error(
-      `OAuth callback returned non-JSON (${response.status}): ${rawText.slice(0, 200)}`
-    );
-  }
-
-  if (!response.ok) {
-    const message =
-      typeof data === 'object' &&
-      data !== null &&
-      'statusMessage' in data &&
-      typeof (data as Record<string, unknown>).statusMessage === 'string'
-        ? String((data as Record<string, unknown>).statusMessage)
-        : rawText || `OAuth callback failed (${response.status})`;
-    throw new Error(message);
-  }
-
-  if (
-    typeof data === 'object' &&
-    data !== null &&
-    ((data as Record<string, unknown>).status === 'failed' ||
-      (data as Record<string, unknown>).status === 'error' ||
-      (data as Record<string, unknown>).STATUS === 'FAILED')
-  ) {
-    throw new Error(
-      String(
-        (data as Record<string, unknown>).statusMessage ??
-          (data as Record<string, unknown>).STATUSMESSAGE ??
-          'OAuth callback failed'
-      )
-    );
-  }
-
-  return parseAccessTokenFromAuthPayload(data);
+  const response = await fetch(withBasePath(`/api/auth/oauth/callback?${params.toString()}`), {
+    method: 'GET',
+    headers: { Accept: 'application/json' },
+    cache: 'no-store',
+  });
+  return readSignInResponse(response, 'OAuth callback');
 }
 
-/** Persist cookies + JWT after password or OAuth login. */
-export async function establishAuthenticatedSession(options: {
-  accessToken: string;
-  userUniqueID?: string;
-  userAdminRoles?: string;
-  userid?: string;
-  tenantId?: string;
-  /** When true and jwtToken cookie exists, skip generateJWTToken (SSO redirect already set tokens). */
-  skipJwtGeneration?: boolean;
-}): Promise<void> {
-  const { accessToken, userUniqueID, userid, tenantId, skipJwtGeneration } = options;
-  const resolvedUserid = userid ?? userUniqueID ?? '';
+/** Password sign-in on the server, which stores the tokens as HttpOnly cookies. */
+export async function signInWithPassword(
+  userid: string,
+  password: string,
+  tenantId: string
+): Promise<SignInResult> {
+  const response = await fetch(withBasePath('/api/auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ userid, password, tenantId }),
+    cache: 'no-store',
+  });
+  return readSignInResponse(response, 'Sign-in');
+}
+
+/**
+ * Records the signed-in user after a password or OAuth sign-in. The tokens are already HttpOnly
+ * cookies set by the server; this keeps only the readable, non-secret ids and the claims in memory.
+ */
+export function establishAuthenticatedSession(options: SignInResult & { tenantId?: string }): void {
+  const { userUniqueID, userid, claims, tenantId } = options;
   const resolvedTenantId = tenantId?.trim() || registeredAppNameOrNull() || '';
 
-  setCookie(COOKIE_NAMES.ACCESS_TOKEN, accessToken);
   setCookie(
     COOKIE_NAMES.UID_TENANT,
     JSON.stringify({
-      userid: resolvedUserid,
+      userid: userid ?? userUniqueID ?? '',
       tenantId: resolvedTenantId,
     })
   );
 
-  // reviewerId and admin roles are no longer written to cookies here — they're decoded
-  // from the JWT's claims on demand (see getReviewerId/getUserAdminRoles) once the JWT below
-  // is issued. Clear a role cookie left by an older build.
+  // reviewerId and admin roles are never written to cookies: they come from the JWT's claims
+  // (see getReviewerId/getUserAdminRoles). Clear a role cookie left by an older build.
   deleteCookie(COOKIE_NAMES.USER_ADMIN_ROLES);
-
-  const existingJwt = getCookie(COOKIE_NAMES.JWT_TOKEN);
-  if (skipJwtGeneration && existingJwt) {
-    return;
-  }
-
-  const jwtResponse = await generateJWTToken(accessToken);
-  const jwtToken = extractJWTToken(jwtResponse);
-  if (!jwtToken) {
-    throw new Error('Failed to generate JWT token after login');
-  }
-  setCookie(COOKIE_NAMES.JWT_TOKEN, jwtToken);
+  setSessionClaims(claims);
+  setHttpOnlySession(true);
 }
 
 /** After SSO redirect: tokens are already in cookies — restore state only, no token APIs. */
@@ -898,52 +869,6 @@ export async function fetchApplicationAuthType(
   return data;
 }
 
-// API functions
-export async function requestToken(
-  userid: string,
-  password: string,
-  registeredApp?: string
-): Promise<TokenResponse> {
-  const appName = (registeredApp ?? registeredAppNameOrNull())?.trim();
-  if (!appName) {
-    throw new Error('Open the app at /<your-tenant-id>.');
-  }
-
-  try {
-    const response = await fetch(`${authBaseUrl()}/requestToken`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        requestToken: {
-          registeredAppName: appName,
-          userid: userid,
-          password: password
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Token request failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    
-    // Check if the response indicates a failed status
-    if (data.status === 'failed' || data.status === 'error' || 
-        data.tokenResponse?.status === 'failed' || data.tokenResponse?.status === 'error') {
-      throw new Error(`Token request returned failed status: ${data.statusMessage || 'Authentication failed'}`);
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Request token error:', error);
-    throw error;
-  }
-}
-
 /**
  * Disabled: SSO and startup flows restore sessions from cookies only.
  * Kept for API compatibility — never calls the network.
@@ -953,32 +878,6 @@ export async function verifyToken(
   _options?: { authType?: string | null }
 ): Promise<VerifyTokenResponse> {
   return { valid: true };
-}
-
-export async function requestJWTToken(accessToken: string): Promise<JWTTokenResponse> {
-  try {
-    const response = await fetch(`${authBaseUrl()}/requestJWTToken`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        registeredAppName: registeredAppName(),
-        accessToken: accessToken
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`JWT token request failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Request JWT token error:', error);
-    throw error;
-  }
 }
 
 // Helper function to extract JWT token from response
@@ -992,70 +891,29 @@ export function extractJWTToken(jwtResponse: JWTTokenResponse): string | null {
     || null;
 }
 
-// Generate JWT token using the new authservice API
-export async function generateJWTToken(accessToken: string): Promise<JWTTokenResponse> {
-  try {
-    const response = await fetch(`${getBackendOrigin()}/authservice/api/v1/${registeredAppName()}/generateJWTToken`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('JWT token generation failed:', response.status, errorText);
-      // Don't force logout here - let the caller (refreshJWTToken) handle it
-      throw new Error(`JWT token generation failed: ${response.status} ${response.statusText} - ${errorText}`);
-    }
-
-    const data = await response.json();
-    
-    // Check if the response indicates a failed status
-    if (data.status === 'failed' || data.status === 'error' || data.valid === false) {
-      // Don't force logout here - let the caller (refreshJWTToken) handle it
-      throw new Error('JWT token generation returned failed status');
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Generate JWT token error:', error);
-    // Don't force logout here - let the caller (refreshJWTToken) handle it
-    throw error;
-  }
-}
-
-// Token refresh functionality
+/**
+ * Issues a fresh JWT on the server from the session's access token (both HttpOnly cookies).
+ * False when the access token is gone or expired: the caller decides whether to log out.
+ */
 export async function refreshJWTToken(): Promise<boolean> {
   try {
-    const accessToken = getCookie(COOKIE_NAMES.ACCESS_TOKEN);
-    if (!accessToken) {
-      console.error('Access token not found during refresh');
-      // Don't logout here - let the caller handle it
+    const tenant = resolveTenantIdForHeader();
+    const response = await fetch(withBasePath('/api/auth/refresh'), {
+      method: 'POST',
+      headers: tenant ? { 'X-Tenant-Id': tenant } : undefined,
+      credentials: 'include',
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      console.error('JWT token refresh failed:', response.status);
       return false;
     }
-
-    // Generate new JWT token using the access token
-    const jwtResponse = await generateJWTToken(accessToken);
-    
-    // Extract JWT token from response (handle different possible response formats)
-    const jwtToken = extractJWTToken(jwtResponse);
-    
-    if (!jwtToken) {
-      console.error('JWT token not found in response');
-      // Don't logout here - let the caller handle it
-      return false;
-    }
-
-    // Save the new JWT token to cookie
-    setCookie(COOKIE_NAMES.JWT_TOKEN, jwtToken);
-    console.log('JWT token refreshed successfully');
+    const data = (await response.json().catch(() => null)) as { claims?: SessionClaims | null } | null;
+    // Keep reviewerId / roles / tenant in sync with the refreshed token's claims.
+    if (data?.claims) setSessionClaims(data.claims);
     return true;
   } catch (error) {
     console.error('JWT token refresh failed:', error);
-    // Refresh failed - access token is likely expired/invalid
-    // Don't logout here - let the caller handle it
     return false;
   }
 }
@@ -1395,56 +1253,11 @@ export function getCurrentUser(): { email?: string; tenantId?: string } | null {
   }
 }
 
-interface DecodedJwtClaims {
-  userid?: string;
-  adminRoles?: string[] | string;
-  [key: string]: unknown;
-}
-
-// In-memory only — decoded once per token value and never persisted (not to a cookie, not to
-// localStorage), since the backend now embeds reviewerId/adminRoles as JWT claims instead of
-// returning them as separate fields alongside the token.
-let cachedJwtDecode: { token: string; claims: DecodedJwtClaims | null } | null = null;
-
-function base64UrlDecode(segment: string): string {
-  const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
-  if (typeof window !== 'undefined' && typeof window.atob === 'function') {
-    const binary = window.atob(padded);
-    const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
-    return new TextDecoder('utf-8').decode(bytes);
-  }
-  return Buffer.from(padded, 'base64').toString('utf-8');
-}
-
-function decodeJwtClaims(token: string): DecodedJwtClaims | null {
-  if (cachedJwtDecode && cachedJwtDecode.token === token) {
-    return cachedJwtDecode.claims;
-  }
-
-  let claims: DecodedJwtClaims | null = null;
-  try {
-    const payloadSegment = token.split('.')[1];
-    if (payloadSegment) {
-      claims = JSON.parse(base64UrlDecode(payloadSegment));
-    }
-  } catch (error) {
-    console.warn('Failed to decode JWT claims:', error);
-    claims = null;
-  }
-
-  cachedJwtDecode = { token, claims };
-  return claims;
-}
-
-// reviewerId (the user's unique id) now lives in the JWT's "userid" claim. Falls back to the
-// legacy cookie for any session still relying on the old token-response field.
+// reviewerId (the user's unique id) now lives in the JWT's "userid" claim (see getSessionClaims).
+// Falls back to the legacy cookie for any session still relying on the old token-response field.
 export function getReviewerId(): string | null {
-  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
-  if (jwtToken) {
-    const fromJwt = decodeJwtClaims(jwtToken)?.userid;
-    if (typeof fromJwt === 'string' && fromJwt.trim()) return fromJwt.trim();
-  }
+  const fromJwt = sessionClaims?.userid;
+  if (typeof fromJwt === 'string' && fromJwt.trim()) return fromJwt.trim();
   return getCookie(COOKIE_NAMES.REVIEWER_ID);
 }
 
@@ -1456,10 +1269,8 @@ const TENANT_UUID_CLAIMS =['tenantUuid', 'tenant_uuid', 'tenantGuid', 'tenant_id
 
 /** Tenant UUID for DB functions that take a tenant_id uuid, read from the signed-in user's JWT claims. */
 export function getTenantUuid(): string {
-  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
-  const claims = jwtToken ? decodeJwtClaims(jwtToken) : null;
   for (const key of TENANT_UUID_CLAIMS) {
-    const value = claims?.[key];
+    const value = sessionClaims?.[key];
     if (typeof value === 'string' && UUID_PATTERN.test(value.trim())) return value.trim();
   }
   // TEMPORARY: remove once the backend adds the tenant UUID claim to the JWT.
@@ -1470,12 +1281,10 @@ export function getTenantUuid(): string {
   return TEMP_FALLBACK_TENANT_UUID;
 }
 
-// User role(s) live only in the JWT's "adminRoles" claim (an array). Never read from a cookie:
-// a client-set cookie can't be trusted for authorization.
+// User role(s) live only in the JWT's "adminRoles" claim (an array), as decoded by the server.
+// Never read from a cookie: a client-set cookie can't be trusted for authorization.
 export function getUserAdminRoles(): string | null {
-  const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
-  if (!jwtToken) return null;
-  const roles = decodeJwtClaims(jwtToken)?.adminRoles;
+  const roles = sessionClaims?.adminRoles;
   if (Array.isArray(roles) && roles.length > 0) {
     return roles.filter(Boolean).join(', ');
   }

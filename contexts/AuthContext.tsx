@@ -4,10 +4,8 @@ import { stripBasePath, withBasePath } from "@/lib/basePath";
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import {
-  requestToken,
+  signInWithPassword,
   clearAllAuthCookies,
-  getCookie,
-  COOKIE_NAMES,
   fetchApplicationAuthType,
   isLocalApplicationAuth,
   usesExternalAuthFlow,
@@ -19,7 +17,9 @@ import {
   establishAuthenticatedSession,
   restoreSessionFromCookies,
   getPersistedAuthType,
-  normalizeAuthCookiesFromBrowser,
+  secureReadableTokenCookies,
+  setSessionClaims,
+  getSessionClaims,
   fetchServerSession,
   shouldRedirectToOAuthProvider,
   markOAuthRedirectAttempt,
@@ -37,6 +37,7 @@ import {
   setActiveTenantId,
 } from '@/lib/tenant';
 import { ensureAuthFetchPatched } from '@/lib/authFetch';
+import { setHttpOnlySession } from '@/lib/kfProxy';
 import { clearJitAccessHistoryStore } from '@/lib/jitAccessHistoryStorage';
 
 interface AuthContextType {
@@ -59,6 +60,10 @@ function applySessionToState(
   setUser: (u: { email: string; tenantId?: string } | null) => void,
   serverSession: Awaited<ReturnType<typeof fetchServerSession>>
 ) {
+  // The session's tokens are HttpOnly cookies: calls go via the token proxy (lib/kfProxy.ts),
+  // and the JWT's claims (user id, roles, tenant) come from the server.
+  setHttpOnlySession(true);
+  setSessionClaims(serverSession.claims ?? getSessionClaims());
   const session = restoreSessionFromCookies();
   const email = String(
     serverSession.user?.email ??
@@ -122,26 +127,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
 
-        normalizeAuthCookiesFromBrowser();
+        // Tokens JS can still read (an older build, some SSO sign-ins) become HttpOnly cookies first.
+        await secureReadableTokenCookies();
         const oauthCallback = getOAuthCallbackParamsFromUrl();
         const serverSession = await fetchServerSession();
-        const hasClientSession = !!(
-          getCookie(COOKIE_NAMES.ACCESS_TOKEN) && getCookie(COOKIE_NAMES.JWT_TOKEN)
-        );
-        const hasSession = serverSession.authenticated || hasClientSession;
+        // The server is the only judge of the session: page code never sees the tokens.
+        const hasSession = serverSession.authenticated;
 
         if (oauthCallback && !hasSession) {
           setIsCompletingOAuth(true);
           try {
-            const tokens = await completeOAuthCallback(
+            const signedIn = await completeOAuthCallback(
               oauthCallback.code,
               oauthCallback.state
             );
-            await establishAuthenticatedSession({
-              ...tokens,
-              skipJwtGeneration: false,
-              tenantId: tenant,
-            });
+            establishAuthenticatedSession({ ...signedIn, tenantId: tenant });
             clearOAuthCallbackParamsFromUrl();
             const afterSession = await fetchServerSession();
             setAuthType('OAUTH');
@@ -224,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Auth initialization error:', error);
         const serverSession = await fetchServerSession();
-        if (hasActiveTenant() && (serverSession.authenticated || normalizeAuthCookiesFromBrowser())) {
+        if (hasActiveTenant() && serverSession.authenticated) {
           const fallbackAuth = getPersistedAuthType() ?? 'OAUTH';
           setAuthType(fallbackAuth);
           syncAuthTypeToSession(fallbackAuth);
@@ -262,15 +262,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!loginApp) {
         throw new Error('Open the app at /<your-tenant-id>.');
       }
-      const tokenResponse = await requestToken(userid, password, loginApp);
-      const { accessToken, userUniqueID, userAdminRoles } = tokenResponse.tokenResponse;
-      await establishAuthenticatedSession({
-        accessToken,
-        userUniqueID,
-        userAdminRoles,
-        userid,
-        tenantId: loginApp,
-      });
+      // The server signs in and stores the tokens as HttpOnly cookies; we get the user's ids and claims only.
+      const signedIn = await signInWithPassword(userid, password, loginApp);
+      establishAuthenticatedSession({ ...signedIn, userid, tenantId: loginApp });
       clearLastAuthTypeOnLocalLogin();
       setIsAuthenticated(true);
       setUser({ email: userid, tenantId: loginApp });

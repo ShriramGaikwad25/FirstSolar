@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { COOKIE_NAMES } from '@/lib/auth';
-import { checkJwt, isAccessTokenExpired } from '@/lib/serverAuth';
+import { checkJwt, isAccessTokenExpired, verifiedJwtClaims } from '@/lib/serverAuth';
 
-/** Server-side session check (reads HttpOnly cookies the browser JS cannot). */
+/**
+ * Server-side session check (reads HttpOnly cookies the browser JS cannot). A signed-in session
+ * also gets the JWT's claims (user id, roles, tenant), which the page cannot decode itself.
+ */
 export async function GET(request: NextRequest) {
   const accessToken = request.cookies.get(COOKIE_NAMES.ACCESS_TOKEN)?.value ?? null;
   const jwtToken = request.cookies.get(COOKIE_NAMES.JWT_TOKEN)?.value ?? null;
@@ -31,6 +34,7 @@ export async function GET(request: NextRequest) {
       hasAccessToken: !!accessToken,
       hasJwtToken: !!jwtToken,
       user: authenticated ? user : null,
+      claims: authenticated ? await verifiedJwtClaims(jwtToken) : null,
     },
     { headers: { 'Cache-Control': 'no-store, private' } }
   );

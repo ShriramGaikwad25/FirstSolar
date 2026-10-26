@@ -1,5 +1,6 @@
 import { COOKIE_NAMES, getCookie, refreshJWTToken, forceLogout } from "@/lib/auth";
 import { isBackendUrl } from "@/lib/backendOrigin";
+import { routeTokenPlaceholder } from "@/lib/kfProxy";
 
 let fetchPatched = false;
 let originalFetch: typeof window.fetch | null = null;
@@ -29,9 +30,13 @@ export function getOriginalFetch(): typeof window.fetch {
   if (typeof window === "undefined") {
     throw new Error("getOriginalFetch can only be called in browser environment");
   }
-  if (originalFetch) return originalFetch;
-  originalFetch = window.fetch.bind(window);
-  return originalFetch;
+  if (!originalFetch) originalFetch = window.fetch.bind(window);
+  const rawFetch = originalFetch;
+  // Bypasses the JWT patch below, but an access-token placeholder still has to reach the token proxy.
+  return ((input: RequestInfo | URL, init?: RequestInit) => {
+    const [url, routed] = routeTokenPlaceholder(input, init);
+    return rawFetch(url, routed);
+  }) as typeof window.fetch;
 }
 
 /**
@@ -54,8 +59,15 @@ export function ensureAuthFetchPatched(): void {
     try {
       const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
 
+      // jwtToken is the placeholder in a signed-in session (tokens are HttpOnly): send() routes the
+      // call through the token proxy, which swaps it for the token from the cookie.
+      const send = (i: RequestInit | undefined) => {
+        const [url, routed] = routeTokenPlaceholder(input, i);
+        return originalFetch!(url, routed);
+      };
+
       if (!jwtToken && !isRetry) {
-        return originalFetch!(input, init);
+        return send(init);
       }
 
       let headers: Headers;
@@ -76,7 +88,7 @@ export function ensureAuthFetchPatched(): void {
 
       const nextInit: RequestInit = { ...init, headers };
 
-      const promise = originalFetch!(input, nextInit);
+      const promise = send(nextInit);
 
       if (isRetry || !isKeyforgeRequest(input)) {
         return promise;
@@ -93,7 +105,7 @@ export function ensureAuthFetchPatched(): void {
           const newHeaders = new Headers(nextInit.headers as Headers);
           newHeaders.set("Authorization", `Bearer ${newJwt}`);
           newHeaders.set(RETRY_HEADER, "1");
-          return originalFetch!(input, { ...nextInit, headers: newHeaders });
+          return send({ ...nextInit, headers: newHeaders });
         };
 
         if (response.status === 401 || response.status === 403) {
@@ -119,7 +131,8 @@ export function ensureAuthFetchPatched(): void {
       });
     } catch (error) {
       console.error("Error in auth fetch patch:", error);
-      return originalFetch!(input, init);
+      const [url, routed] = routeTokenPlaceholder(input, init);
+      return originalFetch!(url, routed);
     }
   }) as typeof window.fetch;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getUserAdminRoles } from "@/lib/auth";
+import { getUserAdminRoles, subscribeSessionClaims } from "@/lib/auth";
 import type { NavItem } from "@/components/Navi";
 
 /**
@@ -35,11 +35,17 @@ export function readRoleAccess(): RoleAccess {
   };
 }
 
-/** Role access for the signed-in user; null until read on the client (cookies). */
+/**
+ * Role access for the signed-in user; null until read on the client. Re-read whenever the session
+ * claims change (sign-in, session restore, refresh, logout): a component mounted before sign-in
+ * would otherwise keep the empty roles it saw first.
+ */
 export function useRoleAccess(): RoleAccess | null {
   const [access, setAccess] = useState<RoleAccess | null>(null);
   useEffect(() => {
-    setAccess(readRoleAccess());
+    const update = () => setAccess(readRoleAccess());
+    update();
+    return subscribeSessionClaims(update);
   }, []);
   return access;
 }

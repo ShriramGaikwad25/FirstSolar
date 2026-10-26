@@ -53,6 +53,20 @@ export async function checkJwt(token: string | null | undefined): Promise<JwtChe
 }
 
 /**
+ * The payload claims of a session jwtToken, for the page (it cannot read the HttpOnly cookie).
+ * Null unless checkJwt accepts the token; an expired one still yields its claims.
+ */
+export async function verifiedJwtClaims(token: string | null | undefined): Promise<Record<string, unknown> | null> {
+  if (!token || (await checkJwt(token)) === "invalid") return null;
+  try {
+    const claims = JSON.parse(new TextDecoder().decode(base64UrlDecode(token.split(".")[1]))) as unknown;
+    return claims && typeof claims === "object" && !Array.isArray(claims) ? (claims as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The access token may be KeyForge's JWT or, after an external SSO sign-in, a provider token in
  * another format, so only its expiry is checked, and only when it decodes as a JWT.
  */
