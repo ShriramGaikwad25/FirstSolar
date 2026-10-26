@@ -22,13 +22,13 @@ const nextConfig: NextConfig = {
     ];
   },
   // All images are served from /public; no remote hosts are allowed through the optimizer.
+  // Content-Security-Policy is set per request in middleware.ts (it carries a nonce).
   async headers() {
     return [
       {
         source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
-          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=31536000" },

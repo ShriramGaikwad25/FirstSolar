@@ -22,6 +22,10 @@ import { ChartJsAppFontSync } from "@/components/ChartJsAppFontSync";
 
 const inter = Inter({ subsets: ["latin"] });
 
+// Every page renders per request so its scripts carry that request's CSP nonce (middleware.ts);
+// a statically generated page would have no nonce and its scripts would be blocked.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "KeyForge",
   description: "Identity Security Posture Management",
