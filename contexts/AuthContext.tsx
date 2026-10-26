@@ -260,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const path = pathname ?? (typeof window !== 'undefined' ? stripBasePath(window.location.pathname) : '');
       const loginApp = getActiveTenantId() ?? parseTenantFromPathname(path);
       if (!loginApp) {
-        throw new Error('Open the app at /YOUR_TENANT_ID (e.g. /ACMECOM or /KFPRODOCI).');
+        throw new Error('Open the app at /<your-tenant-id>.');
       }
       const tokenResponse = await requestToken(userid, password, loginApp);
       const { accessToken, userUniqueID, userAdminRoles } = tokenResponse.tokenResponse;

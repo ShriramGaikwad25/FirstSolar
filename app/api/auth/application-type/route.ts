@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         status: 'failed',
-        statusMessage: 'Tenant required. Open the app via /YOUR_TENANT_ID (e.g. /KFPRODOCI).',
+        statusMessage: 'Tenant required. Open the app via /<your-tenant-id>.',
       },
       { status: 400 }
     );

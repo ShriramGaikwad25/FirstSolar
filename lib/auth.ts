@@ -109,7 +109,7 @@ export const COOKIE_NAMES = {
   UID_TENANT: 'uidTenant',      // User information (userid, tenantId)
   JWT_TOKEN: 'jwtToken',        // Short-lived JWT token - used for API calls in Authorization header
   REVIEWER_ID: 'reviewerId',    // User unique ID used as reviewerId throughout the application
-  USER_ADMIN_ROLES: 'userAdminRoles',  // User admin roles from the token response
+  USER_ADMIN_ROLES: 'userAdminRoles',  // Legacy: no longer set or read; kept so login and logout clear old copies
 } as const;
 
 export function setCookie(name: string, value: string, days: number = 7): void {
@@ -400,7 +400,7 @@ function registeredAppName(): string {
   if (fromUrl) return fromUrl;
   const fromUser = getCurrentUser()?.tenantId?.trim();
   if (fromUser) return fromUser;
-  throw new Error('No tenant configured. Open /YOUR_TENANT_ID (e.g. /ACMECOM).');
+  throw new Error('No tenant configured. Open /<your-tenant-id>.');
 }
 
 /** AuthType from applicationType API (defaults to LOCAL when missing). */
@@ -655,7 +655,8 @@ export async function establishAuthenticatedSession(options: {
 
   // reviewerId and admin roles are no longer written to cookies here — they're decoded
   // from the JWT's claims on demand (see getReviewerId/getUserAdminRoles) once the JWT below
-  // is issued.
+  // is issued. Clear a role cookie left by an older build.
+  deleteCookie(COOKIE_NAMES.USER_ADMIN_ROLES);
 
   const existingJwt = getCookie(COOKIE_NAMES.JWT_TOKEN);
   if (skipJwtGeneration && existingJwt) {
@@ -905,7 +906,7 @@ export async function requestToken(
 ): Promise<TokenResponse> {
   const appName = (registeredApp ?? registeredAppNameOrNull())?.trim();
   if (!appName) {
-    throw new Error('Open the app at /YOUR_TENANT_ID (e.g. /ACMECOM or /KFPRODOCI).');
+    throw new Error('Open the app at /<your-tenant-id>.');
   }
 
   try {
@@ -1469,16 +1470,15 @@ export function getTenantUuid(): string {
   return TEMP_FALLBACK_TENANT_UUID;
 }
 
-// User role(s) now live in the JWT's "adminRoles" claim (an array). Falls back to the legacy
-// cookie for any session still relying on the old token-response field.
+// User role(s) live only in the JWT's "adminRoles" claim (an array). Never read from a cookie:
+// a client-set cookie can't be trusted for authorization.
 export function getUserAdminRoles(): string | null {
   const jwtToken = getCookie(COOKIE_NAMES.JWT_TOKEN);
-  if (jwtToken) {
-    const roles = decodeJwtClaims(jwtToken)?.adminRoles;
-    if (Array.isArray(roles) && roles.length > 0) {
-      return roles.filter(Boolean).join(', ');
-    }
-    if (typeof roles === 'string' && roles.trim()) return roles.trim();
+  if (!jwtToken) return null;
+  const roles = decodeJwtClaims(jwtToken)?.adminRoles;
+  if (Array.isArray(roles) && roles.length > 0) {
+    return roles.filter(Boolean).join(', ');
   }
-  return getCookie(COOKIE_NAMES.USER_ADMIN_ROLES);
+  if (typeof roles === 'string' && roles.trim()) return roles.trim();
+  return null;
 }

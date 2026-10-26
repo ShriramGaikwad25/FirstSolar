@@ -3,6 +3,70 @@ import { COOKIE_NAMES } from "@/lib/auth";
 import { REGISTERED_APP_COOKIE } from "@/lib/tenant";
 import { DEV_BACKEND_ORIGIN, getConfiguredBackendOrigin } from "@/lib/backendOrigin";
 
+export type JwtCheck = "ok" | "expired" | "invalid";
+
+function base64UrlDecode(part: string): Uint8Array {
+  const b64 = part.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(part.length / 4) * 4, "=");
+  return Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+}
+
+/**
+ * Server-side check of the KeyForge jwtToken: well-formed, signed (alg not "none"), not
+ * expired, and, when KF_JWT_SECRET is set, a valid HS256 signature. Without the secret a
+ * forged-but-well-formed token still passes; the gateway remains the authority for every API call.
+ */
+export async function checkJwt(token: string | null | undefined): Promise<JwtCheck> {
+  const parts = token?.split(".");
+  if (!parts || parts.length !== 3 || parts.some((p) => !/^[A-Za-z0-9_-]+$/.test(p))) return "invalid";
+  let header: { alg?: string };
+  let payload: { exp?: number };
+  try {
+    const text = new TextDecoder();
+    header = JSON.parse(text.decode(base64UrlDecode(parts[0])));
+    payload = JSON.parse(text.decode(base64UrlDecode(parts[1])));
+  } catch {
+    return "invalid";
+  }
+  if (!header.alg || header.alg.toLowerCase() === "none") return "invalid";
+
+  const secret = process.env.KF_JWT_SECRET?.trim();
+  if (secret) {
+    if (header.alg !== "HS256") return "invalid";
+    const key = await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["verify"]
+    );
+    const ok = await crypto.subtle.verify(
+      "HMAC",
+      key,
+      base64UrlDecode(parts[2]).buffer as ArrayBuffer,
+      new TextEncoder().encode(`${parts[0]}.${parts[1]}`)
+    );
+    if (!ok) return "invalid";
+  }
+
+  if (typeof payload.exp === "number" && payload.exp * 1000 <= Date.now()) return "expired";
+  return "ok";
+}
+
+/**
+ * The access token may be KeyForge's JWT or, after an external SSO sign-in, a provider token in
+ * another format, so only its expiry is checked, and only when it decodes as a JWT.
+ */
+export function isAccessTokenExpired(token: string): boolean {
+  const parts = token.split(".");
+  if (parts.length !== 3) return false;
+  try {
+    const payload = JSON.parse(new TextDecoder().decode(base64UrlDecode(parts[1]))) as { exp?: number };
+    return typeof payload.exp === "number" && payload.exp * 1000 <= Date.now();
+  } catch {
+    return false;
+  }
+}
+
 export function getJwtTokenFromRequest(request: NextRequest): string | null {
   try {
     return request.cookies.get(COOKIE_NAMES.JWT_TOKEN)?.value ?? null;
