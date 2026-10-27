@@ -190,6 +190,7 @@ function mapApiStepTypeRow(
   row: any
 ): { category: StepPaletteCategory; entry: StepPaletteEntry } | null {
   if (!row || typeof row !== "object") return null;
+  if (row.is_active === false) return null;
 
   const rawCode =
     row.step_code ?? row.STEP_CODE ?? row.code ?? row.CODE ?? row.type_code ?? row.TYPE_CODE ?? null;
@@ -206,18 +207,28 @@ function mapApiStepTypeRow(
   const label = String(rawLabel ?? rawCode ?? "").trim();
   if (!label && !rawCode) return null;
 
-  const category = normalizePaletteBucket(
-    row.default_stage_bucket ??
-      row.DEFAULT_STAGE_BUCKET ??
-      row.stage_bucket ??
-      row.STAGE_BUCKET ??
-      row.bucket ??
-      row.BUCKET
-  );
+  // Rows carry a category (APPROVAL, AI, FULFILLMENT, ...) but may lack a bucket, and have no kind
+  const stepCategory = String(row.category ?? row.CATEGORY ?? "").toUpperCase().trim();
+  const category =
+    normalizePaletteBucket(
+      row.default_stage_bucket ??
+        row.DEFAULT_STAGE_BUCKET ??
+        row.stage_bucket ??
+        row.STAGE_BUCKET ??
+        row.bucket ??
+        row.BUCKET
+    ) ?? normalizePaletteBucket(stepCategory === "RISK" || stepCategory === "AI" ? "VALIDATE" : stepCategory);
   if (!category) return null;
 
   const code = String(rawCode ?? label).toUpperCase().replace(/-/g, "_").trim();
-  const kind = normalizePaletteKind(row.step_kind ?? row.STEP_KIND ?? row.kind ?? row.KIND);
+  const rawKind = row.step_kind ?? row.STEP_KIND ?? row.kind ?? row.KIND;
+  const kind = rawKind
+    ? normalizePaletteKind(rawKind)
+    : stepCategory === "APPROVAL"
+      ? "HUMAN"
+      : stepCategory === "AI"
+        ? "AI"
+        : "SYSTEM";
   const type = normalizePaletteType(
     row.step_type ?? row.STEP_TYPE ?? row.type ?? row.TYPE,
     kind,
@@ -298,6 +309,7 @@ interface PolicyBuilderProps {
 }
 
 const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hideStepPalette = false }) => {
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [apiStepPalette, setApiStepPalette] = useState<Record<StepPaletteCategory, StepPaletteEntry[]>>({
     VALIDATE: [],
     APPROVAL: [],
@@ -309,7 +321,6 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
     (async () => {
       try {
         const rows = await fetchStepTypeRows();
-  const [notice, setNotice] = useState<Notice | null>(null);
 
         const grouped: Record<StepPaletteCategory, StepPaletteEntry[]> = {
           VALIDATE: [],
@@ -1775,6 +1786,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
         </div>
       )}
 
+      <NoticeModal notice={notice} onClose={() => setNotice(null)} />
     </div>
   );
 };
@@ -1786,7 +1798,6 @@ const getInitialFormData = () => ({
     certificationTemplate: "",
     workflowType: "",
     eventType: "",
-      <NoticeModal notice={notice} onClose={() => setNotice(null)} />
     description: "",
     tags: "",
     owner: "",
@@ -2441,6 +2452,12 @@ function WorkflowReviewSubmit({
 export default function WorkflowBuilderCreatePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const closeNotice = () => {
+    const onClose = notice?.onClose;
+    setNotice(null);
+    onClose?.();
+  };
   const [currentStep, setCurrentStep] = useState(() =>
     searchParams.get("step") === "2" ? 2 : 1
   );
@@ -2452,12 +2469,6 @@ export default function WorkflowBuilderCreatePage() {
     { id: 2, title: "Policy Builder" },
     { id: 3, title: "Review and Submit" },
   ];
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const closeNotice = () => {
-    const onClose = notice?.onClose;
-    setNotice(null);
-    onClose?.();
-  };
 
   const {
     register,
@@ -3122,6 +3133,7 @@ export default function WorkflowBuilderCreatePage() {
             </div>
           </div>
         </div>
+        <NoticeModal notice={notice} onClose={closeNotice} />
       </div>
     );
   }
@@ -3133,7 +3145,6 @@ export default function WorkflowBuilderCreatePage() {
           <div className="space-y-4 px-6">
             <div className="rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm">
               <div className="min-w-0">
-        <NoticeModal notice={notice} onClose={closeNotice} />
                 <h1 className="text-2xl font-bold text-gray-900">
                   Review Workflow Policy
                 </h1>
@@ -3247,8 +3258,8 @@ export default function WorkflowBuilderCreatePage() {
         // Step 1: compact full-width form that fits without scrolling
         <div className="px-4 pt-4 pb-4">{renderStepContent()}</div>
       )}
+      <NoticeModal notice={notice} onClose={closeNotice} />
     </div>
   );
 }
 
-      <NoticeModal notice={notice} onClose={closeNotice} />

@@ -45,6 +45,8 @@ type StepTemplate = {
   matchCodes: string[];
   /** When code is missing or unknown (e.g. API hydration), match normalized step.label */
   matchLabels?: string[];
+  /** Add-step menu heading (the step type's category) */
+  group?: string;
 };
 
 const VALIDATE_TEMPLATES: StepTemplate[] = [
@@ -322,9 +324,39 @@ function normalizeStepType(raw: unknown): StepTemplate["type"] {
   return "CUSTOM";
 }
 
+/** Section for a step type with no default_stage_bucket, from its category. */
+function stageBucketFromCategory(category: string): GuidedSection | null {
+  if (category === "APPROVAL") return "approval";
+  if (["FULFILLMENT", "AUDIT", "TERMINAL", "COMMUNICATION", "ORCHESTRATION"].includes(category)) return "fulfillment";
+  if (["VALIDATION", "RISK", "AI"].includes(category)) return "validate";
+  return null;
+}
+
+/** kf_wf_f_get_step_types() rows carry no kind/type, only a category (APPROVAL, AI, FULFILLMENT, ...). */
+function kindAndTypeFromCategory(
+  category: string,
+  bucket: GuidedSection
+): Pick<StepTemplate, "kind" | "type"> {
+  if (category === "APPROVAL") return { kind: "HUMAN", type: "APPROVAL" };
+  if (category === "AI") return { kind: "AI", type: "AI AGENT" };
+  if (category === "FULFILLMENT" || bucket === "fulfillment") return { kind: "SYSTEM", type: "FULFILLMENT" };
+  return { kind: "SYSTEM", type: "LOGIC" };
+}
+
+/** "PRIVILEGE_SESSION" -> "Privilege Session" */
+function humanizeCategory(category: string): string {
+  return category
+    .toLowerCase()
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 /** Maps a raw row from `SELECT * FROM kf_wf_f_get_step_types()` to a Guided step template + bucket. */
 function mapApiStepTypeRow(row: any): { bucket: GuidedSection; template: StepTemplate } | null {
   if (!row || typeof row !== "object") return null;
+  if (row.is_active === false) return null;
 
   const rawCode =
     row.step_code ?? row.STEP_CODE ?? row.code ?? row.CODE ?? row.type_code ?? row.TYPE_CODE ?? null;
@@ -341,24 +373,28 @@ function mapApiStepTypeRow(row: any): { bucket: GuidedSection; template: StepTem
   const label = String(rawLabel ?? rawCode ?? "").trim();
   if (!label && !rawCode) return null;
 
-  const bucket = normalizeStageBucket(
-    row.default_stage_bucket ??
-      row.DEFAULT_STAGE_BUCKET ??
-      row.stage_bucket ??
-      row.STAGE_BUCKET ??
-      row.bucket ??
-      row.BUCKET
-  );
+  const category = String(row.category ?? row.CATEGORY ?? "").toUpperCase().trim();
+  const bucket =
+    normalizeStageBucket(
+      row.default_stage_bucket ??
+        row.DEFAULT_STAGE_BUCKET ??
+        row.stage_bucket ??
+        row.STAGE_BUCKET ??
+        row.bucket ??
+        row.BUCKET
+    ) ?? stageBucketFromCategory(category);
   if (!bucket) return null;
 
   const code = normalizeStepCode(String(rawCode ?? label));
+  const serverCode = String(rawCode ?? code).toUpperCase().trim();
+  const group = category ? humanizeCategory(category) : "Other";
   const description = String(
-    row.description ??
-      row.DESCRIPTION ??
-      row.step_description ??
-      row.STEP_DESCRIPTION ??
-      label
+    row.description ?? row.DESCRIPTION ?? row.step_description ?? row.STEP_DESCRIPTION ?? ""
   ).trim();
+
+  const rawKind = row.step_kind ?? row.STEP_KIND ?? row.kind ?? row.KIND;
+  const rawType = row.step_type ?? row.STEP_TYPE ?? row.type ?? row.TYPE;
+  const fromCategory = kindAndTypeFromCategory(category, bucket);
 
   return {
     bucket,
@@ -366,10 +402,12 @@ function mapApiStepTypeRow(row: any): { bucket: GuidedSection; template: StepTem
       id: code.toLowerCase().replace(/_/g, "-"),
       label: label || code,
       shortLabel: (label || code).toUpperCase(),
-      description,
-      kind: normalizeStepKind(row.step_kind ?? row.STEP_KIND ?? row.kind ?? row.KIND),
-      type: normalizeStepType(row.step_type ?? row.STEP_TYPE ?? row.type ?? row.TYPE),
+      // No description column today: show the step type code instead of repeating the name
+      description: description && description !== label ? description : serverCode,
+      kind: rawKind ? normalizeStepKind(rawKind) : fromCategory.kind,
+      type: rawType ? normalizeStepType(rawType) : fromCategory.type,
       matchCodes: [code],
+      group,
     },
   };
 }
@@ -710,6 +748,25 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
           if (seen.has(key)) return;
           seen.add(key);
           grouped[mapped.bucket].push(mapped.template);
+        });
+
+        // Section's own category first (Approval under Approval, ...), then other groups, A-Z
+        const leadGroup: Record<GuidedSection, string> = {
+          validate: "Validation",
+          approval: "Approval",
+          fulfillment: "Fulfillment",
+        };
+        (Object.keys(grouped) as GuidedSection[]).forEach((section) => {
+          grouped[section].sort((a, b) => {
+            const ga = a.group ?? "";
+            const gb = b.group ?? "";
+            if (ga !== gb) {
+              if (ga === leadGroup[section]) return -1;
+              if (gb === leadGroup[section]) return 1;
+              return ga.localeCompare(gb);
+            }
+            return a.label.localeCompare(b.label);
+          });
         });
 
         if (!cancelled) setApiStepTypesByBucket(grouped);
@@ -1064,23 +1121,40 @@ export const GuidedPolicyBuilder: React.FC<GuidedPolicyBuilderProps> = ({
           />
         </button>
         {addMenuSection === section && (
-          <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-48 overflow-y-auto rounded-lg border border-gray-200 bg-white py-0.5 shadow-lg">
-            {menuItems.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                className="w-full px-2.5 py-1.5 text-left hover:bg-gray-50"
-                onClick={() => {
-                  if (!currentSteps.some((st: any) => stepMatchesTemplate(st, t))) {
-                    onPick(t);
-                  }
-                  setAddMenuSection(null);
-                }}
-              >
-                <div className="text-xs font-semibold text-gray-900">{t.label}</div>
-                <div className="text-[11px] text-gray-500">{t.description}</div>
-              </button>
-            ))}
+          <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-lg border border-gray-200 bg-white pb-0.5 shadow-lg">
+            {menuItems.map((t, i) => {
+              const added = currentSteps.some((st: any) => stepMatchesTemplate(st, t));
+              const group = t.group ?? "Custom";
+              const showGroup = i === 0 || (menuItems[i - 1].group ?? "Custom") !== group;
+              return (
+                <React.Fragment key={t.id}>
+                  {showGroup && (
+                    <div className="sticky top-0 z-10 border-b border-gray-100 bg-gray-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      {group}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    disabled={added}
+                    className="flex w-full items-start justify-between gap-2 px-2.5 py-1.5 text-left hover:bg-gray-50 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent"
+                    onClick={() => {
+                      onPick(t);
+                      setAddMenuSection(null);
+                    }}
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-xs font-semibold text-gray-900">{t.label}</span>
+                      <span className="block truncate text-[11px] text-gray-500">{t.description}</span>
+                    </span>
+                    {added && (
+                      <span className="shrink-0 rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500">
+                        Added
+                      </span>
+                    )}
+                  </button>
+                </React.Fragment>
+              );
+            })}
           </div>
         )}
       </div>
