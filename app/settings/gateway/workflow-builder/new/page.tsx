@@ -34,6 +34,7 @@ import { STEP_PALETTE, type StepPaletteEntry } from "./step-palette";
 import { INITIAL_EVENT_DEFINITIONS } from "@/components/continuous-compliance/eventDefinitionsData";
 import { AGENT_TASKS } from "@/lib/agent-task-library";
 import { executeQuery } from "@/lib/api";
+import { getTenantUuid } from "@/lib/auth";
 
 const STAGE_COLUMN_HEADING_CLASS = [
   "bg-sky-100 text-sky-900",
@@ -233,6 +234,50 @@ function mapApiStepTypeRow(
   };
 }
 
+/** kf_wf_f_get_step_types() rows, fetched once per page load (palette + submit defaults). */
+let stepTypeRowsPromise: Promise<any[]> | null = null;
+
+function fetchStepTypeRows(): Promise<any[]> {
+  if (!stepTypeRowsPromise) {
+    stepTypeRowsPromise = executeQuery<any>("SELECT * FROM kf_wf_f_get_step_types()", [])
+      .then((response) =>
+        Array.isArray(response)
+          ? response
+          : Array.isArray(response?.resultSet)
+            ? response.resultSet
+            : Array.isArray(response?.rows)
+              ? response.rows
+              : []
+      )
+      .catch((e) => {
+        stepTypeRowsPromise = null;
+        throw e;
+      });
+  }
+  return stepTypeRowsPromise;
+}
+
+type StepTypeDefaults = { config?: Record<string, unknown>; execution?: Record<string, unknown> };
+
+/** Step type code -> config_schema.defaultConfig / defaultExecution, as the backend defines them. */
+async function fetchStepTypeDefaults(): Promise<Record<string, StepTypeDefaults>> {
+  const byCode: Record<string, StepTypeDefaults> = {};
+  for (const row of await fetchStepTypeRows()) {
+    const code = String(row.code ?? row.step_code ?? "").toUpperCase().trim();
+    let schema = row.config_schema;
+    if (typeof schema === "string") {
+      try {
+        schema = JSON.parse(schema);
+      } catch {
+        schema = null;
+      }
+    }
+    if (!code || !schema || typeof schema !== "object") continue;
+    byCode[code] = { config: schema.defaultConfig, execution: schema.defaultExecution };
+  }
+  return byCode;
+}
+
 /** Always-available fallback per category, same as Guided's "Custom step/approval/fulfillment". */
 const CUSTOM_STEP_ENTRY: Record<StepPaletteCategory, StepPaletteEntry> = {
   VALIDATE: { id: "custom-step", label: "Custom Step", kind: "SYSTEM", type: "CUSTOM" },
@@ -262,14 +307,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
     let cancelled = false;
     (async () => {
       try {
-        const response = await executeQuery<any>("SELECT * FROM kf_wf_f_get_step_types()", []);
-        const rows: any[] = Array.isArray(response)
-          ? response
-          : Array.isArray(response?.resultSet)
-            ? response.resultSet
-            : Array.isArray(response?.rows)
-              ? response.rows
-              : [];
+        const rows = await fetchStepTypeRows();
 
         const grouped: Record<StepPaletteCategory, StepPaletteEntry[]> = {
           VALIDATE: [],
@@ -1924,6 +1962,182 @@ function buildWorkflowJsonPreview(formData: any) {
   };
 }
 
+function slugifyWorkflowTemplateCode(name: string, version: number): string {
+  const base = name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return `${base || "WORKFLOW_TEMPLATE"}_WF_V${version}`;
+}
+
+/** Strips the builder's internal "stage-"/"step-" prefix to get a short, readable definitionJson id. */
+function slugToDefinitionId(rawId: string | undefined, fallback: string): string {
+  const source = rawId || fallback || "ITEM";
+  const cleaned = String(source)
+    .replace(/^stage-/i, "")
+    .replace(/^step-/i, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return cleaned || "ITEM";
+}
+
+function businessObjectTypeFromWorkflowType(workflowType: string): string {
+  const upper = workflowType.trim().toUpperCase().replace(/\s+/g, "_");
+  return upper || "ACCESS_REQUEST";
+}
+
+/**
+ * Default execution envelope per step type. The guided/advanced builder doesn't expose retry,
+ * assignment, or outcome-mode fields, so submission falls back to one sensible default per type
+ * (validation checks are advisory + retryable, approvals/fulfillment enforce and gate the flow).
+ */
+function defaultExecutionForStep(step: any, stepCode: string) {
+  const assignTarget =
+    stepCode
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "") || "step";
+
+  if (step.type === "APPROVAL") {
+    return {
+      retry: { maxAttempts: 3, delaySeconds: 300 },
+      assignments: [
+        { target: `context.approval.${assignTarget}`, expression: "result" },
+        { target: `vars.${assignTarget}Decision`, expression: "result.decision" },
+      ],
+      waitForCompletion: true,
+      businessOutcomeMode: "ENFORCING",
+      technicalErrorAction: "RETRY_THEN_FAIL",
+    };
+  }
+
+  if (step.type === "FULFILLMENT") {
+    return {
+      retry: { maxAttempts: 0, delaySeconds: 0 },
+      assignments: [{ target: "context.workflow.completion", expression: "result" }],
+      waitForCompletion: true,
+      businessOutcomeMode: "ENFORCING",
+      technicalErrorAction: "FAIL",
+    };
+  }
+
+  return {
+    retry: { maxAttempts: 3, delaySeconds: 300 },
+    assignments: [{ target: `context.validation.${assignTarget}`, expression: "result" }],
+    waitForCompletion: true,
+    businessOutcomeMode: "ADVISORY",
+    technicalErrorAction: "RETRY_THEN_FAIL",
+  };
+}
+
+/** The builder's own approval codes (see normalizeStepCode in guided-policy-builder) -> backend step type codes. */
+const BACKEND_STEP_CODE: Record<string, string> = {
+  MANAGER_APPROVAL: "APPROVAL_MANAGER",
+  APP_OWNER_APPROVAL: "APPROVAL_APP_OWNER",
+  ROLE_OWNER_APPROVAL: "APPROVAL_ROLE_OWNER",
+  SECURITY_APPROVAL: "APPROVAL_SECURITY",
+};
+
+/**
+ * Builds the definitionJson.stages payload kf_wf_p_upsert_template_from_builder expects from the builder's stage/step state.
+ * Each step's config/execution come from, in order: the step as saved in the template being edited
+ * (`step.definition`), the step type's defaultConfig/defaultExecution, then the builder's own fallbacks.
+ */
+function buildWorkflowTemplateDefinitionJson(
+  formData: any,
+  stepTypeDefaults: Record<string, StepTypeDefaults> = {}
+) {
+  const stages = formData?.step2?.stages || [];
+
+  const definitionStages = stages.map((stage: any, stageIdx: number) => {
+    const steps = (stage.steps || []).map((step: any, stepIdx: number) => {
+      const builderCode = String(step.code || `STEP_${stepIdx + 1}`).toUpperCase();
+      const code = BACKEND_STEP_CODE[builderCode] ?? builderCode;
+      const saved = step.definition;
+      const defaults = stepTypeDefaults[code];
+      const baseConfig = saved?.config ?? defaults?.config;
+      const config: any = baseConfig && typeof baseConfig === "object" ? { ...baseConfig } : {};
+
+      // A typed approval step already carries its approver settings; only add the builder's
+      // generic resolver fields to untyped approvals, or when a lookup rule was picked.
+      if (step.type === "APPROVAL") {
+        if (!baseConfig || step.approverResolver === "custom-lookup") {
+          applyApprovalStepToWorkflowJson({ config }, step);
+        }
+      } else if (!baseConfig) {
+        if (step.type === "FULFILLMENT") {
+          config.mode = "ASYNC";
+        } else if (step.type === "AI AGENT") {
+          config.aiEnabled = true;
+        } else if (step.type === "CUSTOM") {
+          config.description = step.description || "";
+        }
+      }
+
+      // The step's condition is sent separately, so drop the one in the type's defaultExecution
+      const { condition: _defaultCondition, ...execution } =
+        saved?.execution ?? defaults?.execution ?? defaultExecutionForStep(step, code);
+
+      const conditionStr =
+        typeof step.condition === "string"
+          ? step.condition
+          : step.condition?.expression ?? step.condition?.expr ?? "true";
+
+      return {
+        id: saved?.id || slugToDefinitionId(step.id, code),
+        code,
+        ...(saved?.description ? { description: saved.description } : {}),
+        config,
+        sequence: (stepIdx + 1) * 10,
+        condition: { onFalse: "SKIP", expression: conditionStr || "true" },
+        execution,
+        stepTypeCode: saved?.stepTypeCode || code,
+      };
+    });
+
+    return {
+      id: slugToDefinitionId(stage.id, stage.name),
+      name: stage.name,
+      ...(stage.description ? { description: stage.description } : {}),
+      config: stage.config && typeof stage.config === "object" ? stage.config : {},
+      sequence: (stageIdx + 1) * 10,
+      steps,
+    };
+  });
+
+  // Keep the rest of an edited template's definition (schemaVersion, variables, ...)
+  const savedDefinition = formData?.step2?.savedDefinition;
+  const savedExtras =
+    savedDefinition && typeof savedDefinition === "object"
+      ? Object.fromEntries(Object.entries(savedDefinition).filter(([key]) => key !== "stages"))
+      : {};
+
+  return { ...savedExtras, stages: definitionStages };
+}
+
+/** Builds the full kf_wf_p_upsert_template_from_builder payload from wizard state plus identity fields carried over from an edited record (or freshly generated for a new template). */
+function buildWorkflowTemplatePayload(
+  formData: any,
+  identity: { code: string; version: number; status: string; isDefault: boolean },
+  stepTypeDefaults: Record<string, StepTypeDefaults> = {}
+) {
+  const s1 = formData?.step1 || {};
+  return {
+    // kf_wf_p_upsert_template_from_builder expects the tenant's UUID
+    tenantId: getTenantUuid(),
+    name: s1.certificationTemplate || "",
+    code: identity.code,
+    description: s1.description || "",
+    version: identity.version,
+    businessObjectType: businessObjectTypeFromWorkflowType(s1.workflowType || "Access Request"),
+    status: identity.status,
+    isDefault: identity.isDefault,
+    definitionJson: buildWorkflowTemplateDefinitionJson(formData, stepTypeDefaults),
+  };
+}
+
 function ReviewSectionHeader({
   icon: Icon,
   title,
@@ -2274,6 +2488,8 @@ export default function WorkflowBuilderCreatePage() {
   const workflowType = watch("workflowType");
   const ownerValue = watch("owner");
   const [isOwnerPickerOpen, setIsOwnerPickerOpen] = useState(false);
+  const [loadedTemplate, setLoadedTemplate] = useState<any>(null);
+  const [isSubmittingTemplate, setIsSubmittingTemplate] = useState(false);
   const editPolicyId = searchParams.get("id");
   const isViewMode = searchParams.get("view") === "1" && Boolean(editPolicyId);
   const isEditFromView = isViewMode && searchParams.get("edit") === "1";
@@ -2355,6 +2571,7 @@ export default function WorkflowBuilderCreatePage() {
       } catch {
         /* ignore */
       }
+      setLoadedTemplate(null);
       const fresh = getInitialFormData();
       setFormData(fresh);
       reset({
@@ -2388,6 +2605,8 @@ export default function WorkflowBuilderCreatePage() {
       if (!raw) return;
       const data = JSON.parse(raw);
       if (String(data.id) !== String(editPolicyId)) return;
+
+      setLoadedTemplate(data);
 
       setValue("certificationTemplate", data.name ?? "", { shouldValidate: true });
       setValue("description", data.description ?? "", { shouldValidate: true });
@@ -2512,6 +2731,14 @@ export default function WorkflowBuilderCreatePage() {
                   type,
                   condition: fallbackCondition || conditionExpr || "true",
                   skipLogic: hasRealConditionExpr ? "condition" : "never",
+                  // Saved step definition, re-sent on submit so its config/execution survive an edit
+                  definition: {
+                    id: step.id,
+                    description: step.description,
+                    config: step.config,
+                    execution: step.execution,
+                    stepTypeCode: step.stepTypeCode,
+                  },
                 };
 
                 if (type === "APPROVAL") {
@@ -2529,6 +2756,8 @@ export default function WorkflowBuilderCreatePage() {
             id: stage.id || `stage-${stageIdx + 1}`,
             name: stageName,
             order: stage.sequence ?? stage.order ?? stageIdx + 1,
+            ...(stage.description ? { description: stage.description } : {}),
+            ...(stage.config ? { config: stage.config } : {}),
             steps: mappedSteps,
           };
         });
@@ -2538,6 +2767,7 @@ export default function WorkflowBuilderCreatePage() {
           step2: {
             ...prev.step2,
             stages: normalizedStages,
+            savedDefinition: def,
           },
         }));
       }
@@ -2791,9 +3021,41 @@ export default function WorkflowBuilderCreatePage() {
     }
   };
 
-  const handleSubmit = () => {
-    console.log("Form submitted:", formData);
-    alert(editPolicyId ? "Workflow updated successfully!" : "Workflow created successfully!");
+  const handleSubmit = async () => {
+    if (isSubmittingTemplate) return;
+
+    const version = loadedTemplate?.version ? Number(loadedTemplate.version) : 1;
+    const code =
+      loadedTemplate?.code ||
+      slugifyWorkflowTemplateCode(formData.step1.certificationTemplate, version);
+    const status = loadedTemplate?.status ? String(loadedTemplate.status).trim() : "ACTIVE";
+    const isDefault = Boolean(loadedTemplate?.is_default ?? loadedTemplate?.isDefault ?? false);
+
+    setIsSubmittingTemplate(true);
+    try {
+      // Without the step types, fall back to the builder's own per-type defaults
+      const stepTypeDefaults = await fetchStepTypeDefaults().catch((e) => {
+        console.error("Failed to load step type defaults:", e);
+        return {};
+      });
+      const payload = buildWorkflowTemplatePayload(
+        formData,
+        { code, version, status, isDefault },
+        stepTypeDefaults
+      );
+      await executeQuery("CALL kf_wf_p_upsert_template_from_builder(?::jsonb, NULL)", [payload]);
+      alert(editPolicyId ? "Workflow updated successfully!" : "Workflow created successfully!");
+      router.push("/settings/gateway/workflow-builder");
+    } catch (error) {
+      console.error("Failed to save workflow template:", error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Something went wrong while saving the workflow template.";
+      alert(message);
+    } finally {
+      setIsSubmittingTemplate(false);
+    }
   };
 
   if (isViewMode && isEditFromView) {
@@ -2827,10 +3089,11 @@ export default function WorkflowBuilderCreatePage() {
                   <button
                     type="button"
                     onClick={handleSubmit}
-                    className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700"
+                    disabled={isSubmittingTemplate}
+                    className="inline-flex items-center gap-2 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <Check className="h-4 w-4" />
-                    Update Policy
+                    {isSubmittingTemplate ? "Updating..." : "Update Policy"}
                   </button>
                 </div>
               </div>
@@ -2947,9 +3210,10 @@ export default function WorkflowBuilderCreatePage() {
           ) : (
             <button
               onClick={handleSubmit}
-              className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:brightness-95"
+              disabled={isSubmittingTemplate}
+              className="flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Submit
+              {isSubmittingTemplate ? "Submitting..." : "Submit"}
             </button>
           )}
         </div>

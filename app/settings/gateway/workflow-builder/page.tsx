@@ -24,6 +24,8 @@ type WorkflowPolicyRow = {
   business_object_type: string | null;
   status: string | null;
   code?: string | null;
+  version?: number | null;
+  is_default?: boolean | null;
   definition_json?: any | null;
 };
 
@@ -88,6 +90,9 @@ export default function WorkflowBuilderPage() {
             row.state ??
             null,
           code: row.code ?? null,
+          // Carried to the edit page so the upsert targets this template's version
+          version: row.version ?? row.VERSION ?? null,
+          is_default: row.is_default ?? row.isDefault ?? null,
           definition_json: row.definition_json ?? row.definitionJson ?? null,
         }));
 
