@@ -162,12 +162,36 @@ function getWorkflowTemplateIdFromPolicyRow(row: unknown): string | null {
   return null;
 }
 
+/** Resolve selector JSON from a policy row; API keys vary by driver/view */
+function getSelectorJsonFromRow(row: Record<string, unknown>): unknown {
+  const direct = row.selector_json ?? row.SELECTOR_JSON ?? row.selectorJson;
+  if (direct !== undefined && direct !== null) return direct;
+  for (const key of Object.keys(row)) {
+    const lower = key.toLowerCase();
+    if (lower.includes("selector") && lower.includes("json")) {
+      const v = row[key];
+      if (v !== undefined && v !== null) return v;
+    }
+  }
+  return undefined;
+}
+
+/** Map a stored status (e.g. "ACTIVE") onto the wizard's Status options */
+function normalizePolicyStatus(value: unknown): Status {
+  const s = String(value ?? "").trim().toLowerCase();
+  if (s === "active") return "Active";
+  if (s === "inactive") return "Inactive";
+  return "Staging";
+}
+
 export default function ManageApprovalPoliciesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [policies, setPolicies] = useState<
     {
       id: string;
+      /** Policy code; reused on edit so the upsert updates this policy */
+      code?: string;
       name: string;
       description: string | null;
       owner: string | null;
@@ -215,6 +239,8 @@ export default function ManageApprovalPoliciesPage() {
   const [workflowRows, setWorkflowRows] = useState<WorkflowDefinition[]>([]);
   const { isVisible: isSidebarVisible, sidebarWidthPx } = useLeftSidebar();
   const reviewEditRequested = searchParams.get("edit") === "1";
+  /** Code of the policy being edited, carried through from the list row so the upsert updates it instead of creating a duplicate. */
+  const [editingPolicyCode, setEditingPolicyCode] = useState<string | null>(null);
   // Mode is derived from the URL (not local state) so the sidebar's "Back to Approval
   // Policy" link (Navigation.tsx) can detect create mode, and so the browser back
   // button / that sidebar link reliably return to the list view.
@@ -240,6 +266,8 @@ export default function ManageApprovalPoliciesPage() {
     setCurrentStep(1);
 
     const linkedWorkflowId = getWorkflowTemplateIdFromPolicyRow(row);
+    const rowCode = row?.code ?? row?.CODE ?? row?.id ?? null;
+    setEditingPolicyCode(rowCode ? String(rowCode) : null);
 
     setFormData({
       step1: {
@@ -251,10 +279,7 @@ export default function ManageApprovalPoliciesPage() {
           row.priority !== undefined && row.priority !== null && row.priority !== ""
             ? Number(row.priority)
             : null,
-        status:
-          (row.status as Status) && ["Staging", "Active", "Inactive"].includes(String(row.status))
-            ? (row.status as Status)
-            : "Staging",
+        status: normalizePolicyStatus(row.status),
       },
       step2: {
         // Conditions not yet modeled in view; start empty
@@ -265,7 +290,7 @@ export default function ManageApprovalPoliciesPage() {
       },
     });
 
-    const storedSelector = row.selector_json ?? row.SELECTOR_JSON ?? row.selectorJson;
+    const storedSelector = getSelectorJsonFromRow(row);
     const parsedSelector =
       storedSelector !== undefined && storedSelector !== null ? parseSelectorJson(storedSelector) : null;
     setSelectorState(parsedSelector ?? createEmptySelectorState());
@@ -281,6 +306,7 @@ export default function ManageApprovalPoliciesPage() {
    * form state from a previous edit/create session (formData, step, conditions) carries over,
    * since navigating between ?view=create and the list is a query-param change, not a remount. */
   const handleStartNewPolicy = () => {
+    setEditingPolicyCode(null);
     setFormData({
       step1: {
         name: "",
@@ -497,11 +523,7 @@ export default function ManageApprovalPoliciesPage() {
             row.STATE ??
             null;
 
-          const selectorJson =
-            row.selector_json ??
-            row.SELECTOR_JSON ??
-            row.selectorJson ??
-            null;
+          const selectorJson = getSelectorJsonFromRow(row) ?? null;
 
           const wfTemplateId =
             row.wftemplate_id ??
@@ -511,8 +533,11 @@ export default function ManageApprovalPoliciesPage() {
             row.WORKFLOW_TEMPLATE_ID ??
             null;
 
+          const code = row.code ?? row.CODE ?? row.policy_code ?? null;
+
           return {
             id: String(id),
+            ...(code ? { code: String(code) } : {}),
             name: String(name),
             description: description ? String(description) : null,
             owner: owner ? String(owner) : null,
@@ -803,7 +828,9 @@ export default function ManageApprovalPoliciesPage() {
     setSubmitError(null);
     const selectorErrors = validateSelector(selectorState);
     if (selectorErrors.length) {
-      setSubmitError(`Selector is incomplete: ${selectorErrors.join(" ")}`);
+      const message = `Selector is incomplete: ${selectorErrors.join(" ")}`;
+      setSubmitError(message);
+      alert(message);
       return;
     }
     setIsSubmitting(true);
@@ -811,7 +838,7 @@ export default function ManageApprovalPoliciesPage() {
     const policyPayload = {
       // kf_wf_p_upsert_approval_policy expects the tenant's UUID
       tenantId: getTenantUuid(),
-      code: slugifyPolicyCode(formData.step1.name),
+      code: editingPolicyCode || slugifyPolicyCode(formData.step1.name),
       name: formData.step1.name,
       description: formData.step1.description,
       version: 1,
@@ -826,11 +853,34 @@ export default function ManageApprovalPoliciesPage() {
       actor: "SYSTEM",
     };
 
+    const selectedTemplate = currentWorkflow?.raw as Record<string, unknown> | undefined;
+    const templateCode = selectedTemplate?.code ? String(selectedTemplate.code) : "";
+
     try {
       await executeQuery<unknown>(
         "CALL kf_wf_p_upsert_approval_policy(?::jsonb, NULL)",
         [policyPayload]
       );
+      // The policy upsert doesn't store the workflow; attach the selected template separately.
+      // deleteMissing drops a previously attached template when an edit picks a different one.
+      if (templateCode) {
+        await executeQuery<unknown>("CALL kf_wf_p_upsert_approval_policy_templates(?::jsonb)", [
+          {
+            tenantId: policyPayload.tenantId,
+            approvalPolicyCode: policyPayload.code,
+            approvalPolicyVersion: policyPayload.version,
+            actor: policyPayload.actor,
+            deleteMissing: true,
+            templates: [
+              {
+                templateCode,
+                templateVersion: Number(selectedTemplate?.version) || 1,
+              },
+            ],
+          },
+        ]);
+      }
+      setEditingPolicyCode(null);
       alert("Approval policy saved successfully.");
       router.push("/settings/gateway/manage-approval-policies");
     } catch (e: any) {
