@@ -35,6 +35,7 @@ import { INITIAL_EVENT_DEFINITIONS } from "@/components/continuous-compliance/ev
 import { AGENT_TASKS } from "@/lib/agent-task-library";
 import { executeQuery } from "@/lib/api";
 import { getTenantUuid } from "@/lib/auth";
+import NoticeModal, { type Notice } from "@/components/NoticeModal";
 
 const STAGE_COLUMN_HEADING_CLASS = [
   "bg-sky-100 text-sky-900",
@@ -308,6 +309,7 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
     (async () => {
       try {
         const rows = await fetchStepTypeRows();
+  const [notice, setNotice] = useState<Notice | null>(null);
 
         const grouped: Record<StepPaletteCategory, StepPaletteEntry[]> = {
           VALIDATE: [],
@@ -734,7 +736,11 @@ const PolicyBuilder: React.FC<PolicyBuilderProps> = ({ formData, setFormData, hi
                           if (selectedStageId) {
                             addStepToStage(selectedStageId, step);
                           } else {
-                            alert("Please select a stage first");
+                            setNotice({
+                              tone: "error",
+                              title: "No stage selected",
+                              message: "Select a stage first, then add the step to it.",
+                            });
                           }
                         }}
                         className={`w-full text-left px-2 py-1 text-[11px] border rounded transition-colors ${
@@ -1780,6 +1786,7 @@ const getInitialFormData = () => ({
     certificationTemplate: "",
     workflowType: "",
     eventType: "",
+      <NoticeModal notice={notice} onClose={() => setNotice(null)} />
     description: "",
     tags: "",
     owner: "",
@@ -2445,6 +2452,12 @@ export default function WorkflowBuilderCreatePage() {
     { id: 2, title: "Policy Builder" },
     { id: 3, title: "Review and Submit" },
   ];
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const closeNotice = () => {
+    const onClose = notice?.onClose;
+    setNotice(null);
+    onClose?.();
+  };
 
   const {
     register,
@@ -3044,15 +3057,19 @@ export default function WorkflowBuilderCreatePage() {
         stepTypeDefaults
       );
       await executeQuery("CALL kf_wf_p_upsert_template_from_builder(?::jsonb, NULL)", [payload]);
-      alert(editPolicyId ? "Workflow updated successfully!" : "Workflow created successfully!");
-      router.push("/settings/gateway/workflow-builder");
+      setNotice({
+        tone: "success",
+        title: editPolicyId ? "Workflow updated" : "Workflow created",
+        message: `"${payload.name}" was ${editPolicyId ? "updated" : "created"} successfully.`,
+        onClose: () => router.push("/settings/gateway/workflow-builder"),
+      });
     } catch (error) {
       console.error("Failed to save workflow template:", error);
       const message =
         error instanceof Error
           ? error.message
           : "Something went wrong while saving the workflow template.";
-      alert(message);
+      setNotice({ tone: "error", title: "Workflow not saved", message });
     } finally {
       setIsSubmittingTemplate(false);
     }
@@ -3116,6 +3133,7 @@ export default function WorkflowBuilderCreatePage() {
           <div className="space-y-4 px-6">
             <div className="rounded-xl border border-blue-100 bg-white px-5 py-4 shadow-sm">
               <div className="min-w-0">
+        <NoticeModal notice={notice} onClose={closeNotice} />
                 <h1 className="text-2xl font-bold text-gray-900">
                   Review Workflow Policy
                 </h1>
@@ -3233,3 +3251,4 @@ export default function WorkflowBuilderCreatePage() {
   );
 }
 
+      <NoticeModal notice={notice} onClose={closeNotice} />

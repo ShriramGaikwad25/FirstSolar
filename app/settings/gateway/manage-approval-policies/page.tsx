@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Check, ChevronLeft, ChevronRight, Eye, Tag, FileText, User, Hash, Search, X } from "lucide-react";
 import UserPickerModal from "@/components/UserPickerModal";
+import NoticeModal, { type Notice } from "@/components/NoticeModal";
 import { asterisk } from "@/utils/utils";
 import { useLeftSidebar } from "@/contexts/LeftSidebarContext";
 import ApprovalPolicySelectorBuilder, {
@@ -186,6 +187,12 @@ function normalizePolicyStatus(value: unknown): Status {
 
 export default function ManageApprovalPoliciesPage() {
   const router = useRouter();
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const closeNotice = () => {
+    const onClose = notice?.onClose;
+    setNotice(null);
+    onClose?.();
+  };
   const searchParams = useSearchParams();
   const [policies, setPolicies] = useState<
     {
@@ -830,7 +837,7 @@ export default function ManageApprovalPoliciesPage() {
     if (selectorErrors.length) {
       const message = `Selector is incomplete: ${selectorErrors.join(" ")}`;
       setSubmitError(message);
-      alert(message);
+      setNotice({ tone: "error", title: "Selector is incomplete", message: selectorErrors.join(" ") });
       return;
     }
     setIsSubmitting(true);
@@ -881,8 +888,12 @@ export default function ManageApprovalPoliciesPage() {
         ]);
       }
       setEditingPolicyCode(null);
-      alert("Approval policy saved successfully.");
-      router.push("/settings/gateway/manage-approval-policies");
+      setNotice({
+        tone: "success",
+        title: "Approval policy saved",
+        message: `"${policyPayload.name}" was saved successfully.`,
+        onClose: () => router.push("/settings/gateway/manage-approval-policies"),
+      });
     } catch (e: any) {
       console.error("Failed to save approval policy:", e);
       setSubmitError(e?.message || "Failed to save approval policy.");
@@ -1793,6 +1804,7 @@ export default function ManageApprovalPoliciesPage() {
           </div>
         </div>
       </div>
+      <NoticeModal notice={notice} onClose={closeNotice} />
     </div>
   );
 }
