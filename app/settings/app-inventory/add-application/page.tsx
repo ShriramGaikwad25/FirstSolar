@@ -3036,8 +3036,6 @@ export default function AddApplicationPage() {
           />
           <SummaryRow label="Technical owner" value={formData.step2.technicalOwner} />
           <SummaryRow label="Business owner" value={formData.step2.businessOwner} />
-          <SummaryRow label="Technical owner email" value={formData.step2.technicalOwnerEmail} />
-          <SummaryRow label="Business owner email" value={formData.step2.businessOwnerEmail} />
           <SummaryRow
             label="Source type"
             value={formData.step2.sourceType?.trim() || "—"}
