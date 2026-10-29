@@ -187,7 +187,7 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ catalogRoles = [], requestAction 
               const fullRole = catalogRoles.find((r) => norm(r.id) === norm(item.id)) ?? ({
                 id: item.id,
                 name: item.name,
-                risk: (item.risk ?? "Low") as "Low" | "Medium" | "High",
+                risk: item.risk,
                 description: "",
                 catalogRow: undefined,
               } as Role);

@@ -795,13 +795,15 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <span className="text-gray-800 font-medium">{role.name}</span>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium border ${getRiskColor(
-                        role.risk
-                      )}`}
-                    >
-                      {role.risk} Risk
-                    </span>
+                    {role.risk && (
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium border ${getRiskColor(
+                          role.risk
+                        )}`}
+                      >
+                        {role.risk} Risk
+                      </span>
+                    )}
                     {getApplicationName(role) && (
                       <span className="px-2 py-1 rounded text-xs font-medium border text-blue-700 bg-blue-50 border-blue-200">
                         {getApplicationName(role)}
@@ -1083,13 +1085,15 @@ const SelectAccessTab: React.FC<SelectAccessTabProps> = ({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2 flex-wrap">
                     <span className="text-gray-800 font-medium">{role.name}</span>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-medium border ${getRiskColor(
-                        role.risk
-                      )}`}
-                    >
-                      {role.risk} Risk
-                    </span>
+                    {role.risk && (
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium border ${getRiskColor(
+                          role.risk
+                        )}`}
+                      >
+                        {role.risk} Risk
+                      </span>
+                    )}
                     {getApplicationName(role) && (
                       <span className="px-2 py-1 rounded text-xs font-medium border text-blue-700 bg-blue-50 border-blue-200">
                         {getApplicationName(role)}

@@ -400,7 +400,7 @@ const AccessRequest: React.FC = () => {
           return {
             id: name || String(idx),
             name,
-            risk: "Low" as const,
+            risk: undefined,
             description: "",
             type: "role" as const,
             catalogRow: { ...row, type: "role" },
@@ -462,13 +462,6 @@ const AccessRequest: React.FC = () => {
           (k) => k === "applicationname",
         ]) || keys[0];
 
-      const riskKey =
-        findKey([
-          (k) => k === "risk",
-          (k) => k.endsWith("_risk"),
-          (k) => k.includes("risk"),
-        ]) || keys[1] || keys[0];
-
       const descriptionKey =
         findKey([
           (k) => k === "description",
@@ -490,19 +483,69 @@ const AccessRequest: React.FC = () => {
 
       const idKey = resolveIdKey();
 
-      const normalizeRisk = (value: string): "Low" | "Medium" | "High" => {
-        const v = value.toLowerCase();
-        if (v.startsWith("high")) return "High";
-        if (v.startsWith("medium")) return "Medium";
-        if (v.startsWith("low")) return "Low";
-        return "Low";
+      // Unknown/empty risk stays undefined so the UI doesn't show a misleading "Low Risk" badge.
+      const normalizeRisk = (value: string): "Low" | "Medium" | "High" | undefined => {
+        const v = value.trim().toLowerCase();
+        if (!v) return undefined;
+        if (v.startsWith("crit") || v.startsWith("high") || v === "h") return "High";
+        if (v.startsWith("med") || v === "m") return "Medium";
+        if (v.startsWith("low") || v === "l") return "Low";
+        return undefined;
+      };
+
+      // Risk may be a top-level column (risk / risk_level / riskLevel), wrapped as { value }, or nested in
+      // the catalog `attributes` ([{ columnName, value }] or an object) / metadata, sometimes as a JSON string.
+      const findRisk = (node: unknown, depth = 0): "Low" | "Medium" | "High" | undefined => {
+        if (node == null || depth > 4) return undefined;
+        if (typeof node === "string") {
+          const s = node.trim();
+          if (!s.startsWith("{") && !s.startsWith("[")) return undefined;
+          try {
+            return findRisk(JSON.parse(s), depth + 1);
+          } catch {
+            return undefined;
+          }
+        }
+        const unwrap = (v: unknown): unknown =>
+          v != null && typeof v === "object" && !Array.isArray(v) && "value" in v
+            ? (v as { value: unknown }).value
+            : v;
+        if (Array.isArray(node)) {
+          for (const item of node) {
+            const col = String((item as any)?.columnName ?? (item as any)?.name ?? "").toLowerCase();
+            if (col.includes("risk")) {
+              const r = normalizeRisk(String(unwrap((item as any).value) ?? ""));
+              if (r) return r;
+            }
+          }
+          for (const item of node) {
+            const r = findRisk(item, depth + 1);
+            if (r) return r;
+          }
+          return undefined;
+        }
+        if (typeof node !== "object") return undefined;
+        const entries = Object.entries(node as Record<string, unknown>);
+        for (const [k, v] of entries) {
+          if (!k.toLowerCase().includes("risk")) continue;
+          const val = unwrap(v);
+          if (val != null && typeof val !== "object") {
+            const r = normalizeRisk(String(val));
+            if (r) return r;
+          }
+        }
+        for (const [, v] of entries) {
+          if (v != null && (typeof v === "object" || typeof v === "string")) {
+            const r = findRisk(v, depth + 1);
+            if (r) return r;
+          }
+        }
+        return undefined;
       };
 
       return catalogData.map((row, idx) => {
         const rawName =
           row[nameKey] !== undefined && row[nameKey] !== null ? String(row[nameKey]) : "";
-        const rawRisk =
-          row[riskKey] !== undefined && row[riskKey] !== null ? String(row[riskKey]) : "";
         const rawDesc =
           row[descriptionKey] !== undefined && row[descriptionKey] !== null
             ? String(row[descriptionKey])
@@ -524,7 +567,7 @@ const AccessRequest: React.FC = () => {
         return {
           id: String(idValue).trim(),
           name: rawName || "Unnamed access",
-          risk: normalizeRisk(rawRisk),
+          risk: findRisk(row),
           description: rawDesc,
           type: rawType,
           catalogRow: row,

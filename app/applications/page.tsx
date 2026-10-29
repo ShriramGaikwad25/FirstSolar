@@ -103,7 +103,8 @@ export default function Application() {
       {
         headerName: "Application",
         field: "applicationinstancename",
-        width:260,
+        flex: 3,
+        minWidth: 220,
         cellRenderer: (params: any) => {
           const name = params.data.applicationinstancename;
           const LOGO_BY_NAME: Record<string, string> = {
@@ -140,24 +141,24 @@ export default function Application() {
           // Special styling for High risk - show app name in red bubble
           if (riskStatus === "High") {
             return (
-              <div className="flex items-center h-full">
+              <div className="flex items-center h-full min-w-0">
                 <img
                   src={withBasePath(getLogoSrc(name))}
                   alt={`${name} logo`}
                   width={28}
                   height={28}
-                  className="mr-2"
+                  className="mr-2 shrink-0"
                   loading="lazy"
                 />
                 <span
-                  className="px-2 py-1 text-sm font-medium rounded-full inline-flex items-center cursor-help"
-                  style={{ 
-                    backgroundColor: "#ffebee", 
+                  className="px-2 py-1 text-sm font-medium rounded-full block truncate min-w-0 cursor-help"
+                  style={{
+                    backgroundColor: "#ffebee",
                     color: "#d32f2f",
                     border: "1px solid #ffcdd2",
                     minHeight: "24px"
                   }}
-                  title="High Risk"
+                  title={`${name} (High Risk)`}
                 >
                   {name}
                 </span>
@@ -168,20 +169,21 @@ export default function Application() {
           
           // Default styling for other risk levels
           return (
-            <div className="flex items-center h-full">
+            <div className="flex items-center h-full min-w-0">
               <img
                 src={withBasePath(getLogoSrc(name))}
                 alt={`${name} logo`}
                 width={28}
                 height={28}
-                className="mr-2"
+                className="mr-2 shrink-0"
                 loading="lazy"
               />
               <a
                 // href={`#${params.data.applicationInstanceId}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:underline font-medium inline-flex items-center py-2"
+                className="text-blue-600 hover:underline font-medium block truncate min-w-0 py-2"
+                title={name}
               >
                 {name}
               </a>
@@ -190,38 +192,42 @@ export default function Application() {
           );
         },
       },
-      { headerName: "Department", field: "businessUnit",width:200 },
-      { headerName: "Owner", field: "ownername",width:200 },
+      { headerName: "Department", field: "businessUnit", flex: 1.3, minWidth: 120 },
+      { headerName: "Owner", field: "ownername", flex: 1.3, minWidth: 120 },
       {
         headerName: "#Accounts",
         field: "numofaccounts",
-        width:145,
+        flex: 1,
+        minWidth: 100,
         valueFormatter: (params: any) =>
           params.value?.toLocaleString("en-US") || "0",
       },
       {
         headerName: "Last Review",
         field: "lastAccessReview",
-        width:140,
+        flex: 1,
+        minWidth: 100,
         valueFormatter: (params) => formatDateMMDDYY(params.value),
        
       },
       {
         headerName: "Last Sync",
         field: "lastSync",
-        width:140,
+        flex: 1,
+        minWidth: 100,
       valueFormatter: (params) => formatDateMMDDYY(params.value),
       },
       {
         headerName: "Next Sync",
         field: "nextSync",
-        width:140,
+        flex: 1,
+        minWidth: 100,
         valueFormatter: (params) => formatDateMMDDYY(params.value),
       },
-      { headerName: "Sync Type", field: "syncType",width:180 },
-      { headerName: "App Risk", field: "risk", hide: true,width:200, },
-      { headerName: "App Type", field: "applicationtype", hide: true,width:200, },
-      { headerName: "App Description", field: "applicationcategory", hide: true,width:200, },
+      { headerName: "Sync Type", field: "syncType", flex: 1, minWidth: 100 },
+      { headerName: "App Risk", field: "risk", hide: true, flex: 1, minWidth: 120 },
+      { headerName: "App Type", field: "applicationtype", hide: true, flex: 1, minWidth: 120 },
+      { headerName: "App Description", field: "applicationcategory", hide: true, flex: 1, minWidth: 120 },
     ],
     []
   );

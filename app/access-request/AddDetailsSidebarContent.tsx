@@ -7,13 +7,13 @@ import { getInProgressApplications, getItAssetApp } from "@/lib/api";
 export interface Role {
   id: string;
   name: string;
-  risk: "Low" | "Medium" | "High";
+  risk?: "Low" | "Medium" | "High";
   description: string;
   type?: string;
   catalogRow?: Record<string, unknown>;
 }
 
-export function getRiskColor(risk: string): string {
+export function getRiskColor(risk?: string): string {
   switch (risk) {
     case "High":
       return "text-red-600 bg-red-50 border-red-200";
@@ -253,9 +253,11 @@ const AddDetailsSidebarContent: React.FC<{
             <span className="text-sm font-medium break-words break-all whitespace-normal max-w-full flex-1">
               {role.name}
             </span>
-            <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-medium border ${riskClass}`}>
-              {role.risk} Risk
-            </span>
+            {role.risk && (
+              <span className={`shrink-0 px-1.5 py-0.5 rounded text-xs font-medium border ${riskClass}`}>
+                {role.risk} Risk
+              </span>
+            )}
           </div>
           {(() => {
             const jit =
