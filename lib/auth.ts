@@ -366,6 +366,33 @@ export function clearAllAuthCookies(options?: { preserveLogoutRedirect?: boolean
   clearPersistedApplicationAuthType();
 }
 
+/**
+ * Wipes all app data kept in the browser (localStorage + sessionStorage) on logout.
+ * When `preserveLogoutRedirect` is set, the SSO logout markers survive so /logged-out still renders.
+ */
+export function clearAllClientStorage(options?: { preserveLogoutRedirect?: boolean }): void {
+  if (typeof window === 'undefined') return;
+  const preserve = options?.preserveLogoutRedirect ?? false;
+  let keepRedirect: string | null = null;
+  let keepExternal: string | null = null;
+  try {
+    if (preserve) {
+      keepRedirect = sessionStorage.getItem(AUTH_SESSION_KEYS.LOGOUT_REDIRECT);
+      keepExternal = sessionStorage.getItem(AUTH_SESSION_KEYS.USES_EXTERNAL_AUTH);
+    }
+    sessionStorage.clear();
+    if (keepRedirect) sessionStorage.setItem(AUTH_SESSION_KEYS.LOGOUT_REDIRECT, keepRedirect);
+    if (keepExternal) sessionStorage.setItem(AUTH_SESSION_KEYS.USES_EXTERNAL_AUTH, keepExternal);
+  } catch {
+    /* ignore */
+  }
+  try {
+    localStorage.clear();
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Server logout API — clears HttpOnly cookies the browser JS cannot remove. */
 export async function clearAuthCookiesOnServer(): Promise<void> {
   if (typeof window === 'undefined') return;
@@ -397,7 +424,8 @@ export function forceLogout(reason?: string): void {
   } catch {
     /* ignore */
   }
-  
+
+  clearAllClientStorage();
   redirectToTenantLogin();
 }
 
@@ -778,6 +806,7 @@ export function performUserLogout(
   } catch {
     /* ignore */
   }
+  clearAllClientStorage({ preserveLogoutRedirect: external });
 
   // Navigate immediately so AuthWrapper cannot redirect to tenant login first.
   window.location.replace(withBasePath(target));
