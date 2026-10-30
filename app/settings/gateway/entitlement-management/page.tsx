@@ -17,6 +17,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { resolveTenantIdForHeader, getJwtAuthHeaders } from "@/lib/auth";
+import { executeNamedQuery } from "@/lib/api";
 import { CatalogExportButton, CatalogImportButton } from "@/components/CatalogFileActions";
 
 type FieldCategory = "general" | "business" | "technical" | "security" | "lifecycle" | "other";
@@ -143,6 +144,24 @@ function toBool(v: unknown, fallback: boolean): boolean {
 /** "Last Reviewed On" / "last_reviewed_on" / "lastReviewedOn" -> "lastreviewedon" */
 const normalizeKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
+/** Columns that can never be enriched: no "Allow Enrichment" toggle */
+const NON_ENRICHABLE_KEYS = new Set(
+  [
+    "applicationname",
+    "entitlementname",
+    "type",
+    "created_on",
+    "last_sync",
+    "audit_comments",
+    "provisioning_steps",
+    "shared_pwd",
+    "mfa_status",
+    "last_reviewed_on",
+  ].map(normalizeKey)
+);
+
+const isEnrichable = (name: string) => !NON_ENRICHABLE_KEYS.has(normalizeKey(name));
+
 /** Static list values sent for every field, whatever the editor holds */
 const STATIC_LIST_VALUES = ["High", "Medium", "Low"];
 
@@ -242,9 +261,28 @@ function mapMetadataItem(item: any, index: number): MetadataField {
       ),
       apiEndpoint: pickStr(item?.apiEndpoint, item?.api_endpoint, item?.endpoint, item?.listApiEndpoint) ?? "",
       showInUI: toBool(item?.showInUI ?? item?.showInUi ?? item?.show_in_ui ?? item?.visible, true),
-      allowEnrichment: toBool(item?.allow_enrichment ?? item?.allowEnrichment, false),
+      allowEnrichment: isEnrichable(name) && toBool(item?.allow_enrichment ?? item?.allowEnrichment, false),
     },
   };
+}
+
+/** Attributes already enriched (named query), as normalized keys; empty if the query fails */
+async function fetchEnrichedAttributes(): Promise<Set<string>> {
+  try {
+    const res = await executeNamedQuery<any>("GET LIST OF ENRICHED CATALOG ATTRIBUTE", []);
+    const rows: any[] = Array.isArray(res) ? res : Array.isArray(res?.resultSet) ? res.resultSet : extractMetadataItems(res);
+    return new Set(
+      rows
+        .map((r) =>
+          normalizeKey(
+            (typeof r === "string" ? r : pickStr(r?.attribute, r?.attributeCode, r?.attribute_code, r?.name)) ?? ""
+          )
+        )
+        .filter(Boolean)
+    );
+  } catch {
+    return new Set();
+  }
 }
 
 const ROW_GRID =
@@ -377,8 +415,6 @@ export default function EntitlementManagementSettings() {
   const [reloadKey, setReloadKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Fields whose enrichment toggle is being saved
-  const [enrichmentPending, setEnrichmentPending] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -386,12 +422,21 @@ export default function EntitlementManagementSettings() {
       setIsLoading(true);
       setLoadError(null);
       try {
-        const res = await fetch(CATALOG_METADATA_URL(), { headers: getJwtAuthHeaders() });
+        const [res, enriched] = await Promise.all([
+          fetch(CATALOG_METADATA_URL(), { headers: getJwtAuthHeaders() }),
+          fetchEnrichedAttributes(),
+        ]);
         const json = await res.json().catch(() => null);
         if (!res.ok) {
           throw new Error(pickStr(json?.errorMessage, json?.message) || `Request failed (${res.status})`);
         }
         const mapped = extractMetadataItems(json).map(mapMetadataItem);
+        for (const f of mapped) {
+          const { name, label } = f.config;
+          if (isEnrichable(name) && [name, label].some((s) => enriched.has(normalizeKey(s)))) {
+            f.config.allowEnrichment = true;
+          }
+        }
         if (cancelled) return;
         const byKey = Object.fromEntries(mapped.map((f) => [f.key, f.config]));
         setFields(mapped);
@@ -435,7 +480,12 @@ export default function EntitlementManagementSettings() {
           splitListValues(next.listValues).join("|") !== splitListValues(prev.listValues).join("|"))
       );
     });
-    if (changed.length === 0 && added.length === 0) {
+    const enrichmentChanged = fields.filter((f) => {
+      const next = configs[f.key];
+      if (!next || !isEnrichable(next.name)) return false;
+      return f.isNew ? next.allowEnrichment : next.allowEnrichment !== savedConfigs[f.key]?.allowEnrichment;
+    });
+    if (changed.length === 0 && added.length === 0 && enrichmentChanged.length === 0) {
       setIsEditing(false);
       return;
     }
@@ -518,6 +568,40 @@ export default function EntitlementManagementSettings() {
         }
       }),
     ]);
+    // A metadata save does not save the enrichment flag; that comes from the call below
+    for (const key of Object.keys(saved)) {
+      saved[key] = { ...saved[key], allowEnrichment: savedConfigs[key]?.allowEnrichment ?? false };
+    }
+    // Enrichment changes go in one PUT to .../attribute-configurations, after new fields are created
+    const enrichFields = enrichmentChanged.filter((f) => !f.isNew || f.key in created);
+    if (enrichFields.length) {
+      try {
+        const res = await fetch(ATTRIBUTE_CONFIGURATIONS_URL(), {
+          method: "PUT",
+          headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({
+            applicationType: null,
+            applicationName: null,
+            // Label as saved, so a label edit that failed to save does not change the code
+            attributes: enrichFields.map((f) => ({
+              attributeCode: toAttributeCode((saved[f.key] ?? savedConfigs[f.key] ?? configs[f.key]).label),
+              enabled: configs[f.key].allowEnrichment,
+              required: false,
+            })),
+          }),
+        });
+        if (!res.ok) {
+          const json = await res.json().catch(() => null);
+          throw new Error(pickStr(json?.errorMessage, json?.message) || `Request failed (${res.status})`);
+        }
+        for (const f of enrichFields) {
+          const base = saved[f.key] ?? savedConfigs[f.key];
+          if (base) saved[f.key] = { ...base, allowEnrichment: configs[f.key].allowEnrichment };
+        }
+      } catch (e) {
+        failures.push(`Enrichment: ${e instanceof Error ? e.message : "Request failed"}`);
+      }
+    }
     // Created fields become regular fields (same row key, so their edit state stays attached)
     setFields((prev) => prev.map((f) => (f.key in created ? { ...f, isNew: false, id: created[f.key] } : f)));
     setSavedConfigs((prev) => ({ ...prev, ...saved }));
@@ -526,41 +610,6 @@ export default function EntitlementManagementSettings() {
       setSaveError(`Some fields could not be saved:\n${failures.join("\n")}`);
     } else {
       setIsEditing(false);
-    }
-  };
-
-  // Each enrichment toggle is saved right away to .../attribute-configurations, outside Edit / Save
-  const toggleEnrichment = async (field: string, enabled: boolean) => {
-    const cfg = configs[field];
-    if (!cfg) return;
-    setEnrichmentPending((prev) => ({ ...prev, [field]: true }));
-    setSaveError(null);
-    updateField(field, { allowEnrichment: enabled });
-    try {
-      const res = await fetch(ATTRIBUTE_CONFIGURATIONS_URL(), {
-        method: "PUT",
-        headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
-        body: JSON.stringify({
-          applicationType: null,
-          applicationName: null,
-          // Saved display label, so an unsaved label edit does not change the code
-          attributes: [{ attributeCode: toAttributeCode(savedConfigs[field]?.label ?? cfg.label), enabled, required: false }],
-        }),
-      });
-      if (!res.ok) {
-        const json = await res.json().catch(() => null);
-        throw new Error(pickStr(json?.errorMessage, json?.message) || `Request failed (${res.status})`);
-      }
-      setSavedConfigs((prev) => (prev[field] ? { ...prev, [field]: { ...prev[field], allowEnrichment: enabled } } : prev));
-    } catch (e) {
-      updateField(field, { allowEnrichment: !enabled });
-      setSaveError(`${cfg.label}: could not update enrichment — ${e instanceof Error ? e.message : "Request failed"}`);
-    } finally {
-      setEnrichmentPending((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
     }
   };
 
@@ -882,12 +931,18 @@ export default function EntitlementManagementSettings() {
                                 />
                               </div>
                               <div className="flex items-center justify-center gap-2">
-                                <ToggleSwitch
-                                  checked={cfg.allowEnrichment}
-                                  disabled={isNew || isSaving || !!enrichmentPending[field]}
-                                  ariaLabel={`Allow enrichment — ${field}`}
-                                  onChange={(next) => void toggleEnrichment(field, next)}
-                                />
+                                {isNew || isEnrichable(cfg.name) ? (
+                                  <ToggleSwitch
+                                    checked={cfg.allowEnrichment}
+                                    disabled={!isEditing || isSaving}
+                                    ariaLabel={`Allow enrichment — ${field}`}
+                                    onChange={(next) => updateField(field, { allowEnrichment: next })}
+                                  />
+                                ) : (
+                                  <span className="text-sm text-gray-400" title="This field cannot be enriched">
+                                    —
+                                  </span>
+                                )}
                                 {isNew && (
                                   <button
                                     type="button"

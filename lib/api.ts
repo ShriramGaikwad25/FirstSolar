@@ -511,6 +511,23 @@ export async function executeQuery<T>(
   return result;
 }
 
+/** Runs a query registered on the backend by name, e.g. "GET LIST OF ENRICHED CATALOG ATTRIBUTE". */
+export async function executeNamedQuery<T>(
+  query: string,
+  parameters: any[]
+): Promise<T> {
+  const endpoint = `${getBackendOrigin()}/entities/api/v1/${resolveEntitiesTenant()}/executeNamedQuery`;
+
+  return apiRequestWithAuth<T>(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "XMLHttpRequest",
+    },
+    body: JSON.stringify({ query, parameters }),
+  });
+}
+
 /** Builds applicationinstance.configuration from schema mapping rows. */
 export function buildApplicationInstanceConfiguration(
   mappings: Array<{ source?: string; target?: string; keyfieldMapping?: boolean }>
