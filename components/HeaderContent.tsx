@@ -323,95 +323,37 @@ const HeaderContent = () => {
   } | null>(null);
 
 
-  const [avatarErrorIndexByKey, setAvatarErrorIndexByKey] = useState<Record<string, number>>({});
+  // Name shown next to the avatar in the navbar
+  const headerUserName: string = (() => {
+    // Prefer authenticated user from context (set to userid at login)
+    if (user?.email) return user.email;
+    // Fallback to cookie `uidTenant`
+    try {
+      const raw = getCookie(COOKIE_NAMES.UID_TENANT);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.userid) return parsed.userid;
+      }
+    } catch {}
+    // Fallback to any current user util
+    const current = getCurrentUser();
+    if (current?.email) return current.email;
+    return userDetails?.username || "IAM Admin";
+  })();
 
-  const getHeaderUserKey = (u: any): string => {
-    if (!u) return "";
-    return String(u.userId || u.username || u.email || u.id || u.username || "");
-  };
+  // Initials only, no profile picture: "jessica.camacho" / "jessica.camacho@x.com" / "Jessica Camacho" -> "JC"
+  const renderUserAvatar = (userName: string, size: number, roundedClass: string) => {
+    const words = String(userName || "User").split("@")[0].split(/[\s._-]+/).filter(Boolean);
+    const initials = (words.length > 1 ? words[0][0] + words[words.length - 1][0] : (words[0] ?? "U")[0]).toUpperCase();
+    const bgColor = `hsl(${(userName.charCodeAt(0) * 137.508) % 360}, 70%, 50%)`;
 
-  const getAvatarCandidates = (u: any): string[] => {
-    // Always try the shared User.jpg first for every user,
-    // then fall back to the generic avatar pool if needed.
-    const availablePictures = [
-      "/User.jpg",
-      "/pictures/user_image1.avif",
-      "/pictures/user_image4.avif",
-      "/pictures/user_image7.avif",
-      "/pictures/user_image8.avif",
-    ];
-
-    return availablePictures;
-  };
-
-  const renderUserAvatar = (u: any, size: number, roundedClass: string) => {
-    if (!u) return null;
-    
-    const userKey = getHeaderUserKey(u);
-    const candidates = getAvatarCandidates(u);
-    
-    // Generate initials as fallback
-    const userName = u?.username || u?.userName || u?.fullName || u?.displayName || u?.email || u?.userId || 'User';
-    const initials = userName
-      .split(" ")
-      .map((n: string) => n[0])
-      .join("")
-      .toUpperCase()
-      .substring(0, 2);
-    const bgColor = `hsl(${(userKey.charCodeAt(0) * 137.508) % 360}, 70%, 50%)`;
-    
-    // If no candidates or all candidates tried, show initials
-    if (!candidates || candidates.length === 0) {
-      return (
-        <div
-          className={`${roundedClass} flex items-center justify-center text-white font-semibold`}
-          style={{ width: size, height: size, backgroundColor: bgColor, fontSize: size * 0.4 }}
-        >
-          {initials}
-        </div>
-      );
-    }
-    
-    const index = Math.max(0, avatarErrorIndexByKey[userKey] ?? 0);
-    const src = candidates[Math.min(index, candidates.length - 1)];
-    
-    // If we've tried all candidates, show initials
-    if (index >= candidates.length - 1 || !src) {
-      return (
-        <div
-          className={`${roundedClass} flex items-center justify-center text-white font-semibold`}
-          style={{ width: size, height: size, backgroundColor: bgColor, fontSize: size * 0.4 }}
-        >
-          {initials}
-        </div>
-      );
-    }
-    
     return (
-      <div className="relative" style={{ width: size, height: size }}>
-        <Image
-          src={withBasePath(src)}
-          alt={`Profile picture of ${userName}`}
-          width={size}
-          height={size}
-          className={`${roundedClass}`}
-          unoptimized={true}
-          loading="lazy"
-          onError={(e) => {
-            try {
-              setAvatarErrorIndexByKey((prev) => {
-                const next = { ...prev } as Record<string, number>;
-                const currentIndex = prev[userKey] ?? 0;
-                const nextIndex = Math.min(currentIndex + 1, candidates.length - 1);
-                next[userKey] = nextIndex;
-                return next;
-              });
-            } catch (error) {
-              // Silently handle error state update failures
-              console.debug('Avatar error handling failed:', error);
-            }
-          }}
-        />
+      <div
+        className={`${roundedClass} flex items-center justify-center text-white font-semibold`}
+        style={{ width: size, height: size, backgroundColor: bgColor, fontSize: size * 0.4 }}
+        title={userName}
+      >
+        {initials}
       </div>
     );
   };
@@ -802,7 +744,7 @@ const HeaderContent = () => {
         {/* Logo and Brand */}
         <div className="flex items-center gap-3 mr-8">
           <button
-            onClick={() => router.push('/')}
+            onClick={() => router.push('/dashboard')}
             className="cursor-pointer hover:opacity-80 transition-opacity flex items-center gap-2"
             aria-label="Navigate to Dashboard"
           >
@@ -1008,24 +950,9 @@ const HeaderContent = () => {
       {/* Right Section */}
       <div className="flex items-center h-full justify-end gap-2 px-3">
         <div className="flex items-center gap-3">
-          {renderUserAvatar(userDetails, 36, "object-cover rounded-full w-9 h-9")}
+          {renderUserAvatar(headerUserName, 36, "rounded-full w-9 h-9 shrink-0 ring-2 ring-white/70")}
           <span className="text-white font-medium text-[11px] md:text-xs max-w-[180px] truncate">
-            {(() => {
-              // Prefer authenticated user from context (set to userid at login)
-              if (user?.email) return user.email;
-              // Fallback to cookie `uidTenant`
-              try {
-                const raw = getCookie(COOKIE_NAMES.UID_TENANT);
-                if (raw) {
-                  const parsed = JSON.parse(raw);
-                  if (parsed?.userid) return parsed.userid;
-                }
-              } catch {}
-              // Fallback to any current user util
-              const current = getCurrentUser();
-              if (current?.email) return current.email;
-              return userDetails?.username || "IAM Admin";
-            })()}
+            {headerUserName}
           </span>
           <Dropdown
             Icon={() => (

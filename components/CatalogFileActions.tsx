@@ -55,20 +55,26 @@ function CatalogFileResultModal({ result, onClose }: { result: CatalogFileResult
 
 interface CatalogExportButtonProps {
   /** Full export URL for the chosen format */
-  buildUrl: (format: CatalogFileFormat) => string;
+  buildUrl?: (format: CatalogFileFormat) => string;
+  /** Builds the file in the browser instead of GETting buildUrl */
+  getFile?: (format: CatalogFileFormat) => Promise<Blob>;
   /** Download file name (without extension) when the response has no Content-Disposition */
   fileName: string;
   /** One format downloads on click; several open a menu */
   formats?: CatalogFileFormat[];
   title?: string;
+  /** Button icon; a download arrow by default */
+  icon?: typeof Download;
 }
 
 /** Download icon that GETs an export file and saves it. */
 export function CatalogExportButton({
   buildUrl,
+  getFile,
   fileName,
   formats = ["csv", "xlsx"],
   title = "Export",
+  icon: Icon = Download,
 }: CatalogExportButtonProps) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,6 +94,11 @@ export function CatalogExportButton({
     setOpen(false);
     setBusy(true);
     try {
+      if (getFile) {
+        triggerDownload(await getFile(format), `${fileName}.${format}`);
+        return;
+      }
+      if (!buildUrl) throw new Error("Export is not configured");
       const res = await fetch(buildUrl(format), { headers: getJwtAuthHeaders() });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
@@ -95,8 +106,10 @@ export function CatalogExportButton({
       }
       const blob = await res.blob();
       const disposition = res.headers.get("Content-Disposition") || "";
-      const name = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1];
-      triggerDownload(blob, name ? decodeURIComponent(name) : `${fileName}.${format}`);
+      const raw = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition)?.[1];
+      const name = raw ? decodeURIComponent(raw) : fileName;
+      // Keep the requested format's extension even when the server's file name has none
+      triggerDownload(blob, /\.[a-z0-9]{2,5}$/i.test(name) ? name : `${name}.${format}`);
     } catch (e) {
       setResult({ ok: false, title: "Export failed", message: e instanceof Error ? e.message : "Export failed" });
     } finally {
@@ -116,7 +129,7 @@ export function CatalogExportButton({
         aria-haspopup={formats.length > 1 ? "menu" : undefined}
         aria-expanded={formats.length > 1 ? open : undefined}
       >
-        <Download className="w-5 h-5 text-gray-700" />
+        <Icon className="w-5 h-5 text-gray-700" />
       </button>
       {open && (
         <div

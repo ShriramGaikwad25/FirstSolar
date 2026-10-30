@@ -40,6 +40,7 @@ import {
   Lock,
   Users,
   KeyRound,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useMemo, useRef, useState, useEffect } from "react";
 import { useParams } from "next/navigation";
@@ -48,6 +49,7 @@ import { formatDateMMDDYY } from "@/utils/utils";
 import "@/lib/ag-grid-setup";
 import Exports from "@/components/agTable/Exports";
 import { CatalogExportButton, CatalogImportButton } from "@/components/CatalogFileActions";
+import { rowsToCsv } from "@/lib/rm-csv";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import EditReassignButtons from "@/components/agTable/EditReassignButtons";
 import ActionButtons from "@/components/agTable/ActionButtons";
@@ -167,6 +169,17 @@ function catalogAttributesToFields(attributes: any): Record<string, any> {
   return out;
 }
 
+/** One export row per catalog /list item: every top-level field plus its fields and attributes; nested values as JSON. */
+function catalogItemToExportRow(item: any): Record<string, unknown> {
+  const { fields, attributes, ...rest } = item || {};
+  const out: Record<string, unknown> = {};
+  const flat = { ...rest, ...(fields && typeof fields === "object" ? fields : {}), ...catalogAttributesToFields(attributes) };
+  for (const [key, value] of Object.entries(flat)) {
+    out[key] = value !== null && typeof value === "object" ? JSON.stringify(value) : value;
+  }
+  return out;
+}
+
 /** Sidebar display keys whose catalog attribute is marked `displayOnly: true` (shown but not editable). */
 function catalogDisplayOnlyKeys(record: any): Set<string> {
   const out = new Set<string>();
@@ -181,7 +194,7 @@ function catalogDisplayOnlyKeys(record: any): Set<string> {
 }
 
 /**
- * Body for PUT .../update/{catalogid}: only the sidebar values that changed, keyed by the catalog
+ * `attributes` for POST .../enrichmentcontroller/{catalogid}/attributes: only the sidebar values that changed, keyed by the catalog
  * column name under `attributes`, e.g. `{ "attributes": { "description": "..." } }`. The key is the record's matching attribute
  * columnName, else its matching top-level key, else the snake_case catalog key. Returns null when
  * nothing changed.
@@ -1181,7 +1194,7 @@ export default function ApplicationDetailPage() {
         "w-full px-2 py-1.5 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
       const readOnlyInputClass = "bg-gray-100 text-gray-500 cursor-not-allowed focus:ring-0 focus:border-gray-300";
 
-      // PUT the edited entitlement to the catalog update API, then refresh the sidebar and grid row
+      // POST the changed attributes to .../enrichmentcontroller/{catalogId}/attributes, then refresh the sidebar and grid row
       const saveEntitlementEdits = async () => {
         const catalogId = resolveCatalogIdFromEntitlementRow(baseData);
         if (!catalogId) {
@@ -1203,13 +1216,21 @@ export default function ApplicationDetailPage() {
         setSaveError(null);
         try {
           const res = await fetch(
-            `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/update/${encodeURIComponent(
+            `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/enrichmentcontroller/${encodeURIComponent(
               catalogId
-            )}`,
+            )}/attributes`,
             {
-              method: "PUT",
+              method: "POST",
               headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
-              body: JSON.stringify(payload),
+              body: JSON.stringify({
+                applicationType: pickString(catalogItem.applicationType, catalogItem.application_type) ?? null,
+                // TODO: null only for testing; restore pickString(catalogItem.applicationName, catalogItem.application_name) ?? null
+                applicationName: null,
+                attributes: payload.attributes,
+                customAttributes: { values: {}, remove: [] },
+                expectedLastModifiedAt: null,
+                validateMandatory: false,
+              }),
             }
           );
           const json = await res.json().catch(() => null);
@@ -2990,6 +3011,29 @@ export default function ApplicationDetailPage() {
     };
   }, [id, tabIndex, entCurrentPage, entPageSize, appliedEntSearch, entReloadKey]);
 
+  // Export every entitlement of the application from the /list API (all pages, all columns)
+  const exportEntitlementsCsv = async (): Promise<Blob> => {
+    const applicationName = getStoredApplicationName();
+    const rows: Record<string, unknown>[] = [];
+    for (let page = 0, totalPages = 1; page < totalPages; page++) {
+      const params = new URLSearchParams({ page: String(page), size: "500", sort: "name,asc" });
+      if (applicationName) params.set("applicationName", applicationName);
+      const response = await fetch(
+        `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/list?${params.toString()}`,
+        { headers: getJwtAuthHeaders() }
+      );
+      if (!response.ok) throw new Error(`Entitlement list failed (${response.status})`);
+      const data = await response.json();
+      const content = Array.isArray(data?.content) ? data.content : [];
+      rows.push(...content.map(catalogItemToExportRow));
+      totalPages = content.length ? Number(data?.totalPages) || 0 : 0;
+    }
+    // Rows can carry different attributes, so the header is the union of all keys
+    const columns = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
+    const csv = rowsToCsv(rows.map((r) => Object.fromEntries(columns.map((c) => [c, r[c] ?? ""]))));
+    return new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
+  };
+
   //   {
   //     "Ent ID": "ENT201",
   //     "Ent Name": "Server Admin",
@@ -3146,12 +3190,18 @@ export default function ApplicationDetailPage() {
         field: "lastlogindate",
         headerName: "Last Login",
         enableRowGroup: true,
+        flex: 0,
+        width: 130,
+        minWidth: 130,
         valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
         field: "lastAccessReview",
         headerName: "Last Review",
+        flex: 0,
+        width: 140,
+        minWidth: 140,
         valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
@@ -3189,14 +3239,18 @@ export default function ApplicationDetailPage() {
       {
         field: "syncDate",
         headerName: "Sync Date",
-        flex: 1,
+        flex: 0,
+        width: 130,
+        minWidth: 130,
         valueFormatter: (params: ValueFormatterParams) =>
           formatDateMMDDYY(params.value),
       },
       {
         field: "__action__",
         headerName: "Action",
-        width: 100,
+        flex: 0,
+        width: 90,
+        minWidth: 90,
         sortable: false,
         filter: false,
         suppressHeaderMenuButton: true,
@@ -3526,7 +3580,7 @@ export default function ApplicationDetailPage() {
       { field: "type", headerName: "Type", flex: 1, minWidth: 150 },
       {
         field: "Ent Owner",
-        headerName: "Entitlement owner",
+        headerName: "Owner",
         flex: 1,
         minWidth: 150,
       },
@@ -3939,6 +3993,9 @@ export default function ApplicationDetailPage() {
     []
   );
 
+  // Accounts grid: same defaults, without column filters
+  const accountsDefaultColDef = useMemo(() => ({ ...defaultColDef, filter: false }), [defaultColDef]);
+
   const tabsDataEnt = useMemo(() => [
     {
       label: "All",
@@ -4312,23 +4369,26 @@ export default function ApplicationDetailPage() {
               <div className="flex items-center gap-1">
                 <CatalogImportButton
                   title="Import entitlements (.csv or .xlsx)"
-                  buildUrl={() => {
-                    // applicationName makes the API reject rows from other applications
-                    const params = new URLSearchParams({ dryRun: "false" });
-                    const applicationName = getStoredApplicationName();
-                    if (applicationName) params.set("applicationName", applicationName);
-                    return `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/import?${params.toString()}`;
-                  }}
+                  buildUrl={() =>
+                    `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/bulkenrichmentcontroller/bulk-enrichment`
+                  }
                   onImported={() => setEntReloadKey((k) => k + 1)}
                 />
                 <CatalogExportButton
                   title="Export entitlements"
+                  formats={["csv"]}
                   fileName={`entitlements${getStoredApplicationName() ? `-${getStoredApplicationName()}` : ""}`}
-                  buildUrl={(format) => {
-                    const params = new URLSearchParams({ format });
+                  getFile={exportEntitlementsCsv}
+                />
+                <CatalogExportButton
+                  title="Download enrichment template (Excel)"
+                  icon={FileSpreadsheet}
+                  formats={["xlsx"]}
+                  fileName={`enrichment-template${getStoredApplicationName() ? `-${getStoredApplicationName()}` : ""}`}
+                  buildUrl={() => {
                     const applicationName = getStoredApplicationName();
-                    if (applicationName) params.set("applicationName", applicationName);
-                    return `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/export?${params.toString()}`;
+                    const query = applicationName ? `?${new URLSearchParams({ applicationName }).toString()}` : "";
+                    return `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/bulkenrichmentcontroller/attributes/excel-template${query}`;
                   }}
                 />
               </div>
@@ -4412,7 +4472,7 @@ export default function ApplicationDetailPage() {
               key={`accounts-grid-${currentPage}-${pageSize}`}
               rowData={paginatedData}
               columnDefs={columnDefs}
-              defaultColDef={defaultColDef}
+              defaultColDef={accountsDefaultColDef}
               masterDetail={true}
               onGridReady={(params: any) => {
                 gridApiRef.current = params.api;

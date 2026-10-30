@@ -97,6 +97,8 @@ interface FieldConfig {
   apiEndpoint: string;
   /** Shown in the "Display" column */
   showInUI: boolean;
+  /** Shown in the "Allow Enrichment" column */
+  allowEnrichment: boolean;
 }
 
 function splitListValues(raw: string): string[] {
@@ -106,6 +108,18 @@ function splitListValues(raw: string): string[] {
 const CATALOG_METADATA_BASE_URL = () =>
   `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/catalog-metadata`;
 const CATALOG_METADATA_URL = () => `${CATALOG_METADATA_BASE_URL()}/list`;
+const ATTRIBUTE_CONFIGURATIONS_URL = () =>
+  `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/attributecontroller/attribute-configurations`;
+
+/** Display label in capitals: "Access Scope" -> "ACCESS_SCOPE" */
+function toAttributeCode(name: string): string {
+  return name
+    .trim()
+    .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toUpperCase();
+}
 
 function pickStr(...vals: unknown[]): string | undefined {
   for (const v of vals) {
@@ -128,6 +142,9 @@ function toBool(v: unknown, fallback: boolean): boolean {
 
 /** "Last Reviewed On" / "last_reviewed_on" / "lastReviewedOn" -> "lastreviewedon" */
 const normalizeKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+/** Static list values sent for every field, whatever the editor holds */
+const STATIC_LIST_VALUES = ["High", "Medium", "Low"];
 
 const CATEGORY_BY_NORMALIZED_KEY: Record<string, FieldCategory> = Object.fromEntries(
   Object.entries(FIELD_CATEGORY_MAP).map(([k, v]) => [normalizeKey(k), v])
@@ -194,6 +211,7 @@ const EMPTY_FIELD_CONFIG: FieldConfig = {
   listValues: "",
   apiEndpoint: "",
   showInUI: true,
+  allowEnrichment: false,
 };
 
 function mapMetadataItem(item: any, index: number): MetadataField {
@@ -224,12 +242,13 @@ function mapMetadataItem(item: any, index: number): MetadataField {
       ),
       apiEndpoint: pickStr(item?.apiEndpoint, item?.api_endpoint, item?.endpoint, item?.listApiEndpoint) ?? "",
       showInUI: toBool(item?.showInUI ?? item?.showInUi ?? item?.show_in_ui ?? item?.visible, true),
+      allowEnrichment: toBool(item?.allow_enrichment ?? item?.allowEnrichment, false),
     },
   };
 }
 
 const ROW_GRID =
-  "grid grid-cols-[minmax(150px,1fr)_minmax(170px,1.2fr)_minmax(200px,1.6fr)_140px_104px] gap-3";
+  "grid grid-cols-[minmax(150px,1fr)_minmax(170px,1.2fr)_minmax(200px,1.6fr)_140px_104px_130px] gap-3";
 
 const inputClass =
   "w-full px-2 py-1.5 border border-gray-300 rounded-md text-sm bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none";
@@ -358,6 +377,8 @@ export default function EntitlementManagementSettings() {
   const [reloadKey, setReloadKey] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  // Fields whose enrichment toggle is being saved
+  const [enrichmentPending, setEnrichmentPending] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -454,7 +475,7 @@ export default function EntitlementManagementSettings() {
             category: CATEGORY_META[f.category].label,
             data_type: cfg.dataType.toLowerCase(),
             is_list: cfg.dataType === "List",
-            static_list_values: cfg.dataType === "List" ? splitListValues(cfg.listValues) : [],
+            static_list_values: STATIC_LIST_VALUES,
             show_in_ui: cfg.showInUI,
           }),
         });
@@ -484,7 +505,7 @@ export default function EntitlementManagementSettings() {
             body: JSON.stringify({
               ui_label: cfg.label,
               show_in_ui: cfg.showInUI,
-              static_list_values: splitListValues(cfg.listValues),
+              static_list_values: STATIC_LIST_VALUES,
             }),
           });
           if (!res.ok) {
@@ -505,6 +526,41 @@ export default function EntitlementManagementSettings() {
       setSaveError(`Some fields could not be saved:\n${failures.join("\n")}`);
     } else {
       setIsEditing(false);
+    }
+  };
+
+  // Each enrichment toggle is saved right away to .../attribute-configurations, outside Edit / Save
+  const toggleEnrichment = async (field: string, enabled: boolean) => {
+    const cfg = configs[field];
+    if (!cfg) return;
+    setEnrichmentPending((prev) => ({ ...prev, [field]: true }));
+    setSaveError(null);
+    updateField(field, { allowEnrichment: enabled });
+    try {
+      const res = await fetch(ATTRIBUTE_CONFIGURATIONS_URL(), {
+        method: "PUT",
+        headers: { ...getJwtAuthHeaders(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          applicationType: null,
+          applicationName: null,
+          // Saved display label, so an unsaved label edit does not change the code
+          attributes: [{ attributeCode: toAttributeCode(savedConfigs[field]?.label ?? cfg.label), enabled, required: false }],
+        }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => null);
+        throw new Error(pickStr(json?.errorMessage, json?.message) || `Request failed (${res.status})`);
+      }
+      setSavedConfigs((prev) => (prev[field] ? { ...prev, [field]: { ...prev[field], allowEnrichment: enabled } } : prev));
+    } catch (e) {
+      updateField(field, { allowEnrichment: !enabled });
+      setSaveError(`${cfg.label}: could not update enrichment — ${e instanceof Error ? e.message : "Request failed"}`);
+    } finally {
+      setEnrichmentPending((prev) => {
+        const next = { ...prev };
+        delete next[field];
+        return next;
+      });
     }
   };
 
@@ -636,9 +692,9 @@ export default function EntitlementManagementSettings() {
                   onImported={() => setReloadKey((k) => k + 1)}
                 />
                 <CatalogExportButton
-                  title="Export metadata (CSV)"
+                  title="Export metadata"
                   fileName="catalog-metadata"
-                  formats={["csv"]}
+                  formats={["csv", "xlsx"]}
                   buildUrl={(format) => `${CATALOG_METADATA_BASE_URL()}/export?format=${format}`}
                 />
               </>
@@ -742,13 +798,14 @@ export default function EntitlementManagementSettings() {
 
                 {!collapsed && (
                   <div className="border-t border-gray-100 overflow-x-auto">
-                    <div className="min-w-[856px]">
+                    <div className="min-w-[998px]">
                       <div className={`${ROW_GRID} px-5 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-400`}>
                         <span>Name</span>
                         <span>Label</span>
                         <span>Tool Tip</span>
                         <span>Data Type</span>
                         <span className="text-center">Display</span>
+                        <span className="text-center">Allow Enrichment</span>
                       </div>
                       {fields.map((field) => {
                         const cfg = configs[field];
@@ -822,6 +879,14 @@ export default function EntitlementManagementSettings() {
                                   disabled={!isEditing}
                                   ariaLabel={`Display — ${field}`}
                                   onChange={(next) => updateField(field, { showInUI: next })}
+                                />
+                              </div>
+                              <div className="flex items-center justify-center gap-2">
+                                <ToggleSwitch
+                                  checked={cfg.allowEnrichment}
+                                  disabled={isNew || isSaving || !!enrichmentPending[field]}
+                                  ariaLabel={`Allow enrichment — ${field}`}
+                                  onChange={(next) => void toggleEnrichment(field, next)}
                                 />
                                 {isNew && (
                                   <button

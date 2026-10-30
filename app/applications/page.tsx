@@ -195,7 +195,7 @@ export default function Application() {
       { headerName: "Department", field: "businessUnit", flex: 1.3, minWidth: 120 },
       { headerName: "Owner", field: "ownername", flex: 1.3, minWidth: 120 },
       {
-        headerName: "#Accounts",
+        headerName: "Accounts",
         field: "numofaccounts",
         flex: 1,
         minWidth: 100,

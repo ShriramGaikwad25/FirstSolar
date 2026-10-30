@@ -112,22 +112,22 @@ export function ensureAuthFetchPatched(): void {
           return doRefreshAndRetry();
         }
 
-        const cloned = response.clone();
-        let text: string;
-        try {
-          text = await cloned.text();
-        } catch {
+        // Only a JSON body can carry "Token Expired"; files (e.g. .xlsx) must not be read as text,
+        // which would corrupt their bytes
+        const contentType = response.headers.get("Content-Type") || "";
+        if (contentType && !/json|text\/plain/i.test(contentType)) {
           return response;
         }
+        // Read a clone so the original body reaches the caller untouched
         try {
-          const data = JSON.parse(text) as unknown;
+          const data = JSON.parse(await response.clone().text()) as unknown;
           if (isTokenExpiredBody(data)) {
             return doRefreshAndRetry();
           }
         } catch {
           // not JSON or other parse error
         }
-        return new Response(text, { status: response.status, statusText: response.statusText, headers: response.headers });
+        return response;
       });
     } catch (error) {
       console.error("Error in auth fetch patch:", error);

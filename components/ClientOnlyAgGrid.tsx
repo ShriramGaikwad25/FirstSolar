@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { themeQuartz } from "ag-grid-community";
+import "@/lib/ag-grid-setup";
 
 // Create a client-only wrapper that completely isolates ag-grid
 const AgGridReact = dynamic(

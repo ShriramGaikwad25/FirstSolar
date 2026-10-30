@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { themeQuartz } from "ag-grid-community";
+import "@/lib/ag-grid-setup";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { Check, ChevronLeft, ChevronRight, Eye, Tag, FileText, User, Hash, Search, X } from "lucide-react";

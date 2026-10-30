@@ -19,6 +19,7 @@ import RightSideBarHost from "@/components/RightSideBarHost";
 import LayoutContentShift from "@/components/LayoutContentShift";
 import { SkipLink } from "@/components/SkipLink";
 import { ChartJsAppFontSync } from "@/components/ChartJsAppFontSync";
+import { TableCellHoverTitles } from "@/components/TableCellHoverTitles";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -40,6 +41,7 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <ChartJsAppFontSync />
+        <TableCellHoverTitles />
         <SkipLink />
         <AuthProvider>
           <QueryProvider>

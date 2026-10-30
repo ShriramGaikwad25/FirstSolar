@@ -1296,7 +1296,9 @@
   border-radius: 8px;
   border: 1px solid #e5e7eb;
   background-color: #ffffff;
-  overflow: hidden;
+  /* Scrolls sideways only when the columns do not fit (e.g. left menu open); no scrollbar otherwise */
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .history-table {
