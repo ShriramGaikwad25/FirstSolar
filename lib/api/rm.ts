@@ -115,8 +115,8 @@ export const RM_LIST_LOOKUP_VALUES_QUERY =
   "SELECT public.kf_rm_list_lookup_values(?, ?::uuid, ?) AS result";
 
 const RM_UPSERT_RULESET_QUERY = "SELECT public.kf_rm_upsert_ruleset(?::jsonb) AS result";
-const RM_TRIGGER_ANALYSIS_QUERY = "SELECT public.kf_rm_trigger_analysis(?::bigint) AS result";
-const RM_EXPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_export_ruleset_json(?::bigint) AS result";
+const RM_TRIGGER_ANALYSIS_QUERY =
+  "SELECT public.kf_rm_trigger_analysis(?::uuid, ?::bigint) AS result";const RM_EXPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_export_ruleset_json(?::bigint) AS result";
 const RM_EXPORT_RULESET_CSV_QUERY = "SELECT public.kf_rm_export_ruleset_csv(?::bigint) AS result";
 const RM_IMPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_import_ruleset_json(?::jsonb, ?::text) AS result";
 const RM_IMPORT_RULESET_CSV_QUERY = "SELECT public.kf_rm_import_ruleset_from_csv(?::jsonb) AS result";
@@ -210,7 +210,7 @@ export async function upsertRuleset(
 }
 
 export async function triggerAnalysis(rulesetId: number): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_TRIGGER_ANALYSIS_QUERY, [rulesetId]);
+  const res = await executeQuery<unknown>(RM_TRIGGER_ANALYSIS_QUERY, [rmTenantId(), rulesetId]);
   return { data: getKfResultData(res) };
 }
 
@@ -316,7 +316,7 @@ const RM_UPSERT_RULE_V2_QUERY = "SELECT public.kf_rm_upsert_rule_v2(?::jsonb) AS
 const RM_LIST_USER_ATTRIBUTES_QUERY =
   "SELECT public.kf_rm_list_user_attributes(?::uuid) AS result";
 const RM_SEARCH_FUNCTIONS_QUERY =
-  "SELECT public.kf_rm_search_functions(?::uuid, ?, ?, ?) AS result";
+  "SELECT public.kf_rm_search_functions(?::uuid, NULLIF(?, '')::text, NULLIF(?, '')::text, ?::int) AS result";
 
 const DEFAULT_UC_OPERATORS = [
   "EQUALS",

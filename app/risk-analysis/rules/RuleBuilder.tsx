@@ -778,7 +778,12 @@ function FunctionChips({
               </button>
             );
           })}
-          {!results.isLoading && (results.data ?? []).length === 0 && (
+          {results.isError && (
+            <div className="p-2.5 text-xs text-red-700">
+              Search failed: {(results.error as Error).message}
+            </div>
+          )}
+          {!results.isLoading && !results.isError && (results.data ?? []).length === 0 && (
             <div className="p-2.5 text-xs text-slate-500">No functions match “{q}”</div>
           )}
         </div>

@@ -15,7 +15,7 @@ import type { RuleListRow } from "@/types/rm-rules";
 import type { RmRuleset } from "@/types/rm-dashboard";
 import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
-import { Pencil, Eye, Plus, Copy, Search, ListChecks } from "lucide-react";
+import { Pencil, Eye, Plus, Copy, Search, ListChecks, Power, PowerOff } from "lucide-react";
 import AgGridReact from "@/components/ClientOnlyAgGrid";
 import "@/lib/ag-grid-setup";
 import type {
@@ -123,8 +123,8 @@ export default function RulesPageClient() {
       {
         headerName: "Code",
         field: "rule_code",
-        flex: 1,
-        minWidth: 130,
+        flex: 2,
+        minWidth: 280,
         tooltipField: "rule_code",
         cellRenderer: (p: ICellRendererParams<RuleListRow>) =>
           p.data ? (
@@ -141,13 +141,13 @@ export default function RulesPageClient() {
         headerName: "Name",
         field: "rule_name",
         flex: 2,
-        minWidth: 200,
+        minWidth: 220,
         tooltipField: "rule_name",
       },
       {
         headerName: "Type",
         field: "rule_type",
-        width: 130,
+        width: 200,
         valueGetter: (p) => (p.data ? lookupName(ruleTypes.data, p.data.rule_type) : ""),
         cellRenderer: (p: ICellRendererParams<RuleListRow>) =>
           p.data ? (
@@ -174,7 +174,7 @@ export default function RulesPageClient() {
       {
         headerName: "Functions (A / B)",
         colId: "functions",
-        width: 200,
+        width: 190,
         sortable: false,
         headerTooltip: "Functions on side A / side B of the rule",
         valueGetter: (p) => {
@@ -198,7 +198,7 @@ export default function RulesPageClient() {
       {
         headerName: "Actions",
         colId: "actions",
-        width: 210,
+        width: 160,
         sortable: false,
         suppressHeaderMenuButton: true,
         resizable: false,
@@ -224,17 +224,19 @@ export default function RulesPageClient() {
               </button>
               <button
                 type="button"
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium whitespace-nowrap ${
+                className={`inline-flex shrink-0 items-center justify-center rounded-md border bg-white p-1.5 disabled:opacity-50 ${
                   active
-                    ? "border-red-200 bg-white text-red-600 hover:bg-red-50"
-                    : "border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50"
+                    ? "border-red-200 text-red-600 hover:bg-red-50"
+                    : "border-emerald-200 text-emerald-700 hover:bg-emerald-50"
                 }`}
+                title={active ? "Deactivate" : "Activate"}
+                aria-label={active ? "Deactivate" : "Activate"}
                 disabled={toggle.isPending}
                 onClick={() =>
                   void toggle.mutate({ id: r.rule_id, status: active ? "INACTIVE" : "ACTIVE" })
                 }
               >
-                {active ? "Deactivate" : "Activate"}
+                {active ? <PowerOff className="h-3.5 w-3.5" /> : <Power className="h-3.5 w-3.5" />}
               </button>
             </div>
           );

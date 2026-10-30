@@ -514,33 +514,15 @@ export async function executeQuery<T>(
 /** Builds applicationinstance.configuration from schema mapping rows. */
 export function buildApplicationInstanceConfiguration(
   mappings: Array<{ source?: string; target?: string; keyfieldMapping?: boolean }>
-): Record<string, string> {
-  const keyfield = mappings.find((m) => m.keyfieldMapping && m.target?.trim() && m.source?.trim());
-  if (keyfield) {
-    return {
-      matchUserAttribute: keyfield.target!.trim(),
-      identityMatchingAttribute: keyfield.source!.trim(),
-    };
-  }
-  const userNameMapping = mappings.find(
-    (m) => m.target?.trim().toLowerCase() === "username" && m.source?.trim()
-  );
-  if (userNameMapping) {
-    return {
-      matchUserAttribute: userNameMapping.target!.trim(),
-      identityMatchingAttribute: userNameMapping.source!.trim(),
-    };
-  }
-  const first = mappings.find((m) => m.target?.trim() && m.source?.trim());
-  if (first) {
-    return {
-      matchUserAttribute: first.target!.trim(),
-      identityMatchingAttribute: first.source!.trim(),
-    };
-  }
+): Record<string, string | boolean> {
+  const match =
+    mappings.find((m) => m.keyfieldMapping && m.target?.trim() && m.source?.trim()) ??
+    mappings.find((m) => m.target?.trim().toLowerCase() === "username" && m.source?.trim()) ??
+    mappings.find((m) => m.target?.trim() && m.source?.trim());
   return {
-    matchUserAttribute: "userName",
-    identityMatchingAttribute: "username",
+    matchUserAttribute: match?.target?.trim() || "userName",
+    groupsAuthoritative: true,
+    identityMatchingAttribute: match?.source?.trim() || "username",
   };
 }
 
@@ -552,7 +534,7 @@ export async function executeAddNewAppFunction(applicationName: string): Promise
 /** executeQuery: persist applicationinstance configuration (identity matching attrs). */
 export async function executeUpdateApplicationInstanceConfiguration(
   appId: string,
-  configuration: Record<string, string>
+  configuration: Record<string, string | boolean>
 ): Promise<unknown> {
   return executeQuery("CALL kf_update_applicationinstance_configuration(?,?::jsonb)", [
     appId,

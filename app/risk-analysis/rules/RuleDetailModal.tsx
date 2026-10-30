@@ -764,36 +764,36 @@ function FunctionCard({
 
   return (
     <div className="border border-slate-200 rounded-lg bg-white">
-      <button
-        type="button"
-        className="w-full p-2.5 flex justify-between items-center gap-2 text-left"
-        onClick={() => setExpanded((e) => !e)}
-      >
-        <div className="flex gap-2 items-center min-w-0">
-          <span className="text-[11px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-900 rounded shrink-0">
-            {fn.system_type}
-          </span>
-          <div className="min-w-0">
-            <div className="font-semibold text-sm truncate" title={fn.function_code}>{fn.function_code}</div>
-            <div className="text-xs text-slate-500 truncate" title={fn.function_name}>{fn.function_name}</div>
+      {/* Toggle and remove are sibling buttons: a <button> cannot contain another. */}
+      <div className="w-full p-2.5 flex items-center gap-2">
+        <button
+          type="button"
+          className="flex-1 min-w-0 flex justify-between items-center gap-2 text-left"
+          onClick={() => setExpanded((e) => !e)}
+          aria-expanded={expanded}
+        >
+          <div className="flex gap-2 items-center min-w-0">
+            <span className="text-[11px] font-bold px-1.5 py-0.5 bg-indigo-100 text-indigo-900 rounded shrink-0">
+              {fn.system_type}
+            </span>
+            <div className="min-w-0">
+              <div className="font-semibold text-sm truncate" title={fn.function_code}>{fn.function_code}</div>
+              <div className="text-xs text-slate-500 truncate" title={fn.function_name}>{fn.function_name}</div>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-slate-500">{fn.privileges.length} privileges</span>
-          {editMode && (
-            <button
-              type="button"
-              className="p-1 rounded border border-red-200 text-red-700 hover:bg-red-50"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove();
-              }}
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-      </button>
+          <span className="text-xs text-slate-500 shrink-0">{fn.privileges.length} privileges</span>
+        </button>
+        {editMode && (
+          <button
+            type="button"
+            className="p-1 rounded border border-red-200 text-red-700 hover:bg-red-50 shrink-0"
+            onClick={onRemove}
+            aria-label={`Remove ${fn.function_code}`}
+          >
+            <Trash2 className="h-3 w-3" />
+          </button>
+        )}
+      </div>
       {expanded && (
         <div className="px-2.5 pb-2.5 border-t border-slate-100">
           {privs.length === 0 ? (

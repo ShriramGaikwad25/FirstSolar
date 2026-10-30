@@ -62,7 +62,13 @@ export default function RulesetsPage() {
   });
 
   const run = useMutation({
-    mutationFn: async (rulesetId: number) => triggerAnalysis(rulesetId),
+    mutationFn: async (rulesetId: number) => {
+      const r = await triggerAnalysis(rulesetId);
+      const out = r.data as { success?: boolean; error?: string; message?: string } | null;
+      if (out && out.success === false)
+        throw new Error(out.error ?? out.message ?? "Analysis could not be started");
+      return r;
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["analysis-runs"] });
     },
@@ -298,18 +304,6 @@ export default function RulesetsPage() {
           <p className="text-sm">{q.error instanceof Error ? q.error.message : String(q.error)}</p>
         </div>
       )}
-      {run.isSuccess && (
-        <div className="mb-4 rounded-md border-l-4 border-emerald-500 bg-emerald-50 p-4 text-sm text-emerald-800">
-          Analysis started. Results will appear on the Dashboard and Violations pages.
-        </div>
-      )}
-      {run.isError && (
-        <div className="mb-4 rounded-md border-l-4 border-red-500 bg-red-50 p-4 text-red-700">
-          <p className="font-medium">Could not start analysis</p>
-          <p className="text-sm">{(run.error as Error).message}</p>
-        </div>
-      )}
-
       {/* Rulesets table (AG Grid) */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <div className="mb-1 border-b border-gray-100">{pagination}</div>
