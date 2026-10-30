@@ -341,7 +341,7 @@ export default function GatewayCustomSchemaSettings() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px]">
                 <thead>
-                  <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <tr className="bg-blue-50 border-b border-blue-100 text-left text-xs font-semibold uppercase tracking-wide text-blue-800">
                     <th className="px-4 py-3 w-[22%]">Name</th>
                     <th className="px-4 py-3">Description</th>
                     <th className="px-4 py-3 w-32">Data Type</th>
