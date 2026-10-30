@@ -34,6 +34,9 @@ import type { ExceptionListRow } from "@/types/rm-exceptions";
 import type { AnalysisRunListRow } from "@/types/rm-analysis-runs";
 import type {
   EntitlementSearchRow,
+  RolePairDetail,
+  ScopedCheckInput,
+  ScopedCheckResult,
   SimulationApiResult,
   SimulationResult,
   SimulateUserAccessInput,
@@ -848,81 +851,104 @@ export async function approveException(
   return { data: getKfResultData(res) };
 }
 
-// --- Simulation (what-if) — align SQL with your `public.kf_rm_*` definitions ---
-const RM_SEARCH_USERS_SIM =
-  "SELECT public.kf_rm_search_users(?::uuid, ?, ?) AS result";
-const RM_SEARCH_ENTITLEMENTS_SIM =
-  "SELECT public.kf_rm_search_entitlements(?::uuid, ?, ?) AS result";
-const RM_GET_USER_ACCESS_SIM = "SELECT public.kf_rm_get_user_access(?::text) AS result";
-const RM_SIMULATE_USER_ACCESS = "SELECT public.kf_rm_simulate_user_access(?::jsonb) AS result";
-const RM_SIMULATE_ROLE = "SELECT public.kf_rm_simulate_role(?, ?::bigint) AS result";
+// --- Simulation (what-if) ---
+// Through the RPC gateway (rmCall), as the Risk Management console does: the public.kf_rm_simulate_*
+// and search functions now take the tenant as a separate argument, which the gateway supplies.
 
-function unwrapSimulationResult<T>(res: unknown): Omit<SimulationApiResult, "data"> & { data?: T } {
-  const raw = getKfResultData(res);
-  if (raw != null && typeof raw === "object" && !Array.isArray(raw)) {
-    const o = raw as Record<string, unknown>;
-    if ("success" in o) {
-      return {
-        success: Boolean(o.success),
-        error:
-          typeof o.error === "string"
-            ? o.error
-            : o.error != null
-              ? String(o.error)
-              : undefined,
-        data: (o.data ?? undefined) as T | undefined,
-      };
-    }
+/** The gateway's result envelope: { success, data } or { success: false, error }. */
+async function rmOp<T>(op: string, params: Record<string, unknown>): Promise<{ success: boolean; data?: T; error?: string }> {
+  try {
+    const r = (await rmCall(op, params)) as { success?: boolean; data?: T; error?: string } | null;
+    if (!r) return { success: false, error: "Empty response" };
+    return { success: r.success !== false, data: r.data, error: r.error };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : String(e) };
   }
-  return { success: true, data: raw as T };
+}
+
+async function rmOpData<T>(op: string, params: Record<string, unknown>): Promise<T> {
+  const r = await rmOp<T>(op, params);
+  if (!r.success) throw new Error(r.error ?? `${op} failed`);
+  return r.data as T;
 }
 
 export async function searchUsers(
   query: string,
   limit: number = 15
 ): Promise<{ data: UserSearchRow[] }> {
-  const res = await executeQuery<unknown>(RM_SEARCH_USERS_SIM, [
-    rmTenantId(),
-    query,
-    limit,
-  ]);
-  return { data: asArray<UserSearchRow>(getKfResultData(res)) };
+  return { data: (await rmOpData<UserSearchRow[]>("rm_search_users", { search: query, limit })) ?? [] };
 }
 
 export async function searchEntitlements(
   query: string,
   limit: number = 15
 ): Promise<{ data: EntitlementSearchRow[] }> {
-  const res = await executeQuery<unknown>(RM_SEARCH_ENTITLEMENTS_SIM, [
-    rmTenantId(),
-    query,
-    limit,
-  ]);
-  return { data: asArray<EntitlementSearchRow>(getKfResultData(res)) };
+  return {
+    data: (await rmOpData<EntitlementSearchRow[]>("rm_search_entitlements", { search: query, limit })) ?? [],
+  };
 }
 
 export async function getUserAccess(userid: string): Promise<{ data: UserAccessPayload | null }> {
-  const res = await executeQuery<unknown>(RM_GET_USER_ACCESS_SIM, [userid]);
-  const data = getKfResultData(res);
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    return { data: data as UserAccessPayload };
+  // rm_get_user_entitlements is the lighter call; older gateways only have rm_get_user_access.
+  let r = await rmOp<UserAccessPayload>("rm_get_user_entitlements", { user_id: userid });
+  if (!r.success && /unknown operation/i.test(r.error ?? "")) {
+    r = await rmOp<UserAccessPayload>("rm_get_user_access", { user_id: userid });
   }
-  return { data: null };
+  if (!r.success) throw new Error(r.error ?? "Could not load the user's access");
+  return { data: r.data && typeof r.data === "object" ? r.data : null };
 }
 
 export async function simulateUserAccess(
   input: SimulateUserAccessInput
 ): Promise<SimulationApiResult & { data?: SimulationResult }> {
-  const res = await executeQuery<unknown>(RM_SIMULATE_USER_ACCESS, [JSON.stringify(input)]);
-  return unwrapSimulationResult<SimulationResult>(res);
+  return rmOp<SimulationResult>("rm_simulate_user_access", {
+    user_id: input.user_id,
+    ruleset_id: input.ruleset_id,
+    add_entitlement_ids: input.add_entitlement_ids,
+    add_privilege_ids: input.add_privilege_ids.map(String),
+    remove_entitlement_ids: input.remove_entitlement_ids,
+    language: "en",
+  });
 }
 
 export async function simulateRole(
   entitlementId: string,
   rulesetId: number
 ): Promise<SimulationApiResult & { data?: SimulationResult }> {
-  const res = await executeQuery<unknown>(RM_SIMULATE_ROLE, [entitlementId, rulesetId]);
-  return unwrapSimulationResult<SimulationResult>(res);
+  return rmOp<SimulationResult>("rm_simulate_role", {
+    entitlement_id: entitlementId,
+    ruleset_id: rulesetId,
+    language: "en",
+  });
+}
+
+/** Privilege search across every system (server-side, by code or name). */
+export async function searchPrivilegesByText(
+  search: string,
+  limit: number = 15
+): Promise<{ data: PrivilegeSearchRow[] }> {
+  const data = await rmOpData<PrivilegeSearchRow[]>("rm_search_privileges", { system_type: null, search, limit });
+  return { data: data ?? [] };
+}
+
+export type RmLookupOption = { value_code: string; value_name: string; color_hex?: string | null };
+
+export async function listLookupOptions(typeCode: string): Promise<RmLookupOption[]> {
+  return (await rmOpData<RmLookupOption[]>("rm_list_lookup_values", { type_code: typeCode, language: "en" })) ?? [];
+}
+
+/** Risk between two roles, from the precomputed role SoD coverage matrix. */
+export async function getRolePairDetail(entitlementA: string, entitlementB: string): Promise<RolePairDetail> {
+  return rmOpData<RolePairDetail>("rm_role_pair_detail", { entitlement_a: entitlementA, entitlement_b: entitlementB });
+}
+
+/** Checks a request the way analysis will see it once granted, with each role in its requested scopes. */
+export async function checkRequestScoped(input: ScopedCheckInput): Promise<ScopedCheckResult> {
+  return rmOpData<ScopedCheckResult>("rm_check_request_sod_scoped", {
+    user_id: input.user_id,
+    items: input.items,
+    ruleset_codes: input.ruleset_codes?.length ? input.ruleset_codes : null,
+  });
 }
 
 // --- ERP instances & extract templates — align SQL with your `public.kf_rm_*` definitions ---

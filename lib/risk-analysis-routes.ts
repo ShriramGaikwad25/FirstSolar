@@ -1,4 +1,4 @@
-import { LayoutGrid, Library, ListChecks, Box, ShieldAlert } from "lucide-react";
+import { LayoutGrid, Library, ListChecks, Box, ShieldAlert, FlaskConical } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type RiskAnalysisEntry = {
@@ -14,6 +14,7 @@ export const RISK_ANALYSIS_NAV: RiskAnalysisEntry[] = [
   { name: "Rules", href: "/risk-analysis/rules", icon: ListChecks },
   { name: "Functions", href: "/risk-analysis/functions", icon: Box },
   { name: "Violations", href: "/risk-analysis/violations", icon: ShieldAlert },
+  { name: "Simulation", href: "/risk-analysis/simulation", icon: FlaskConical },
 ];
 
 export const riskAnalysisSubItems = RISK_ANALYSIS_NAV.map((e) => ({
