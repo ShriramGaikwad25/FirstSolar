@@ -1,5 +1,6 @@
 import { getTenantUuid } from "@/lib/auth";
 import { executeQuery } from "@/lib/api";
+import { getBackendOrigin } from "@/lib/backendOrigin";
 import { coerceRowObject, extractResultRows } from "@/lib/nhi-dashboard";
 import { getKfResultData, mapExecuteQueryToDashboard, mapExecuteQueryToRulesets } from "@/lib/rm-dashboard-data";
 import type { RmDashboardData, RmRuleset, RulesetCsvRow } from "@/types/rm-dashboard";
@@ -45,6 +46,27 @@ import type { Lookup, LookupType, UpsertLookupValueInput } from "@/types/rm-look
 
 function rmTenantId(): string {
   return getTenantUuid();
+}
+
+/**
+ * Calls one operation on the Risk Management RPC gateway (kf-rm-api): an operation name and named
+ * params, never SQL. The gateway verifies the session JWT and supplies the tenant and acting user,
+ * which the reworked public.kf_rm_* functions now take as separate arguments (so the old one-jsonb
+ * SQL calls no longer match). Returns the function's result envelope, as getKfResultData did.
+ */
+async function rmCall(op: string, params: Record<string, unknown>): Promise<unknown> {
+  const res = await fetch(`${getBackendOrigin()}/rm-api/api/v1/rpc`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ op, params }),
+  });
+  const body = (await res.json().catch(() => ({}))) as {
+    data?: { result?: unknown }[];
+    error?: string;
+    detail?: string;
+  };
+  if (!res.ok) throw new Error(body.detail ?? body.error ?? `${op} failed (${res.status})`);
+  return body.data?.[0]?.result ?? null;
 }
 
 export type { RulesetCsvRow } from "@/types/rm-dashboard";
@@ -308,11 +330,8 @@ export async function copyRuleset(input: CopyRulesetInput): Promise<{ data: Copy
 // --- Rules ---
 const RM_LIST_RULES_QUERY =
   "SELECT public.kf_rm_list_rules(?::uuid, ?::bigint, NULL, NULL, NULL, NULL, ?, ?) AS result";
-const RM_TOGGLE_RULE_STATUS_QUERY =
-  "SELECT public.kf_rm_set_rule_status(?::uuid, ?::bigint, ?::text) AS result";
 const RM_GET_RULE_QUERY =
   "SELECT public.kf_rm_get_rule_detail(?::uuid, ?::bigint, ?) AS result";
-const RM_UPSERT_RULE_V2_QUERY = "SELECT public.kf_rm_upsert_rule_v2(?::jsonb) AS result";
 const RM_LIST_USER_ATTRIBUTES_QUERY =
   "SELECT public.kf_rm_list_user_attributes(?::uuid) AS result";
 const RM_SEARCH_FUNCTIONS_QUERY =
@@ -395,12 +414,7 @@ export async function listRules(
 }
 
 export async function toggleRuleStatus(ruleId: number, status: string): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_TOGGLE_RULE_STATUS_QUERY, [
-    rmTenantId(),
-    ruleId,
-    status,
-  ]);
-  return { data: getKfResultData(res) };
+  return { data: await rmCall("rm_toggle_rule_status", { rule_id: ruleId, status }) };
 }
 
 export async function getRuleDetail(
@@ -416,8 +430,22 @@ export async function getRuleDetail(
 }
 
 export async function upsertRuleV2(input: UpsertRuleV2Input): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_UPSERT_RULE_V2_QUERY, [JSON.stringify(input)]);
-  return { data: getKfResultData(res) };
+  const data = await rmCall("rm_upsert_rule_v2", {
+    ruleset_id: input.ruleset_id,
+    rule_code: input.rule_code,
+    rule_type: input.rule_type,
+    severity: input.severity,
+    risk_score: input.risk_score ?? 0,
+    scope_enforcement: input.scope_enforcement ?? "SAME_SCOPE",
+    rule_name: input.rule_name ?? null,
+    description: input.description ?? null,
+    remediation: input.remediation ?? null,
+    side_a_function_ids: input.side_a_function_ids.map(String),
+    side_b_function_ids: input.side_b_function_ids.map(String),
+    user_conditions: input.user_conditions ?? [],
+    status: input.status ?? "ACTIVE",
+  });
+  return { data };
 }
 
 export async function listUserAttributes(): Promise<{
@@ -459,14 +487,10 @@ export async function searchFunctions(
 // --- Rule <-> Ruleset M:N + scope pairs ---
 const RM_LIST_RULE_RULESETS_QUERY =
   "SELECT public.kf_rm_list_rule_rulesets(?::uuid, ?::bigint) AS result";
-const RM_SET_RULE_RULESETS_QUERY =
-  "SELECT public.kf_rm_set_rule_rulesets(?::uuid, ?::bigint, ?::bigint[]) AS result";
 const RM_LIST_SCOPE_VALUES_QUERY =
   "SELECT public.kf_rm_list_scope_values(?::uuid, NULLIF(?, '')) AS result";
 const RM_GET_RULE_SCOPE_PAIRS_QUERY =
   "SELECT public.kf_rm_get_rule_scope_pairs(?::uuid, ?::bigint) AS result";
-const RM_SET_RULE_SCOPE_PAIRS_QUERY =
-  "SELECT public.kf_rm_set_rule_scope_pairs(?::uuid, ?::bigint, ?::jsonb) AS result";
 
 /** kf_rm_* functions return `{ success: false, error }` (no `data`) on failure. */
 function throwIfKfError(data: unknown, fallback: string): void {
@@ -494,12 +518,7 @@ export async function setRuleRulesets(
   ruleId: number,
   rulesetIds: number[]
 ): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_SET_RULE_RULESETS_QUERY, [
-    rmTenantId(),
-    ruleId,
-    `{${rulesetIds.join(",")}}`,
-  ]);
-  const data = getKfResultData(res);
+  const data = await rmCall("rm_set_rule_rulesets", { rule_id: ruleId, ruleset_ids: rulesetIds.map(String) });
   throwIfKfError(data, "Ruleset membership update failed");
   return { data };
 }
@@ -522,12 +541,7 @@ export async function setRuleScopePairs(
   ruleId: number,
   pairs: RuleScopePair[]
 ): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_SET_RULE_SCOPE_PAIRS_QUERY, [
-    rmTenantId(),
-    ruleId,
-    JSON.stringify(pairs),
-  ]);
-  const data = getKfResultData(res);
+  const data = await rmCall("rm_set_rule_scope_pairs", { rule_id: ruleId, pairs });
   throwIfKfError(data, "Scope pairs update failed");
   return { data };
 }
