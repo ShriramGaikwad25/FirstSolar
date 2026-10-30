@@ -84,8 +84,8 @@ export const navLinks: NavItem[] = [
       { name: "Workflow Builder", href: "/settings/gateway/workflow-builder", icon: Workflow },
       { name: "Email Templates", href: "/settings/gateway/email-templates", icon: FileText },
       { name: "Entitlement management", href: "/settings/gateway/entitlement-management", icon: FileCode2 },
+      { name: "Custom Schema Management", href: "/settings/gateway/custom-schema", icon: Database },
       { name: "Manage Native Users", href: "/settings/gateway/native-users", icon: Users },
-      { name: "Custom Schema", href: "/settings/gateway/custom-schema", icon: Database },
     ],
   },
 ];

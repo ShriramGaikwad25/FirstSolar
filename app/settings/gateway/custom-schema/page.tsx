@@ -295,19 +295,21 @@ export default function GatewayCustomSchemaSettings() {
   return (
     <div className="h-full">
       <div className="w-full px-6 py-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Custom Schema Management</h1>
-            <p className="text-sm text-gray-500 mt-1 max-w-3xl">
-              Define custom user attributes beyond the standard SCIM schema. Each attribute is mapped to a
-              SCIM custom attribute that integrations and policies can use.
-            </p>
+        <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:w-96">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 pointer-events-none" />
+            <input
+              value={query}
+              onChange={e => { setQuery(e.target.value); setCurrentPage(1); }}
+              placeholder="Search name, description, attribute..."
+              className="w-full pl-9 pr-3 py-2.5 rounded-md border border-blue-500 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
           </div>
           <button
             type="button"
             onClick={handleAdd}
             disabled={isLoading || !!error}
-            className="shrink-0 inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="shrink-0 inline-flex items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Plus className="w-4 h-4" />
             Add Attribute
@@ -315,30 +317,8 @@ export default function GatewayCustomSchemaSettings() {
         </div>
 
         <div className="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-          <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="text-sm font-semibold text-gray-900">Custom Attributes</div>
-              <div className="text-xs text-gray-500 mt-0.5">
-                {isLoading
-                  ? "Loading..."
-                  : query.trim()
-                    ? `${filtered.length} of ${rows.length} attribute${rows.length === 1 ? "" : "s"}`
-                    : `${rows.length} attribute${rows.length === 1 ? "" : "s"}`}
-              </div>
-            </div>
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-              <input
-                value={query}
-                onChange={e => { setQuery(e.target.value); setCurrentPage(1); }}
-                placeholder="Search name, description, attribute..."
-                className="w-full pl-9 pr-3 py-2 rounded-md border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-          </div>
-
           {error && (
-            <div className="mx-5 mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
+            <div className="mx-5 my-3 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs text-red-700">
               {error}
             </div>
           )}
