@@ -299,7 +299,7 @@ export function Navigation() {
                     } ${!isSidebarExpanded ? 'justify-center' : 'justify-start'}`}
                     style={{
                       color: isActive ? '#2563eb' : 'var(--text-icons-base-second, #68727D)',
-                      fontFamily: 'Inter',
+                      fontFamily: 'var(--font-inter)',
                       fontSize: '13px',
                       fontStyle: 'normal',
                       fontWeight: '600',
@@ -337,7 +337,7 @@ export function Navigation() {
                     } ${!isSidebarExpanded ? 'justify-center' : 'justify-start'}`}
                     style={{
                       color: isActive ? '#2563eb' : 'var(--text-icons-base-second, #68727D)',
-                      fontFamily: 'Inter',
+                      fontFamily: 'var(--font-inter)',
                       fontSize: '13px',
                       fontStyle: 'normal',
                       fontWeight: '600',
@@ -382,7 +382,7 @@ export function Navigation() {
                           }`}
                           style={{
                             color: isSubActive ? '#15803d' : '#475569',
-                            fontFamily: 'Inter',
+                            fontFamily: 'var(--font-inter)',
                             fontSize: '12px',
                             fontStyle: 'normal',
                             fontWeight: '500',

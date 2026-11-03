@@ -17,9 +17,8 @@ export function middleware(req: NextRequest) {
   const csp =
     "default-src 'self'; " +
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'${isDev ? " 'unsafe-eval'" : ""}; ` +
-    // globals.css imports the Inter stylesheet from Google Fonts.
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
+    "style-src 'self' 'unsafe-inline'; " +
+    "font-src 'self'; " +
     "img-src 'self' data: blob: https:; " +
     `connect-src 'self' https://*.keyforge.ai${backend ? ` ${backend}` : ""}; ` +
     "object-src 'none'; frame-ancestors 'self'; base-uri 'self'";
