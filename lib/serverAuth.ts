@@ -160,15 +160,37 @@ export function withTenantHeader(
 
 
 /**
- * Backend origin for server-side calls: NEXT_PUBLIC_BACKEND_ORIGIN when set (e.g. Vercel), DEV_BACKEND_ORIGIN under
- * `npm run dev`, otherwise the host the user typed (from the proxy's X-Forwarded-* headers or Host), without /kfidp.
+ * Backend origin for server-side calls: BACKEND_ORIGIN (server-only, read at runtime, e.g. set in the systemd unit
+ * when the instance cannot reach the backend at the public address), NEXT_PUBLIC_BACKEND_ORIGIN when set (e.g.
+ * Vercel), DEV_BACKEND_ORIGIN under `npm run dev`, otherwise the host the user typed (from the proxy's
+ * X-Forwarded-* headers or Host), without /kfidp.
  */
 export function getBackendOriginFromRequest(request: NextRequest): string {
+  const serverOrigin = (process.env.BACKEND_ORIGIN ?? "").trim().replace(/\/+$/, "");
+  if (serverOrigin) return serverOrigin;
   const configured = getConfiguredBackendOrigin();
   if (configured) return configured;
   if (process.env.NODE_ENV === "development") return DEV_BACKEND_ORIGIN;
   const first = (v: string | null) => v?.split(",")[0]?.trim() || "";
-  const proto = first(request.headers.get("x-forwarded-proto")) || request.nextUrl.protocol.replace(/:$/, "");
-  const host = first(request.headers.get("x-forwarded-host")) || first(request.headers.get("host")) || request.nextUrl.host;
+  let host = first(request.headers.get("x-forwarded-host")) || first(request.headers.get("host")) || request.nextUrl.host;
+  // Port 443 is always https, whatever the proxy says: some chains forward "host:443" with
+  // X-Forwarded-Proto: http, and plain HTTP to 443 gets a 400.
+  const port = host.match(/:(\d+)$/)?.[1];
+  const proto =
+    port === "443"
+      ? "https"
+      : first(request.headers.get("x-forwarded-proto")) || request.nextUrl.protocol.replace(/:$/, "");
+  if ((proto === "https" && port === "443") || (proto === "http" && port === "80")) host = host.replace(/:\d+$/, "");
   return `${proto}://${host}`;
+}
+
+/** Origin of the page that sent the request (Origin header, else Referer); null when neither is present. */
+export function getPageOriginFromRequest(request: NextRequest): string | null {
+  const origin = request.headers.get("origin")?.trim();
+  if (origin && origin !== "null") return origin;
+  try {
+    return new URL(request.headers.get("referer") ?? "").origin;
+  } catch {
+    return null;
+  }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAccessTokenFromRequest, getBackendOriginFromRequest, getJwtTokenFromRequest } from "@/lib/serverAuth";
+import { getAccessTokenFromRequest, getBackendOriginFromRequest, getJwtTokenFromRequest, getPageOriginFromRequest } from "@/lib/serverAuth";
 import { isKeyforgeOrigin, KF_AUTH_HEADER, KF_UPSTREAM_HEADER, TOKEN_ISSUING_PATH } from "@/lib/kfProxy";
 
 // Token proxy: session tokens are HttpOnly cookies (see lib/kfProxy.ts).
@@ -26,7 +26,10 @@ async function proxy(request: NextRequest, { params }: { params: Promise<{ path:
   const path = (pathSegments ?? []).map(encodeURIComponent).join("/");
 
   const backendOrigin = getBackendOriginFromRequest(request);
-  const requested = request.headers.get(KF_UPSTREAM_HEADER)?.trim().replace(/\/+$/, "") || backendOrigin;
+  let requested = request.headers.get(KF_UPSTREAM_HEADER)?.trim().replace(/\/+$/, "") || backendOrigin;
+  // Self-hosted, the browser names the backend by the page's own origin; BACKEND_ORIGIN may be another
+  // address for that same backend.
+  if (requested === getPageOriginFromRequest(request)) requested = backendOrigin;
   if (requested !== backendOrigin && !isKeyforgeOrigin(requested)) {
     return NextResponse.json({ error: "bad_upstream", message: `Upstream not allowed: ${requested}` }, { status: 400 });
   }
