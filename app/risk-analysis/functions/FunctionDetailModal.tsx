@@ -51,6 +51,9 @@ function KindBadge({ kind }: { kind: string }) {
 
 type Tab = "OVERVIEW" | "PRIVILEGES" | "REQUIRED_PERMS" | "USAGE";
 
+/** Privilege picker's "All systems" option value. */
+const ALL_SYSTEMS = "*";
+
 type Props = {
   open: boolean;
   functionId: number | null;
@@ -389,24 +392,18 @@ function PrivilegesEditor({
   const systems = useFunctionSystems(systemType);
   const [filterSystem, setFilterSystem] = useState("");
 
-  const effectiveSystem = filterSystem || systemType || "GENERIC";
+  // "" = the function's own system; ALL_SYSTEMS searches every system. Search text is matched on the server.
+  const effectiveSystem = filterSystem === ALL_SYSTEMS ? null : filterSystem || systemType || null;
+  const search = query.trim();
 
   const pickable = useQuery({
     enabled: editMode,
-    queryKey: ["priv-search", effectiveSystem],
-    queryFn: async () => (await searchPrivileges(effectiveSystem, 50)).data ?? [],
+    queryKey: ["priv-search", search, effectiveSystem],
+    queryFn: async () => (await searchPrivileges(effectiveSystem, search || null, 50)).data ?? [],
+    placeholderData: (prev) => prev,
   });
 
-  const pickableFiltered = useMemo(() => {
-    const rows = pickable.data ?? [];
-    const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((p) => {
-      const code = (p.privilege_code ?? "").toLowerCase();
-      const name = (p.privilege_name ?? "").toLowerCase();
-      return code.includes(q) || name.includes(q);
-    });
-  }, [pickable.data, query]);
+  const pickableFiltered = pickable.data ?? [];
 
   const add = (p: PrivilegeSearchRow) => {
     if (privileges.some((x) => x.privilege_id === p.privilege_id)) return;
@@ -497,7 +494,8 @@ function PrivilegesEditor({
               onChange={(e) => setFilterSystem(e.target.value)}
             >
               <option value="">System: {systemType}</option>
-              {systems.map((s) => (
+              <option value={ALL_SYSTEMS}>All systems</option>
+              {systems.filter((s) => s !== systemType).map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
@@ -581,8 +579,10 @@ function RequiredPermsEditor({
       <p className="text-[13px] text-slate-500 mb-2 flex gap-1 items-start">
         <Wrench className="h-3.5 w-3.5 mt-0.5 shrink-0" />
         <span>
-          <b>Required permissions</b> — value-level rules (e.g. SAP ACTVT). Leave empty for simple
-          &quot;any privilege&quot; semantics.
+          <b>Required permissions</b> express value-level rules — e.g.{" "}
+          <code className="font-mono">F_BKPF_BUK / ACTVT = 01</code> (SAP &quot;Create&quot;). A user satisfies this
+          function only when ≥1 of their privileges carries a permission row that covers every required row.
+          Leave empty for simple &quot;any privilege&quot; semantics.
         </span>
       </p>
       {rows.length === 0 && (
@@ -698,8 +698,8 @@ function UsageTab({ rules }: { rules: FunctionDetail["rules"] }) {
   return (
     <div className="space-y-3">
       <p className="text-[13px] text-slate-500">
-        This function is bound to <b>{rules.length}</b> rule(s). Editing privileges here affects those
-        rules.
+        This function is bound to <b>{rules.length}</b> rule(s). Editing privileges here directly
+        affects the rules below.
       </p>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>

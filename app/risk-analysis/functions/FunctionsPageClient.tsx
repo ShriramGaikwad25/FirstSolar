@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { listFunctionsPaged } from "@/lib/api/rm";
 import type { FunctionListRow } from "@/types/rm-functions";
@@ -25,38 +25,36 @@ export default function FunctionsPageClient() {
   const [status, setStatus] = useState("ACTIVE");
   const systems = useFunctionSystems();
 
+  // Search, filters and paging run on the server (rm_list_functions_paged); search waits for typing to pause.
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+
   const q = useQuery({
-    queryKey: ["functions", status, 1, 100],
-    queryFn: async () =>
-      (await listFunctionsPaged({ status, page: 1, page_size: 100 })).data ?? [],
+    queryKey: ["functions", debouncedSearch, systemType, status, currentPage, pageSize],
+    queryFn: () =>
+      listFunctionsPaged({
+        search: debouncedSearch || undefined,
+        system_type: systemType || undefined,
+        status,
+        page: currentPage,
+        page_size: pageSize,
+      }),
+    placeholderData: (prev) => prev,
   });
 
-  const rows = useMemo(() => {
-    const raw = q.data ?? [];
-    const s = search.trim().toLowerCase();
-    return raw.filter((f) => {
-      if (systemType && f.system_type !== systemType) return false;
-      if (!s) return true;
-      const name = (f.function_name ?? "").toLowerCase();
-      const code = (f.function_code ?? "").toLowerCase();
-      return code.includes(s) || name.includes(s);
-    });
-  }, [q.data, search, systemType]);
+  const rows = q.data?.data ?? [];
+  const total = q.data?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const [openFnId, setOpenFnId] = useState<number | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [creating, setCreating] = useState(false);
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState<number | "all">(20);
-  const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(rows.length / pageSize));
-  // Filtering can shrink the list below the current page; clamp instead of resetting in an effect.
-  const page = Math.min(currentPage, totalPages);
-  const paginatedRows = useMemo(() => {
-    if (pageSize === "all") return rows;
-    const start = (page - 1) * pageSize;
-    return rows.slice(start, start + pageSize);
-  }, [rows, page, pageSize]);
 
   const openFunction = (id: number, edit: boolean) => {
     setOpenFnId(id);
@@ -190,16 +188,16 @@ export default function FunctionsPageClient() {
 
   const pagination = (
     <CustomPagination
-      totalItems={rows.length}
-      currentPage={page}
+      totalItems={total}
+      currentPage={currentPage}
       totalPages={totalPages}
       pageSize={pageSize}
       onPageChange={setCurrentPage}
       onPageSizeChange={(n) => {
-        setPageSize(n);
+        setPageSize(n === "all" ? 100 : n);
         setCurrentPage(1);
       }}
-      pageSizeOptions={[10, 20, 50, 100, "all"]}
+      pageSizeOptions={[20, 50, 100]}
     />
   );
 
@@ -277,7 +275,7 @@ export default function FunctionsPageClient() {
           </div>
           <span className="inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-lg border border-blue-200 bg-blue-50 px-3 text-sm font-semibold text-blue-700">
             <Boxes className="h-4 w-4" />
-            Functions: <span className="text-blue-900">{rows.length}</span>
+            Functions: <span className="text-blue-900">{total}</span>
           </span>
           {hasFilters && (
             <button
@@ -308,7 +306,7 @@ export default function FunctionsPageClient() {
         <div className="mb-1 border-b border-gray-100">{pagination}</div>
         <div className="ag-theme-quartz risk-analysis-grid w-full" style={{ width: "100%", minWidth: 0 }}>
           <AgGridReact
-            rowData={paginatedRows}
+            rowData={rows}
             columnDefs={columnDefs}
             getRowId={(p: GetRowIdParams<FunctionListRow>) => String(p.data.function_id)}
             rowClassRules={{

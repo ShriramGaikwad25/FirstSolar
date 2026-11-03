@@ -534,17 +534,6 @@ export async function setRuleScopePairs(
   return { data };
 }
 
-// --- Functions (catalog) ---
-const RM_LIST_FUNCTIONS_PAGED_QUERY =
-  "SELECT public.kf_rm_list_functions_paged(?::uuid, NULL::varchar, NULL::varchar, ?::varchar, ?, ?) AS result";
-const RM_GET_FUNCTION_DETAIL_QUERY =
-  "SELECT public.kf_rm_get_function_detail(?::uuid, ?::bigint) AS result";
-const RM_UPSERT_FUNCTION_QUERY = "SELECT public.kf_rm_upsert_function(?::jsonb) AS result";
-const RM_DELETE_FUNCTION_QUERY =
-  "SELECT public.kf_rm_delete_function(?::uuid, ?::bigint) AS result";
-const RM_SEARCH_PRIVILEGES_QUERY =
-  "SELECT public.kf_rm_search_privileges(?::uuid, ?, NULL, ?) AS result";
-
 const RM_LIST_VIOLATIONS_QUERY =
   "SELECT public.kf_rm_list_violations_v2(?::uuid, NULL::bigint, NULL::bigint, NULL::uuid, ?, NULL, NULL, NULL, NULL, NULL, ?, ?, ?, ?, ?) AS result";
 
@@ -723,62 +712,62 @@ export async function addViolationComment(
   return { data };
 }
 
+// Functions go through the RPC gateway (rmCall), as the Risk Management console does; the gateway supplies the tenant.
+
+/** Server-side search, system and status filters and paging; `total` is the count across all pages. */
 export async function listFunctionsPaged(
   params: ListFunctionsPagedParams = {}
-): Promise<{ data: FunctionListRow[] }> {
-  const page = params.page ?? 1;
-  const pageSize = params.page_size ?? 100;
-  const status =
-    params.status != null && String(params.status).trim() !== ""
-      ? String(params.status).trim()
-      : "";
-  const res = await executeQuery<unknown>(RM_LIST_FUNCTIONS_PAGED_QUERY, [
-    rmTenantId(),
-    status,
-    page,
-    pageSize,
-  ]);
-  return { data: asArray<FunctionListRow>(getKfResultData(res)) };
+): Promise<{ data: FunctionListRow[]; total: number }> {
+  const r = (await rmCall("rm_list_functions_paged", {
+    system_type: params.system_type || null,
+    search: params.search || null,
+    status: params.status === undefined ? "ACTIVE" : params.status || null,
+    page: params.page ?? 1,
+    page_size: params.page_size ?? 50,
+  })) as { success?: boolean; data?: unknown; total?: number; pagination?: { total?: number }; error?: string } | null;
+  if (!r || r.success === false) throw new Error(r?.error ?? "Failed to load functions");
+  const data = asArray<FunctionListRow>(r.data);
+  return { data, total: Number(r.total ?? r.pagination?.total ?? data.length) };
 }
 
 export async function getFunctionDetail(
   functionId: number
 ): Promise<{ data: FunctionDetail | null }> {
-  const res = await executeQuery<unknown>(RM_GET_FUNCTION_DETAIL_QUERY, [
-    rmTenantId(),
-    functionId,
-  ]);
-  const data = getKfResultData(res);
-  if (data && typeof data === "object" && !Array.isArray(data)) {
-    return { data: data as FunctionDetail };
-  }
-  return { data: null };
+  const data = await rmOpData<FunctionDetail | null>("rm_get_function_detail", { function_id: functionId });
+  return { data: data && typeof data === "object" && !Array.isArray(data) ? data : null };
 }
 
 export async function upsertFunction(input: UpsertFunctionInput): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_UPSERT_FUNCTION_QUERY, [JSON.stringify(input)]);
-  return { data: getKfResultData(res) };
+  const data = await rmOpData<unknown>("rm_upsert_function", {
+    function_id: input.function_id ?? null,
+    function_code: input.function_code,
+    function_name: input.function_name || input.function_code,
+    system_type: input.system_type,
+    description: input.description ?? null,
+    status: input.status ?? "ACTIVE",
+    privileges: input.privileges ?? [],
+    required_permissions: input.required_permissions ?? [],
+  });
+  return { data };
 }
 
+/** The backend deactivates instead of deleting when rules still reference the function. */
 export async function deleteFunction(functionId: number): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_DELETE_FUNCTION_QUERY, [
-    rmTenantId(),
-    functionId,
-  ]);
-  return { data: getKfResultData(res) };
+  return { data: await rmOpData<unknown>("rm_delete_function", { function_id: functionId }) };
 }
 
-/** `kf_rm_search_privileges(tenant_id, system_type, NULL, limit)` — filter by text in the UI; search is not bound. */
+/** `systemType` null searches every system; `search` matches privilege code or name on the server. */
 export async function searchPrivileges(
-  systemType: string = "GENERIC",
+  systemType: string | null,
+  search: string | null,
   limit: number = 50
 ): Promise<{ data: PrivilegeSearchRow[] }> {
-  const res = await executeQuery<unknown>(RM_SEARCH_PRIVILEGES_QUERY, [
-    rmTenantId(),
-    systemType,
+  const data = await rmOpData<PrivilegeSearchRow[]>("rm_search_privileges", {
+    system_type: systemType || null,
+    search: search || null,
     limit,
-  ]);
-  return { data: asArray<PrivilegeSearchRow>(getKfResultData(res)) };
+  });
+  return { data: asArray<PrivilegeSearchRow>(data) };
 }
 
 /**

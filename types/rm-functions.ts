@@ -56,8 +56,12 @@ export type PrivilegeSearchRow = {
   privilege_kind?: string;
 };
 
-/** Matches `kf_rm_list_functions_paged(NULL::uuid, NULL::varchar, NULL::varchar, status, page, page_size)`. */
+/** Params of the `rm_list_functions_paged` gateway op. */
 export type ListFunctionsPagedParams = {
+  /** Code or name contains (server-side) */
+  search?: string;
+  system_type?: string;
+  /** `""` lists every status */
   status?: string;
   /** 1-based page (default 1) */
   page?: number;
