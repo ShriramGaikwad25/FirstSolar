@@ -16,13 +16,14 @@ import type {
 } from "ag-grid-enterprise";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import { FunctionDetailModal } from "./FunctionDetailModal";
-import { FUNCTION_SYSTEMS } from "./constants";
+import { useFunctionSystems } from "./constants";
 
 export default function FunctionsPageClient() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [systemType, setSystemType] = useState("");
   const [status, setStatus] = useState("ACTIVE");
+  const systems = useFunctionSystems();
 
   const q = useQuery({
     queryKey: ["functions", status, 1, 100],
@@ -252,7 +253,7 @@ export default function FunctionsPageClient() {
               }}
             >
               <option value="">All systems</option>
-              {FUNCTION_SYSTEMS.map((s) => (
+              {systems.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>

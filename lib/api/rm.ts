@@ -176,28 +176,13 @@ export async function getLookupByCategory(
   category: string,
   locale: string = "en"
 ): Promise<{ data: RmLookupValue[] }> {
-  const res = await executeQuery<unknown>(RM_LIST_LOOKUP_VALUES_QUERY, [
-    category,
-    rmTenantId(),
-    locale,
-  ]);
-  const data = getKfResultData(res);
-  if (Array.isArray(data)) {
-    return {
-      data: data
-        .map((row) => mapLookupRow(coerceRowObject(row) ?? (row as Record<string, unknown>)))
-        .filter((x) => x.value_code),
-    };
-  }
-  const rows = extractResultRows(res);
-  if (rows.length) {
-    return {
-      data: rows
-        .map((r) => mapLookupRow(coerceRowObject(r) ?? (r as Record<string, unknown>)))
-        .filter((x) => x.value_code),
-    };
-  }
-  return { data: [] };
+  // Through the RPC gateway, as the Risk Management console does; the gateway supplies the tenant.
+  const rows = await rmOpData<unknown[]>("rm_list_lookup_values", { type_code: category, language: locale });
+  return {
+    data: asArray<unknown>(rows)
+      .map((row) => mapLookupRow(coerceRowObject(row) ?? (row as Record<string, unknown>)))
+      .filter((x) => x.value_code),
+  };
 }
 
 /**

@@ -24,7 +24,7 @@ import {
   Database,
   Wrench,
 } from "lucide-react";
-import { FUNCTION_SYSTEMS } from "./constants";
+import { useFunctionSystems } from "./constants";
 
 const KIND_META: Record<string, { color: string; el: ReactNode }> = {
   ROLE: { color: "#2563eb", el: <ShieldAlert className="h-[11px] w-[11px] shrink-0" /> },
@@ -136,7 +136,7 @@ export function FunctionDetailModal({
 
   if (!form) {
     return (
-      <Modal open={open} onClose={onClose} extraWide>
+      <Modal open={open} onClose={onClose} extraWide fixedHeight>
         <div className="p-4 text-slate-600">
           {detailQ.isError
             ? (detailQ.error as Error).message
@@ -151,8 +151,8 @@ export function FunctionDetailModal({
   const update = <K extends keyof FunctionDetail>(k: K, v: FunctionDetail[K]) =>
     setForm((prev) => (prev ? { ...prev, [k]: v } : null));
 
-  return (
-    <Modal open={open} onClose={onClose} extraWide>
+  const header = (
+    <>
       <div className="flex flex-col gap-1 mb-2">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
           <div>
@@ -224,7 +224,7 @@ export function FunctionDetailModal({
         )}
       </div>
 
-      <nav className="flex flex-wrap gap-0.5 border-b border-slate-200 mb-3">
+      <nav className="flex flex-wrap gap-0.5">
         {(["OVERVIEW", "PRIVILEGES", "REQUIRED_PERMS", "USAGE"] as Tab[]).map((t) => {
           const label =
             t === "OVERVIEW"
@@ -250,7 +250,11 @@ export function FunctionDetailModal({
           );
         })}
       </nav>
+    </>
+  );
 
+  return (
+    <Modal open={open} onClose={onClose} extraWide fixedHeight header={header}>
       {tab === "OVERVIEW" && <OverviewTab form={form} editMode={editMode} update={update} />}
       {tab === "PRIVILEGES" && (
         <PrivilegesEditor
@@ -281,6 +285,7 @@ function OverviewTab({
   editMode: boolean;
   update: <K extends keyof FunctionDetail>(k: K, v: FunctionDetail[K]) => void;
 }) {
+  const systems = useFunctionSystems(form.system_type);
   if (!editMode) {
     return (
       <div className="text-[13px] leading-relaxed">
@@ -320,7 +325,7 @@ function OverviewTab({
             value={form.system_type}
             onChange={(e) => update("system_type", e.target.value)}
           >
-            {FUNCTION_SYSTEMS.map((s) => (
+            {systems.map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
@@ -381,6 +386,7 @@ function PrivilegesEditor({
   onChange: (p: FunctionPrivilege[]) => void;
 }) {
   const [query, setQuery] = useState("");
+  const systems = useFunctionSystems(systemType);
   const [filterSystem, setFilterSystem] = useState("");
 
   const effectiveSystem = filterSystem || systemType || "GENERIC";
@@ -491,7 +497,7 @@ function PrivilegesEditor({
               onChange={(e) => setFilterSystem(e.target.value)}
             >
               <option value="">System: {systemType}</option>
-              {FUNCTION_SYSTEMS.map((s) => (
+              {systems.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>

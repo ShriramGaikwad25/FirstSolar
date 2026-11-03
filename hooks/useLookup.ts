@@ -12,6 +12,7 @@ export function useLookup(category: string, locale: string = "en") {
       const { data } = await getLookupByCategory(category, locale);
       return data ?? [];
     },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
