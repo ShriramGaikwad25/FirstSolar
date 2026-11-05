@@ -108,7 +108,7 @@ const btnPrimary = "inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3
 export function ImportRuleLibraryModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
   const rulesets = useQuery({
     queryKey: ["rulesets", "import"],
-    queryFn: async () => (await listRulesets(null, 1, 200)).data ?? [],
+    queryFn: async () => (await listRulesets("ACTIVE", 1, 200)).data ?? [],
   });
   const [rulesetCode, setRulesetCode] = useState("");
   const [rulesetName, setRulesetName] = useState("");

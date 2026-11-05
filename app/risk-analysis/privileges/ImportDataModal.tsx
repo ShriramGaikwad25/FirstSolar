@@ -50,7 +50,7 @@ export function ImportDataModal({
   const apps = useQuery({ queryKey: ["app-instances"], queryFn: listAppInstances });
   const rulesets = useQuery({
     queryKey: ["rulesets", "import"],
-    queryFn: async () => (await listRulesets(null, 1, 200)).data ?? [],
+    queryFn: async () => (await listRulesets("ACTIVE", 1, 200)).data ?? [],
   });
 
   const [pickedApp, setPickedApp] = useState("");
