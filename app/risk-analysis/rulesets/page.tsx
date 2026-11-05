@@ -728,6 +728,7 @@ function UploadModal({ onClose, onDone }: { onClose: () => void; onDone: () => v
           ref={fileRef}
           type="file"
           accept=".json,.csv,application/json,text/csv"
+          className="block w-full cursor-pointer rounded-md border border-gray-300 bg-white text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 file:mr-3 file:cursor-pointer file:border-0 file:border-r file:border-gray-300 file:bg-blue-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-blue-700 hover:file:bg-blue-100"
           onChange={(e) => {
             const f = e.target.files?.[0];
             if (f) void readFile(f);

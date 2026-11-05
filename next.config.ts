@@ -37,6 +37,11 @@ const nextConfig: NextConfig = {
     ];
   },
   // ESLint during build: configure via eslint.config.mjs and run `npm run lint` separately (Next.js 16+).
+  // middleware.ts runs on every path, so request bodies are capped (10MB by default) — including uploads
+  // through the /api/kf proxy. Privileges › Import data accepts files up to 64MB, as the backend does.
+  experimental: {
+    proxyClientMaxBodySize: "64mb",
+  },
   // Add empty turbopack config to silence warnings
   turbopack: {},
   // Keep webpack config for ag-grid externals (needed for SSR)

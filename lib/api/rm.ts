@@ -30,6 +30,19 @@ import type {
   ViolationDetailFull,
 } from "@/types/rm-violations";
 import type { MitigationListRow, UpsertMitigationInput } from "@/types/rm-mitigations";
+import type {
+  AppInstance,
+  ImportJob,
+  ImportType,
+  IngestResult,
+  ListPrivilegesParams,
+  ListPrivilegesResult,
+  OnboardAppRolesInput,
+  OnboardAppRolesResult,
+  PrivilegeListRow,
+  PrivilegeSystemCount,
+  PromoteImportInput,
+} from "@/types/rm-privileges";
 import type { ExceptionListRow } from "@/types/rm-exceptions";
 import type { AnalysisRunListRow } from "@/types/rm-analysis-runs";
 import type {
@@ -106,6 +119,15 @@ export type {
   ViolationDetailFull,
 } from "@/types/rm-violations";
 export type { MitigationListRow, UpsertMitigationInput } from "@/types/rm-mitigations";
+export type {
+  AppInstance,
+  ImportJob,
+  ImportJobStatus,
+  ImportType,
+  IngestLoadData,
+  PrivilegeListRow,
+  PrivilegeSystemCount,
+} from "@/types/rm-privileges";
 export type { ExceptionListRow } from "@/types/rm-exceptions";
 export type { AnalysisRunListRow } from "@/types/rm-analysis-runs";
 export type {
@@ -1051,4 +1073,98 @@ export async function upsertLookupValue(
 export async function deleteLookupValue(id: number): Promise<{ data: unknown }> {
   const res = await executeQuery<unknown>(RM_DELETE_LOOKUP_VALUE_QUERY, [id]);
   return { data: getKfResultData(res) };
+}
+
+// --- Privileges catalog and data imports ---
+// As the Risk Management console does: list and onboarding ops through the RPC gateway, file uploads
+// through the gateway's REST endpoints (same /rm-api base as rpc).
+
+async function rmRest<T>(path: string, init: RequestInit): Promise<T> {
+  const res = await fetch(`${getBackendOrigin()}/rm-api/api/v1/${path}`, init);
+  const body = (await res.json().catch(() => ({}))) as { error?: string; detail?: string };
+  if (!res.ok) throw new Error(body.detail ?? body.error ?? `${path} failed (${res.status})`);
+  return body as T;
+}
+
+export async function listPrivileges(params: ListPrivilegesParams = {}): Promise<ListPrivilegesResult> {
+  const r = (await rmCall("rm_list_privileges", {
+    system_type: params.system_type || null,
+    search: params.search || null,
+    page: params.page ?? 1,
+    page_size: params.page_size ?? 50,
+  })) as {
+    success?: boolean;
+    data?: unknown;
+    pagination?: { total?: number };
+    total?: number;
+    systems?: unknown;
+    error?: string;
+  } | null;
+  if (!r || r.success === false) throw new Error(r?.error ?? "Could not load privileges");
+  const data = asArray<PrivilegeListRow>(r.data);
+  return {
+    data,
+    total: Number(r.pagination?.total ?? r.total ?? data.length),
+    systems: asArray<PrivilegeSystemCount>(r.systems),
+  };
+}
+
+export async function listAppInstances(): Promise<AppInstance[]> {
+  return asArray<AppInstance>(await rmOpData<AppInstance[]>("rm_list_app_instances", {}));
+}
+
+/** Saves the system code (and name) an application's privileges are catalogued under. */
+export async function setAppSystem(instanceId: string, systemType: string, systemName?: string): Promise<unknown> {
+  return rmOpData<unknown>("rm_set_app_system", {
+    instance_id: instanceId,
+    system_type: systemType,
+    system_name: systemName ?? null,
+  });
+}
+
+/** Each role becomes a privilege with the same code and a function using it; dryRun only counts. */
+export async function onboardAppRoles(input: OnboardAppRolesInput): Promise<OnboardAppRolesResult> {
+  return (
+    (await rmOpData<OnboardAppRolesResult>("rm_onboard_app_roles", {
+      instance_id: input.instanceId,
+      system_type: input.systemType,
+      system_name: input.systemName ?? null,
+      kind: input.kind,
+      dry_run: input.dryRun,
+    })) ?? {}
+  );
+}
+
+export async function listImportTypes(systemType: string): Promise<ImportType[]> {
+  return asArray<ImportType>(await rmOpData<ImportType[]>("rm_list_import_types", { system_type: systemType }));
+}
+
+export async function listImportJobs(limit: number = 10): Promise<ImportJob[]> {
+  return asArray<ImportJob>(await rmOpData<ImportJob[]>("rm_list_import_jobs", { limit }));
+}
+
+/** Uploads the file as-is to be read and staged under `batch`; nothing is applied until promoteImport. */
+export async function ingestImportFile(input: {
+  systemType: string;
+  artifactCode: string;
+  batch: string;
+  file: File;
+}): Promise<IngestResult> {
+  const qs = new URLSearchParams({
+    system_type: input.systemType,
+    artifact_code: input.artifactCode,
+    batch: input.batch,
+    filename: input.file.name,
+  });
+  return rmRest<IngestResult>(`ingest?${qs}`, { method: "POST", body: input.file });
+}
+
+/** Queues the background job that applies a staged batch; progress shows in listImportJobs. */
+export async function promoteImport(input: PromoteImportInput): Promise<unknown> {
+  const body = Object.fromEntries(Object.entries(input).filter(([, v]) => v !== undefined));
+  return rmRest<unknown>("import/promote", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
