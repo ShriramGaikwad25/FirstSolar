@@ -43,6 +43,7 @@ import type {
   PrivilegeSystemCount,
   PromoteImportInput,
 } from "@/types/rm-privileges";
+import type { ImportRuleLibraryInput, ImportRuleLibraryResult } from "@/types/rm-rule-library";
 import type { ExceptionListRow } from "@/types/rm-exceptions";
 import type { AnalysisRunListRow } from "@/types/rm-analysis-runs";
 import type {
@@ -128,6 +129,7 @@ export type {
   PrivilegeListRow,
   PrivilegeSystemCount,
 } from "@/types/rm-privileges";
+export type { RuleLibraryFileKind, RuleLibraryReport } from "@/types/rm-rule-library";
 export type { ExceptionListRow } from "@/types/rm-exceptions";
 export type { AnalysisRunListRow } from "@/types/rm-analysis-runs";
 export type {
@@ -1167,4 +1169,21 @@ export async function promoteImport(input: PromoteImportInput): Promise<unknown>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+/**
+ * Functions, rules and extra rule functions from up to three files (CSV, TSV or Excel), as the Risk
+ * Management console's "Import functions & rules". `check: true` reports what it would do without saving.
+ */
+export async function importRuleLibrary(input: ImportRuleLibraryInput): Promise<ImportRuleLibraryResult> {
+  const form = new FormData();
+  if (input.ruleset_code) form.append("ruleset", input.ruleset_code);
+  if (input.ruleset_name) form.append("ruleset_name", input.ruleset_name);
+  form.append("mode", input.mode);
+  form.append("check", String(input.check));
+  for (const kind of ["functions", "rules", "rule_functions"] as const) {
+    const file = input[kind];
+    if (file) form.append(kind, file, file.name);
+  }
+  return rmRest<ImportRuleLibraryResult>("import/rule-library", { method: "POST", body: form });
 }

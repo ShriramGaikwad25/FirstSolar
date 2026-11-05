@@ -13,7 +13,8 @@ export function rowsToCsv(rows: Record<string, unknown>[]): string {
   return lines.join("\r\n");
 }
 
-export function csvToRows<T extends Record<string, unknown>>(text: string): T[] {
+/** Raw CSV table: every record as an array of cells, the header row included. */
+function parseCsvTable(text: string): string[][] {
   let t = text;
   if (t.charCodeAt(0) === 0xfeff) t = t.slice(1);
   const table: string[][] = [];
@@ -48,6 +49,23 @@ export function csvToRows<T extends Record<string, unknown>>(text: string): T[] 
     cur.push(field);
     table.push(cur);
   }
+  return table;
+}
+
+/** Header names (through `mapHeader`) and the number of non-blank data rows. */
+export function csvHeadersAndRowCount(
+  text: string,
+  mapHeader: (h: string) => string = (h) => h.trim()
+): { headers: string[]; rows: number } {
+  const [head = [], ...body] = parseCsvTable(text);
+  return {
+    headers: head.map(mapHeader),
+    rows: body.filter((r) => r.some((c) => c.trim() !== "")).length,
+  };
+}
+
+export function csvToRows<T extends Record<string, unknown>>(text: string): T[] {
+  const table = parseCsvTable(text);
   if (!table.length) return [];
   const headers = table[0]!.map((h) => h.trim());
   const out: T[] = [];

@@ -17,6 +17,7 @@ import { useLookup } from "@/hooks/useLookup";
 import { csvToRows, rowsToCsv, triggerDownload } from "@/lib/rm-csv";
 import Badge from "@/components/Badge";
 import Modal from "@/components/Modal";
+import { ImportRuleLibraryModal } from "./ImportRuleLibraryModal";
 import {
   Plus,
   Play,
@@ -78,6 +79,7 @@ export default function RulesetsPage() {
     statuses.data?.find((s) => s.value_code === code)?.color_hex ?? "#64748b";
 
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [downloadFor, setDownloadFor] = useState<null | { id: number; code: string }>(null);
   const [copyFrom, setCopyFrom] = useState<null | { id: number; code: string }>(null);
 
@@ -225,6 +227,14 @@ export default function RulesetsPage() {
       <div className="mb-3 flex items-center justify-between gap-3 border-b border-gray-300 pb-2">
         <h1 className="text-2xl font-bold text-blue-950">Rulesets</h1>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setLibraryOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          >
+            <Upload className="h-4 w-4" />
+            Import functions &amp; rules
+          </button>
           <button
             type="button"
             onClick={() => setUploadOpen(true)}
@@ -395,6 +405,16 @@ export default function RulesetsPage() {
           rulesetId={downloadFor.id}
           rulesetCode={downloadFor.code}
           onClose={() => setDownloadFor(null)}
+        />
+      )}
+      {libraryOpen && (
+        <ImportRuleLibraryModal
+          onClose={() => setLibraryOpen(false)}
+          onDone={() => {
+            void qc.invalidateQueries({ queryKey: ["rulesets"] });
+            void qc.invalidateQueries({ queryKey: ["rules"] });
+            void qc.invalidateQueries({ queryKey: ["functions"] });
+          }}
         />
       )}
       {uploadOpen && (
