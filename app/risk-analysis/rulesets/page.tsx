@@ -231,7 +231,7 @@ export default function RulesetsPage() {
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
             <Upload className="h-4 w-4" />
-            Upload
+            Import ruleset (one file)
           </button>
           <button
             type="button"

@@ -143,8 +143,6 @@ const RM_UPSERT_RULESET_QUERY = "SELECT public.kf_rm_upsert_ruleset(?::jsonb) AS
 const RM_TRIGGER_ANALYSIS_QUERY =
   "SELECT public.kf_rm_trigger_analysis(?::uuid, ?::bigint) AS result";const RM_EXPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_export_ruleset_json(?::bigint) AS result";
 const RM_EXPORT_RULESET_CSV_QUERY = "SELECT public.kf_rm_export_ruleset_csv(?::bigint) AS result";
-const RM_IMPORT_RULESET_JSON_QUERY = "SELECT public.kf_rm_import_ruleset_json(?::jsonb, ?::text) AS result";
-const RM_IMPORT_RULESET_CSV_QUERY = "SELECT public.kf_rm_import_ruleset_from_csv(?::jsonb) AS result";
 const RM_COPY_RULESET_QUERY = "SELECT public.kf_rm_copy_ruleset(?::jsonb) AS result";
 
 function asString(v: unknown, fallback = ""): string {
@@ -257,12 +255,13 @@ export async function exportRulesetCsv(rulesetId: number): Promise<{ data: Rules
   return { data: [] };
 }
 
+// Ruleset imports go through the RPC gateway, as the Risk Management console does; the reworked
+// kf_rm_import_ruleset_* functions take the tenant separately, so the old one-jsonb SQL calls fail.
 export async function importRulesetJson(
   payload: unknown,
   mode: "UPSERT" | "REPLACE"
 ): Promise<{ data: unknown }> {
-  const res = await executeQuery<unknown>(RM_IMPORT_RULESET_JSON_QUERY, [JSON.stringify(payload), mode]);
-  return { data: getKfResultData(res) };
+  return { data: await rmOpData<unknown>("rm_import_ruleset_json", { payload, mode }) };
 }
 
 export type ImportRulesetCsvInput = {
@@ -275,14 +274,13 @@ export type ImportRulesetCsvInput = {
 export async function importRulesetCsv(
   input: ImportRulesetCsvInput
 ): Promise<{ data: unknown }> {
-  const body = {
+  const data = await rmOpData<unknown>("rm_import_ruleset_csv", {
     ruleset_code: input.ruleset_code,
     ruleset_name: input.ruleset_name,
     rows: input.rows,
-    mode: input.mode,
-  };
-  const res = await executeQuery<unknown>(RM_IMPORT_RULESET_CSV_QUERY, [JSON.stringify(body)]);
-  return { data: getKfResultData(res) };
+    mode: input.mode ?? "UPSERT",
+  });
+  return { data };
 }
 
 export type CopyRulesetInput = {
