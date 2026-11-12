@@ -53,13 +53,14 @@ import { rowsToCsv } from "@/lib/rm-csv";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import EditReassignButtons from "@/components/agTable/EditReassignButtons";
 import ActionButtons from "@/components/agTable/ActionButtons";
-import { getAllRegisteredApps, searchUsers } from "@/lib/api";
+import { executeQuery, getAllRegisteredApps, searchUsers } from "@/lib/api";
 import {
   getReviewerId,
   getCookie,
   COOKIE_NAMES,
   resolveTenantIdForHeader,
   getJwtAuthHeaders,
+  getTenantUuid,
 } from "@/lib/auth";
 import { getOriginalFetch } from "@/lib/authFetch";
 import Link from "next/link";
@@ -165,17 +166,6 @@ function catalogAttributesToFields(attributes: any): Record<string, any> {
   const out: Record<string, any> = {};
   for (const a of attributes) {
     if (a?.columnName) out[a.columnName] = unwrapCatalogAttributeValue(a.value);
-  }
-  return out;
-}
-
-/** One export row per catalog /list item: every top-level field plus its fields and attributes; nested values as JSON. */
-function catalogItemToExportRow(item: any): Record<string, unknown> {
-  const { fields, attributes, ...rest } = item || {};
-  const out: Record<string, unknown> = {};
-  const flat = { ...rest, ...(fields && typeof fields === "object" ? fields : {}), ...catalogAttributesToFields(attributes) };
-  for (const [key, value] of Object.entries(flat)) {
-    out[key] = value !== null && typeof value === "object" ? JSON.stringify(value) : value;
   }
   return out;
 }
@@ -3011,26 +3001,29 @@ export default function ApplicationDetailPage() {
     };
   }, [id, tabIndex, entCurrentPage, entPageSize, appliedEntSearch, entReloadKey]);
 
-  // Export every entitlement of the application from the /list API (all pages, all columns)
+  // Export the application's catalog rows through two executeQuery calls:
+  // the catalog table's column names (in table order) for the header, then the rows for this app instance.
   const exportEntitlementsCsv = async (): Promise<Blob> => {
-    const applicationName = getStoredApplicationName();
-    const rows: Record<string, unknown>[] = [];
-    for (let page = 0, totalPages = 1; page < totalPages; page++) {
-      const params = new URLSearchParams({ page: String(page), size: "500", sort: "name,asc" });
-      if (applicationName) params.set("applicationName", applicationName);
-      const response = await fetch(
-        `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/list?${params.toString()}`,
-        { headers: getJwtAuthHeaders() }
-      );
-      if (!response.ok) throw new Error(`Entitlement list failed (${response.status})`);
-      const data = await response.json();
-      const content = Array.isArray(data?.content) ? data.content : [];
-      rows.push(...content.map(catalogItemToExportRow));
-      totalPages = content.length ? Number(data?.totalPages) || 0 : 0;
-    }
-    // Rows can carry different attributes, so the header is the union of all keys
-    const columns = Array.from(new Set(rows.flatMap((r) => Object.keys(r))));
-    const csv = rowsToCsv(rows.map((r) => Object.fromEntries(columns.map((c) => [c, r[c] ?? ""]))));
+    const toRows = (res: any): Record<string, unknown>[] =>
+      Array.isArray(res?.resultSet) ? res.resultSet : Array.isArray(res) ? res : [];
+    const [columnsRes, dataRes] = await Promise.all([
+      executeQuery<any>(
+        "SELECT column_name, data_type, character_maximum_length, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'catalog' AND table_schema = 'public' ORDER BY ordinal_position",
+        []
+      ),
+      executeQuery<any>(
+        "select * from catalog where appinstanceid = ?::uuid AND tenant_id = ?::uuid",
+        [id, getTenantUuid()]
+      ),
+    ]);
+    const dataRows = toRows(dataRes);
+    const tableColumns = toRows(columnsRes)
+      .map((c) => String(c?.column_name ?? ""))
+      .filter(Boolean);
+    // Any column the data has but the schema query didn't list goes after the table columns
+    const columns = Array.from(new Set([...tableColumns, ...dataRows.flatMap((r) => Object.keys(r))]));
+    const cell = (v: unknown) => (v !== null && typeof v === "object" ? JSON.stringify(v) : v ?? "");
+    const csv = rowsToCsv(dataRows.map((r) => Object.fromEntries(columns.map((c) => [c, cell(r[c])]))));
     return new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
   };
 
