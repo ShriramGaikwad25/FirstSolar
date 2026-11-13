@@ -1839,9 +1839,11 @@ const getInitialFormData = () => ({
           },
         ],
       },
+      // One approval stage: the guided builder treats every stage between Validate and Fulfillment as
+      // a single approval list and adds new approvals to the last of them
       {
-        id: "stage-manager-approval",
-        name: "Manager Approval",
+        id: "stage-approval",
+        name: "Approval",
         order: 2,
         steps: [
           {
@@ -1852,13 +1854,6 @@ const getInitialFormData = () => ({
             type: "APPROVAL",
             condition: 'risk >= "MEDIUM"',
           },
-        ],
-      },
-      {
-        id: "stage-operational-approval",
-        name: "Operational Approval",
-        order: 3,
-        steps: [
           {
             id: "step-app-owner-approval",
             label: "App Owner Approval",
@@ -1872,7 +1867,7 @@ const getInitialFormData = () => ({
       {
         id: "stage-fulfillment",
         name: "Fulfillment",
-        order: 4,
+        order: 3,
         steps: [
           {
             id: "step-scim-fulfillment",
@@ -1989,7 +1984,30 @@ function slugifyWorkflowTemplateCode(name: string, version: number): string {
   return `${base || "WORKFLOW_TEMPLATE"}_WF_V${version}`;
 }
 
-/** Strips the builder's internal "stage-"/"step-" prefix to get a short, readable definitionJson id. */
+/**
+ * Drops stages with no steps between the first (Validate) and last (Fulfillment) stage, e.g. the empty
+ * "Manager Approval" stage left when its approvals ended up in another approval stage. The guided builder
+ * treats all middle stages as one approval list, so an empty one only shows as "No steps in this stage".
+ * At least one middle stage is kept, and orders are renumbered.
+ */
+function withoutEmptyMiddleStages<T extends { steps?: unknown[]; order?: number }>(stages: T[]): T[] {
+  if (stages.length < 3) return stages;
+  const middle = stages.slice(1, -1);
+  const keptMiddle = middle.filter((s) => (s.steps?.length ?? 0) > 0);
+  if (keptMiddle.length === middle.length) return stages;
+  const kept = [stages[0], ...(keptMiddle.length ? keptMiddle : [middle[0]]), stages[stages.length - 1]];
+  return kept.map((s, i) => ({ ...s, order: i + 1 }));
+}
+
+/**
+ * True for ids the builder used to generate from its internal timestamp ids, e.g. "1794523644110_IDFA7IB"
+ * (step) or "1794523644110" / "APPROVAL_1794523644110" (stage). These are replaced by name-based ids.
+ */
+function isGeneratedDefinitionId(id: unknown): boolean {
+  return typeof id === "string" && /(^|_)\d{12,}(_|$)/.test(id);
+}
+
+/** Turns a name (or id, without the builder's "stage-"/"step-" prefix) into a definitionJson id, e.g. "Manager Approval" -> "MANAGER_APPROVAL". */
 function slugToDefinitionId(rawId: string | undefined, fallback: string): string {
   const source = rawId || fallback || "ITEM";
   const cleaned = String(source)
@@ -2067,9 +2085,24 @@ function buildWorkflowTemplateDefinitionJson(
   formData: any,
   stepTypeDefaults: Record<string, StepTypeDefaults> = {}
 ) {
-  const stages = formData?.step2?.stages || [];
+  const stages = withoutEmptyMiddleStages(formData?.step2?.stages || []);
+
+  // Ids must be unique in the definition: a repeated name gets _2, _3, ...
+  const usedIds = new Set<string>();
+  const uniqueId = (base: string) => {
+    let candidate = base;
+    for (let n = 2; usedIds.has(candidate); n++) candidate = `${base}_${n}`;
+    usedIds.add(candidate);
+    return candidate;
+  };
 
   const definitionStages = stages.map((stage: any, stageIdx: number) => {
+    // A stage loaded from a saved template keeps its id; a new one (builder id "stage-...") is named after the stage
+    const stageId = uniqueId(
+      stage.id && !/^stage-/i.test(String(stage.id)) && !isGeneratedDefinitionId(stage.id)
+        ? slugToDefinitionId(stage.id, stage.name)
+        : slugToDefinitionId(stage.name, `STAGE_${stageIdx + 1}`)
+    );
     const steps = (stage.steps || []).map((step: any, stepIdx: number) => {
       const builderCode = String(step.code || `STEP_${stepIdx + 1}`).toUpperCase();
       const code = BACKEND_STEP_CODE[builderCode] ?? builderCode;
@@ -2104,7 +2137,14 @@ function buildWorkflowTemplateDefinitionJson(
           : step.condition?.expression ?? step.condition?.expr ?? "true";
 
       return {
-        id: saved?.id || slugToDefinitionId(step.id, code),
+        // A step loaded from a saved template keeps its id; a new one (or one saved with a generated id) is named after the step
+        id: uniqueId(
+          saved?.id && !isGeneratedDefinitionId(saved.id)
+            ? saved.id
+            : slugToDefinitionId(step.label || step.name, code)
+        ),
+        // Saved so the step shows its name when the template is opened again
+        ...(step.label || step.name ? { name: String(step.label || step.name) } : {}),
         code,
         ...(saved?.description ? { description: saved.description } : {}),
         config,
@@ -2116,7 +2156,7 @@ function buildWorkflowTemplateDefinitionJson(
     });
 
     return {
-      id: slugToDefinitionId(stage.id, stage.name),
+      id: stageId,
       name: stage.name,
       ...(stage.description ? { description: stage.description } : {}),
       config: stage.config && typeof stage.config === "object" ? stage.config : {},
@@ -2741,8 +2781,12 @@ export default function WorkflowBuilderCreatePage() {
                   ? null
                   : defaultConditionForCode(upperCode, data.name);
 
+                // Ids the builder generated (e.g. "1794523644110_IDFA7IB") aren't names: fall back to the code
                 const prettyLabelSource: string =
-                  step.name || step.id || rawCode || `Step ${stepIdx + 1}`;
+                  step.name ||
+                  (isGeneratedDefinitionId(step.id) ? "" : step.id) ||
+                  rawCode ||
+                  `Step ${stepIdx + 1}`;
                 const label = String(prettyLabelSource)
                   .replace(/_/g, " ")
                   .replace(/\b\w/g, (c: string) => c.toUpperCase());
@@ -2790,7 +2834,7 @@ export default function WorkflowBuilderCreatePage() {
           ...prev,
           step2: {
             ...prev.step2,
-            stages: normalizedStages,
+            stages: withoutEmptyMiddleStages(normalizedStages),
             savedDefinition: def,
           },
         }));
