@@ -49,41 +49,6 @@ import { formatDateMMDDYY } from "@/utils/utils";
 import "@/lib/ag-grid-setup";
 import Exports from "@/components/agTable/Exports";
 import { CatalogExportButton, CatalogImportButton } from "@/components/CatalogFileActions";
-import { buildXlsx, type XlsxCell } from "@/lib/xlsx-writer";
-
-/** catalog columns that are locked (read-only) in the entitlements export; every other column can be edited. */
-const ENTITLEMENT_EXPORT_LOCKED_COLUMNS = [
-  "catalogid",
-  "name",
-  "type",
-  "parentcatalogid",
-  "metadata",
-  "createddate",
-  "lastmodifieddate",
-  "entitlementid",
-  "entitlementname",
-  "entitlementtype",
-  "totalassignmentstousers",
-  "last_sync",
-  "shared_pwd",
-  "applicationname",
-  "appinstanceid",
-  "last_reviewed_on",
-  "assigned_to",
-  "claimed_by",
-  "mfa_status",
-  "created_on",
-  "audit_comments",
-  "jit_access",
-  "provisioning_steps",
-  "provisioning_mechanism",
-  "action_on_native_change",
-  "last_modified_at",
-  "last_modified_by",
-  "tenant_id",
-  "nde_flag",
-  "application_category",
-];
 import CustomPagination from "@/components/agTable/CustomPagination";
 import EditReassignButtons from "@/components/agTable/EditReassignButtons";
 import ActionButtons from "@/components/agTable/ActionButtons";
@@ -3037,8 +3002,7 @@ export default function ApplicationDetailPage() {
 
   // Export the application's catalog rows through two executeQuery calls:
   // the catalog table's column names (in table order) for the header, then the rows for this app instance.
-  // Written as .xlsx so the system columns (ENTITLEMENT_EXPORT_LOCKED_COLUMNS) can be locked for editing.
-  const exportEntitlementsXlsx = async (): Promise<Blob> => {
+  const exportEntitlementsCsv = async (): Promise<Blob> => {
     const toRows = (res: any): Record<string, unknown>[] =>
       Array.isArray(res?.resultSet) ? res.resultSet : Array.isArray(res) ? res : [];
     const [columnsRes, dataRes] = await Promise.all([
@@ -3057,14 +3021,15 @@ export default function ApplicationDetailPage() {
       .filter(Boolean);
     // Any column the data has but the schema query didn't list goes after the table columns
     const columns = Array.from(new Set([...tableColumns, ...dataRows.flatMap((r) => Object.keys(r))]));
-    const cell = (v: unknown): XlsxCell =>
-      v !== null && typeof v === "object" ? JSON.stringify(v) : (v as XlsxCell);
-    return buildXlsx({
-      sheetName: "Entitlements",
-      columns,
-      rows: dataRows.map((r) => columns.map((c) => cell(r[c]))),
-      lockedColumns: ENTITLEMENT_EXPORT_LOCKED_COLUMNS,
-    });
+    // Objects (e.g. metadata) as JSON; quote any cell holding a comma, quote or line break (RFC 4180)
+    const cell = (v: unknown): string => {
+      const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    // Header row is written even when the app has no entitlements yet
+    const lines = [columns.map(cell).join(","), ...dataRows.map((r) => columns.map((c) => cell(r[c])).join(","))];
+    // BOM so Excel opens UTF-8 text correctly
+    return new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
   };
 
   //   {
@@ -4408,10 +4373,10 @@ export default function ApplicationDetailPage() {
                   onImported={() => setEntReloadKey((k) => k + 1)}
                 />
                 <CatalogExportButton
-                  title="Export entitlements (Excel; system columns are locked)"
-                  formats={["xlsx"]}
+                  title="Export entitlements (CSV)"
+                  formats={["csv"]}
                   fileName={`entitlements${getStoredApplicationName() ? `-${getStoredApplicationName()}` : ""}`}
-                  getFile={exportEntitlementsXlsx}
+                  getFile={exportEntitlementsCsv}
                 />
                 <CatalogExportButton
                   title="Download enrichment template (Excel)"
