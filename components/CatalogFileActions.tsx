@@ -159,10 +159,12 @@ interface CatalogImportButtonProps {
   buildUrl: () => string;
   onImported: () => void;
   title?: string;
+  /** Rewrites the chosen file before upload (e.g. unwrapExcelTextCellsInFile) */
+  prepareFile?: (file: File) => Promise<File>;
 }
 
 /** Upload icon that POSTs a .csv/.xlsx in the multipart field `file`. */
-export function CatalogImportButton({ buildUrl, onImported, title = "Import (.csv or .xlsx)" }: CatalogImportButtonProps) {
+export function CatalogImportButton({ buildUrl, onImported, title = "Import (.csv or .xlsx)", prepareFile }: CatalogImportButtonProps) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CatalogFileResult | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -171,7 +173,7 @@ export function CatalogImportButton({ buildUrl, onImported, title = "Import (.cs
     setBusy(true);
     try {
       const body = new FormData();
-      body.append("file", file);
+      body.append("file", prepareFile ? await prepareFile(file) : file);
       const res = await fetch(buildUrl(), { method: "POST", headers: getJwtAuthHeaders(), body });
       const json = await res.json().catch(() => null);
       if (!res.ok) {

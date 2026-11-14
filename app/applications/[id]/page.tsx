@@ -49,6 +49,7 @@ import { formatDateMMDDYY } from "@/utils/utils";
 import "@/lib/ag-grid-setup";
 import Exports from "@/components/agTable/Exports";
 import { CatalogExportButton, CatalogImportButton } from "@/components/CatalogFileActions";
+import { excelTextCell, unwrapExcelTextCellsInFile } from "@/lib/csv-text-cells";
 import CustomPagination from "@/components/agTable/CustomPagination";
 import EditReassignButtons from "@/components/agTable/EditReassignButtons";
 import ActionButtons from "@/components/agTable/ActionButtons";
@@ -3021,12 +3022,10 @@ export default function ApplicationDetailPage() {
       .filter(Boolean);
     // Any column the data has but the schema query didn't list goes after the table columns
     const columns = Array.from(new Set([...tableColumns, ...dataRows.flatMap((r) => Object.keys(r))]));
-    // Objects (e.g. metadata) as JSON; quote any cell holding a comma, quote or line break (RFC 4180)
-    // Timestamps as in the database: "2026-11-03T09:28:47.358845" -> "2026-11-03 09:28:47.358845" (text only,
-    // never through Date, which would cut the microseconds)
-    const timestamp = (s: string) => s.replace(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/, "$1 $2");
+    // Objects (e.g. metadata) as JSON; timestamps exactly as the backend sends them, as ="..." so Excel
+    // does not reformat them; quote any cell holding a comma, quote or line break (RFC 4180)
     const cell = (v: unknown): string => {
-      const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : timestamp(String(v));
+      const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : excelTextCell(String(v));
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     // Header row is written even when the app has no entitlements yet
@@ -4374,6 +4373,7 @@ export default function ApplicationDetailPage() {
                     `${getBackendOrigin()}/catalog/api/v1/${resolveTenantIdForHeader()}/bulkenrichmentcontroller/bulk-enrichment`
                   }
                   onImported={() => setEntReloadKey((k) => k + 1)}
+                  prepareFile={unwrapExcelTextCellsInFile}
                 />
                 <CatalogExportButton
                   title="Export entitlements (CSV)"
