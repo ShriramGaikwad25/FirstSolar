@@ -3022,8 +3022,11 @@ export default function ApplicationDetailPage() {
     // Any column the data has but the schema query didn't list goes after the table columns
     const columns = Array.from(new Set([...tableColumns, ...dataRows.flatMap((r) => Object.keys(r))]));
     // Objects (e.g. metadata) as JSON; quote any cell holding a comma, quote or line break (RFC 4180)
+    // Timestamps as in the database: "2026-11-03T09:28:47.358845" -> "2026-11-03 09:28:47.358845" (text only,
+    // never through Date, which would cut the microseconds)
+    const timestamp = (s: string) => s.replace(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}:\d{2}(?:\.\d+)?)/, "$1 $2");
     const cell = (v: unknown): string => {
-      const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : String(v);
+      const s = v === null || v === undefined ? "" : typeof v === "object" ? JSON.stringify(v) : timestamp(String(v));
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     // Header row is written even when the app has no entitlements yet
